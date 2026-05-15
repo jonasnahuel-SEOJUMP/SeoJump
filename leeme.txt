@@ -1,0 +1,24 @@
+# ¡Bienvenido a SEOJUMP! 🚀
+
+Has dado el primer paso para dominar el SEO de una manera divertida y gamificada. Aquí tienes los primeros pasos para comenzar:
+
+## 1. ¿Qué es SEOJUMP?
+SEOJUMP es una aplicación diseñada para convertir las tareas técnicas de optimización en motores de búsqueda (SEO) en un juego. Ganarás puntos, subirás de nivel y completarás misiones mientras mejoras el posicionamiento de tu web.
+
+## 2. Conceptos Básicos para Principiantes
+- **Palabras Clave (Keywords):** Son los términos que la gente busca en Google. Tu objetivo es aparecer cuando alguien los use.
+- **SEO On-Page:** Son las mejoras que haces *dentro* de tu sitio (títulos, descripciones, contenido).
+- **Backlinks:** Son enlaces desde otros sitios hacia el tuyo. Funcionan como "votos de confianza".
+
+## 3. El Sistema de Juego
+- **XP (Experiencia):** Ganas XP por cada tarea completada (ej. optimizar una imagen).
+- **Niveles:** Al acumular XP, subirás de nivel, desbloqueando misiones más complejas.
+- **Rachas (Streaks):** Mantén tu racha diaria entrando y realizando al menos una pequeña acción SEO cada día.
+
+## 4. Tus Primeros Pasos
+1.  **Define tu Objetivo:** Elige una página de tu sitio que quieras posicionar.
+2.  **Investigación Inicial:** Identifica 3 palabras clave relacionadas con tu negocio.
+3.  **Misión 1:** Asegúrate de que tu palabra clave principal esté en el título de tu página (Etiqueta H1).
+
+---
+¡El camino al #1 de Google es un maratón, no un sprint! ¡A jugar! 🎮📈

@@ -1,0 +1,104 @@
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
+@import "tailwindcss";
+
+
+:root {
+  --background: #ffffff;
+  --foreground: #4b4b4b;
+  
+  --duo-green: #58cc02;
+  --duo-green-shadow: #46a302;
+  --duo-blue: #1cb0f6;
+  --duo-blue-shadow: #1899d6;
+  --duo-yellow: #ffc800;
+  --duo-yellow-shadow: #e5a400;
+  --duo-white: #ffffff;
+  --duo-white-shadow: #e5e5e5;
+  --duo-gray: #afafaf;
+  --duo-gray-shadow: #8a8a8a;
+  --duo-red: #ff4b4b;
+  --duo-red-shadow: #d33131;
+}
+
+@theme inline {
+  --color-duo-green: var(--duo-green);
+  --color-duo-green-shadow: var(--duo-green-shadow);
+  --color-duo-blue: var(--duo-blue);
+  --color-duo-blue-shadow: var(--duo-blue-shadow);
+  --color-duo-yellow: var(--duo-yellow);
+  --color-duo-yellow-shadow: var(--duo-yellow-shadow);
+  --color-duo-white: var(--duo-white);
+  --color-duo-white-shadow: var(--duo-white-shadow);
+  --color-duo-gray: var(--duo-gray);
+  --color-duo-gray-shadow: var(--duo-gray-shadow);
+  --color-duo-red: var(--duo-red);
+  --color-duo-red-shadow: var(--duo-red-shadow);
+  
+  --font-fredoka: "Fredoka", sans-serif;
+  
+  --radius-xl: 16px;
+  --radius-2xl: 20px;
+}
+
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-fredoka);
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .btn-3d {
+    @apply relative inline-flex items-center justify-center px-6 py-3 font-bold text-white transition-all duration-75 rounded-xl border-b-4 active:border-b-0 active:translate-y-[4px];
+  }
+  
+  .btn-green {
+    @apply bg-duo-green border-duo-green-shadow;
+  }
+  
+  .btn-blue {
+    @apply bg-duo-blue border-duo-blue-shadow;
+  }
+  
+  .btn-yellow {
+    @apply bg-duo-yellow border-duo-yellow-shadow;
+  }
+  
+  .btn-white {
+    @apply bg-white border-duo-white-shadow text-duo-gray hover:bg-gray-50;
+  }
+
+  .card-3d {
+    @apply p-6 bg-white border-2 border-duo-white-shadow rounded-2xl;
+  }
+}
+@layer base {
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideInRight {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+  @keyframes zoomIn {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  @keyframes slideInBottom {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  
+  .animate-in {
+    animation-duration: 400ms;
+    animation-fill-mode: both;
+    animation-timing-function: ease-out;
+  }
+  .fade-in { animation-name: fadeIn; }
+  .slide-in-from-right { animation-name: slideInRight; }
+  .slide-in-from-bottom { animation-name: slideInBottom; }
+  .zoom-in { animation-name: zoomIn; }
+}
+
