@@ -1,23 +1,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@300..700&display=swap');
 @import "tailwindcss";
+@variant dark (&:where(.dark, .dark *));
 
 
 :root {
   --background: #ffffff;
-  --foreground: #4b4b4b;
+  --foreground: #1e293b;
   
-  --duo-green: #58cc02;
-  --duo-green-shadow: #46a302;
-  --duo-blue: #1cb0f6;
-  --duo-blue-shadow: #1899d6;
-  --duo-yellow: #ffc800;
-  --duo-yellow-shadow: #e5a400;
+  --duo-green: #46a302;
+  --duo-green-shadow: #378102;
+  --duo-blue: #1583b7;
+  --duo-blue-shadow: #116a94;
+  --duo-yellow: #e5a400;
+  --duo-yellow-shadow: #c68e00;
   --duo-white: #ffffff;
   --duo-white-shadow: #e5e5e5;
-  --duo-gray: #afafaf;
-  --duo-gray-shadow: #8a8a8a;
-  --duo-red: #ff4b4b;
-  --duo-red-shadow: #d33131;
+  --duo-gray: #71717a;
+  --duo-gray-shadow: #52525b;
+  --duo-red: #d33131;
+  --duo-red-shadow: #a82727;
+}
+
+.dark {
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --duo-white: #1e293b;
+  --duo-white-shadow: #0f172a;
 }
 
 @theme inline {
@@ -38,6 +46,12 @@
   
   --radius-xl: 16px;
   --radius-2xl: 20px;
+
+  /* Agrandar letras chicas globalmente */
+  --text-xs: 0.85rem;
+  --text-xs--line-height: 1.3rem;
+  --text-sm: 0.95rem;
+  --text-sm--line-height: 1.4rem;
 }
 
 
@@ -66,11 +80,11 @@ body {
   }
   
   .btn-white {
-    @apply bg-white border-duo-white-shadow text-duo-gray hover:bg-gray-50;
+    @apply bg-white border-duo-white-shadow text-slate-600 hover:bg-gray-50;
   }
 
   .card-3d {
-    @apply p-6 bg-white border-2 border-duo-white-shadow rounded-2xl;
+    @apply p-6 bg-white dark:bg-slate-800 border-2 border-duo-white-shadow dark:border-slate-700 rounded-2xl transition-colors duration-300;
   }
 }
 @layer base {
