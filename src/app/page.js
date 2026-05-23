@@ -571,30 +571,37 @@ export default function Home() {
              {/* PANEL IZQUIERDO (Lateral de Control) */}
              <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col gap-6 sticky top-4">
                {/* Dashboard Header */}
-               <header className="w-full flex flex-row lg:flex-col items-center lg:items-start justify-between bg-white dark:bg-slate-800 p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 transition-colors duration-300 gap-5">
-                 <div className="flex items-center gap-4 w-full">
+               <header className="w-full flex flex-col md:flex-row lg:flex-col items-stretch md:items-center lg:items-start justify-between bg-white dark:bg-slate-800 p-4 md:p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 transition-colors duration-300 gap-4">
+                 <div className="flex items-center gap-4 w-full md:w-auto">
                    <div className="w-12 h-12 bg-duo-blue rounded-lg flex items-center justify-center text-white text-2xl flex-shrink-0">🌐</div>
                    <span className="text-xl lg:text-2xl font-black text-slate-800 dark:text-slate-100 truncate">{url}</span>
                  </div>
                  
-                 <div className="flex items-center lg:w-full lg:justify-between gap-4 lg:gap-2">
-                   <div className="flex items-center gap-1.5">
+                 <div className="flex items-center justify-between md:justify-end lg:justify-between w-full md:w-auto gap-4 lg:w-full border-t md:border-t-0 lg:border-t border-slate-100 dark:border-slate-700/50 pt-3 md:pt-0 lg:pt-3">
+                   <div className="flex items-center gap-1.5 flex-shrink-0">
                       <span className="text-3xl">🔥</span>
                       <span className="text-2xl lg:text-3xl font-black text-orange-500">{Math.floor(xp / 100) + 1}</span>
                    </div>
-                   <div className="flex gap-3">
+                   <div className="flex items-center gap-3">
+                     <Link
+                       href="/blog"
+                       onClick={playClick}
+                       className="btn-3d btn-white hover:text-cyan-500 text-xs px-3 py-2 font-black uppercase tracking-wider transition-colors flex-shrink-0"
+                     >
+                       📖 Academia
+                     </Link>
                      <button onClick={toggleMute} className="text-3xl hover:scale-110 transition-transform" title={isMuted ? "Activar sonido" : "Silenciar"}>
                        {isMuted ? '🔇' : '🔊'}
                      </button>
                      <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-3xl hover:scale-110 transition-transform" title="Cambiar Tema">
                        {theme === "light" ? '🌙' : '☀️'}
                      </button>
+                     {session?.user?.image ? (
+                       <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow flex-shrink-0" />
+                     ) : (
+                       <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white flex-shrink-0 text-xl">👤</div>
+                     )}
                    </div>
-                   {session?.user?.image ? (
-                     <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow flex-shrink-0" />
-                   ) : (
-                     <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white flex-shrink-0 text-xl">👤</div>
-                   )}
                  </div>
                </header>
  

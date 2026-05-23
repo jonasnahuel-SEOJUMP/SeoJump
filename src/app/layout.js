@@ -23,7 +23,7 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col">
+      <body className="min-h-full flex flex-col bg-[#f7f7f7] dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-300">
         <AuthProvider>
           {children}
         </AuthProvider>
