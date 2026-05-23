@@ -651,14 +651,11 @@ export default function BuscadorDeOro() {
             {/* Search Form / Bloqueo */}
             {!isVip() && dailyCredits >= DAILY_LIMIT ? (
               <div className="w-full space-y-4 animate-in fade-in duration-300 border-t border-slate-100 dark:border-slate-700 pt-3">
-                <div className="text-5xl text-center animate-bounce">🦉</div>
+                <div className="text-5xl text-center animate-bounce">🏁</div>
                 <div className="space-y-1.5 text-center">
-                  <h3 className="text-lg font-black text-amber-500 dark:text-amber-400">¡Frená en boxes, campeón!</h3>
-                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300 leading-relaxed">
-                    Usaste tus ${DAILY_LIMIT} fichas gratuitas de hoy. Se recarga en 24h.
-                  </p>
-                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 leading-tight">
-                    ¿Querés optimizar todo tu negocio ahora? Pasá al Plan Premium.
+                  <h3 className="text-lg font-black text-amber-500 dark:text-amber-400">¡Excelente trabajo estratégico! 🏁</h3>
+                  <p className="text-xs font-bold text-slate-650 dark:text-slate-300 leading-relaxed">
+                    Usaste tus turnos gratuitos por hoy. No dejes que tu web pierda velocidad. Pasate a Premium para obtener misiones ilimitadas, tomar el control de tu SEO y superar a tu competencia.
                   </p>
                 </div>
                 <button
@@ -668,7 +665,7 @@ export default function BuscadorDeOro() {
                   }}
                   className="w-full btn-3d bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white text-base font-black py-3.5 flex items-center justify-center gap-2"
                 >
-                  🚀 Desbloquear Premium
+                  Desbloquear Premium
                 </button>
               </div>
             ) : (
@@ -757,6 +754,52 @@ export default function BuscadorDeOro() {
         </div>
 
       </div>
+
+      {/* Premium Limit Modal */}
+      {showPremiumModal && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-200 dark:border-slate-700 shadow-2xl p-6 md:p-8 max-w-md w-full relative space-y-6 text-center animate-in zoom-in-95 duration-300">
+            <button
+              onClick={() => {
+                playClick();
+                setShowPremiumModal(false);
+              }}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-650 dark:hover:text-white text-xl font-bold transition-colors"
+            >
+              ✕
+            </button>
+            <div className="text-6xl animate-bounce">🏁</div>
+            <div className="space-y-3">
+              <h2 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100 leading-tight">
+                ¡Excelente trabajo estratégico! 🏁
+              </h2>
+              <p className="text-base font-bold text-slate-600 dark:text-slate-300 leading-relaxed">
+                Usaste tus turnos gratuitos por hoy. No dejes que tu web pierda velocidad. Pasate a Premium para obtener misiones ilimitadas, tomar el control de tu SEO y superar a tu competencia.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={() => {
+                  playClick();
+                  alert("🚀 Próximamente disponible. ¡Gracias por tu interés en el Plan Premium!");
+                }}
+                className="w-full btn-3d bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white text-lg font-black py-4 flex items-center justify-center gap-2 shadow-lg hover:shadow-amber-500/20"
+              >
+                Desbloquear Premium
+              </button>
+              <button
+                onClick={() => {
+                  playClick();
+                  setShowPremiumModal(false);
+                }}
+                className="text-slate-550 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-bold transition-colors py-2 text-sm uppercase tracking-wider"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 
