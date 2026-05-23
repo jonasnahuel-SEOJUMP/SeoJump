@@ -295,7 +295,7 @@ export default function BuscadorDeOro() {
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 md:p-8 overflow-y-auto animate-in slide-in-from-bottom duration-500 w-full max-w-7xl mx-auto space-y-8 bg-[#f7f7f7] dark:bg-slate-900 transition-colors duration-300 text-slate-800 dark:text-slate-100 min-h-screen relative">
+    <div className="flex-1 flex flex-col items-center p-4 md:p-6 overflow-y-auto animate-in slide-in-from-bottom duration-500 w-full max-w-5xl mx-auto space-y-8 bg-[#f7f7f7] dark:bg-slate-900 transition-colors duration-300 text-slate-800 dark:text-slate-100 min-h-screen relative">
       
       {/* Confetti Effect */}
       {showConfetti && (
@@ -362,14 +362,14 @@ export default function BuscadorDeOro() {
             <div className="flex-1 btn-3d bg-yellow-50 text-duo-yellow font-black text-center py-5 px-6 text-lg lg:text-xl border-2 border-duo-yellow border-b-4 cursor-default">
               🔍 Fase 1: Búsqueda
             </div>
-            <button onClick={() => { playClick(); router.push("/contenido"); }} className="flex-1 btn-3d btn-white text-slate-600 dark:text-slate-300 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+            <button onClick={() => { playClick(); router.push("/contenido"); }} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
               ✍️ Fase 2: Contenido
             </button>
-            <button onClick={() => { playClick(); router.push("/optimizacion"); }} className="flex-1 btn-3d btn-white text-slate-600 dark:text-slate-300 hover:text-slate-800 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+            <button onClick={() => { playClick(); router.push("/optimizacion"); }} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-slate-800 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
               🛠️ Fase 3: Optimización
             </button>
             {xp >= 500 ? (
-              <button onClick={() => { playClick(); router.push("/detective-de-enlaces"); }} className="flex-1 btn-3d btn-white text-slate-600 dark:text-slate-300 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+              <button onClick={() => { playClick(); router.push("/detective-de-enlaces"); }} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
                 🕵️‍♂️ Fase 4: Indexación
               </button>
             ) : (
@@ -380,216 +380,79 @@ export default function BuscadorDeOro() {
          </nav>
       </header>
 
-      {/* Main Content: Layout de Dos Columnas */}
+      {/* Header y Tipografía Centrados Arriba */}
+      <div className="text-center space-y-2 py-4">
+        <div className="text-4xl md:text-5xl">🦉</div>
+        <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
+          ¡Atención, Jugador!
+        </h1>
+        <p className="text-base md:text-lg font-bold text-slate-600 dark:text-slate-400">
+          Fase 1: Buscador de Oro 👑
+        </p>
+      </div>
+
+      {/* Main Content: Layout de Dos Columnas con Grid Responsivo */}
       <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-0">
         
-        {/* CABINA DE CONTROL (Columna Izquierda) */}
-        <div className="lg:col-span-5 w-full flex flex-col gap-6 lg:sticky lg:top-48">
-           <div className="text-center md:text-left space-y-4">
-             <h1 className="text-4xl lg:text-5xl font-black text-duo-yellow">Fase 1: Buscador de Oro 👑</h1>
-             <p className="text-xl lg:text-2xl font-bold text-slate-600 dark:text-slate-400">
-               Descubrí qué busca la gente realmente y capturá clientes convirtiendo esas búsquedas en texto para tu web.
-             </p>
-           </div>
-           
-           {/* Contador de fichas — solo visible para usuarios no-VIP */}
-           {!isVip() ? (
-             <div className="flex items-center justify-between bg-slate-800/60 border border-slate-700/50 rounded-xl px-4 py-2.5">
-               <span className="text-sm font-black text-slate-400 uppercase tracking-wider">Fichas de hoy</span>
-               <div className="flex items-center gap-2">
-                 {[...Array(DAILY_LIMIT)].map((_, i) => (
-                   <div
-                     key={i}
-                     className={`w-6 h-6 rounded-full border-2 transition-all ${
-                       i < dailyCredits
-                         ? "bg-amber-500 border-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]"
-                         : "bg-slate-700 border-slate-600"
-                     }`}
-                   />
-                 ))}
-                 <span className={`text-sm font-black ml-1 ${
-                   dailyCredits >= DAILY_LIMIT ? "text-red-400" : "text-amber-400"
-                 }`}>
-                   {dailyCredits}/{DAILY_LIMIT}
-                 </span>
-               </div>
-             </div>
-           ) : (
-             <div className="flex items-center justify-between bg-green-900/30 border border-green-700/40 rounded-xl px-4 py-2.5">
-               <span className="text-sm font-black text-green-400 uppercase tracking-wider">🔑 Modo Admin — Ilimitado</span>
-               <span className="text-sm font-black text-green-300">∞ fichas</span>
-             </div>
-           )}
+        {/* Columna Izquierda (Resultados y Consejos) - lg:col-span-8 */}
+        <div className="lg:col-span-8 w-full flex flex-col gap-6">
+          
+          {/* ── Consejo del Búho — Tutor de SEO Premium ── */}
+          <div className="relative rounded-2xl overflow-hidden border border-amber-500/30 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-[0_0_30px_rgba(251,191,36,0.08)] mb-2">
+            {/* Glow decorativo */}
+            <div className="absolute top-0 left-0 w-40 h-40 bg-amber-400 opacity-5 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute bottom-0 right-0 w-32 h-32 bg-orange-500 opacity-5 rounded-full blur-2xl pointer-events-none" />
 
-           {/* Search Form */}
-           {!isVip() && dailyCredits >= DAILY_LIMIT ? (
-             /* ── CARTEL DE BOXES BLOQUEADO ── */
-             <div className="w-full space-y-5 animate-in fade-in duration-300">
-               <div className="bg-slate-900 rounded-3xl border-2 border-amber-700/50 shadow-2xl overflow-hidden relative">
-                 <div className="absolute top-0 right-0 w-48 h-48 bg-amber-500 opacity-5 rounded-full blur-3xl pointer-events-none" />
-                 <div className="absolute bottom-0 left-0 w-32 h-32 bg-red-500 opacity-5 rounded-full blur-3xl pointer-events-none" />
-                 <div className="relative z-10 p-7 flex flex-col items-center text-center gap-5">
-                   <div className="text-7xl animate-bounce">🦉</div>
-                   <div className="space-y-2">
-                     <h3 className="text-2xl md:text-3xl font-black text-amber-400">¡Frená en boxes, campeón!</h3>
-                     <p className="text-base md:text-lg font-bold text-slate-300 leading-relaxed">
-                       Ya usaste tus <span className="text-white font-black">2 fichas gratuitas</span> de hoy. El tanque se vuelve a llenar automáticamente en{" "}
-                       <span className="text-amber-400 font-black">24 horas</span>.
-                     </p>
-                     <p className="text-sm font-bold text-slate-400 pt-1">
-                       Si querés mapear y optimizar todo el stock de tu negocio ahora mismo sin esperar, pasá al Plan Premium Ilimitado.
-                     </p>
-                   </div>
-                   <button
-                     onClick={() => {
-                       playClick();
-                       alert("🚀 Próximamente disponible. ¡Gracias por tu interés en el Plan Premium!");
-                     }}
-                     className="w-full btn-3d bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-400 active:border-b-0 active:translate-y-1 text-white text-xl md:text-2xl font-black py-5 flex items-center justify-center gap-3"
-                   >
-                     🚀 Desbloquear Modo Ilimitado (Mercado Pago)
-                   </button>
-                   <p className="text-xs font-bold text-slate-500">
-                     🔒 Próximamente disponible · Beta Gratuita activa
-                   </p>
-                 </div>
-               </div>
-             </div>
-           ) : (
-             <form onSubmit={handleSearch} className="w-full space-y-4">
-                <input
-                  type="text"
-                  value={query}
-                  onChange={(e) => setQuery(e.target.value)}
-                  placeholder="Ej: limpieza de tapizados, tratamiento acrílico..."
-                  className="w-full p-5 text-xl md:text-2xl border-2 border-slate-200 dark:border-slate-600 rounded-xl focus:border-duo-yellow outline-none font-black text-slate-800 dark:text-slate-100 dark:bg-slate-800"
-                />
+            {/* Pill de badge superior */}
+            <div className="relative z-10 px-5 pt-5 pb-1 flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-black uppercase tracking-widest rounded-full px-3 py-1">
+                <span className="text-sm">🦉</span> Consejo Premium
+              </span>
+            </div>
 
-                {/* ── Filtro Dinámico de Exclusión ── */}
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                    <span className="text-lg select-none">🚫</span>
-                  </div>
-                  <input
-                    type="text"
-                    value={excludedWords}
-                    onChange={(e) => setExcludedWords(e.target.value)}
-                    placeholder="Marcas o palabras a excluir (ej: full car, mercadolibre)"
-                    className="w-full pl-11 pr-4 py-3.5 text-base md:text-lg border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl focus:border-red-400 focus:border-solid outline-none font-bold text-slate-600 dark:text-slate-300 dark:bg-slate-800 placeholder:text-slate-400 dark:placeholder:text-slate-500 transition-all"
-                  />
-                </div>
+            {/* Cuerpo del callout */}
+            <div className="relative z-10 px-5 pb-5 pt-3 flex gap-4 items-start">
+              {/* Búho */}
+              <div className="hidden sm:flex flex-shrink-0 w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 items-center justify-center text-3xl">
+                🦉
+              </div>
 
-                <button
-                  type="submit"
-                  disabled={loading || !query.trim()}
-                  className={`btn-3d w-full text-2xl py-5 font-black ${loading || !query.trim() ? "btn-white text-slate-400" : "bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-400 active:border-b-0 active:translate-y-1 text-white"}`}
-                >
-                  {loading ? "BUSCANDO..." : `DETECTAR OPORTUNIDAD (${DAILY_LIMIT - dailyCredits} ficha${DAILY_LIMIT - dailyCredits === 1 ? "" : "s"} restante${DAILY_LIMIT - dailyCredits === 1 ? "" : "s"})`}
-                </button>
-              </form>
-           )}
+              {/* Texto */}
+              <div className="flex-1 min-w-0">
+                <p className="text-amber-300 font-black text-base md:text-lg mb-3 leading-snug">
+                  ¡Atención! Para que Google y mi radar detecten tu palabra clave, debe estar en lugares estratégicos.
+                </p>
+                <p className="text-slate-400 text-sm font-bold mb-3">
+                  Asegurate de incluirla en estos <span className="text-white font-black">4 puntos calientes</span> de tu web:
+                </p>
+                <ol className="space-y-2">
+                  {[
+                    { num: "1️⃣", label: "La URL / Slug", example: "ej: /apc-detailing" },
+                    { num: "2️⃣", label: "El Título Principal (H1)", example: "de la página" },
+                    { num: "3️⃣", label: "El primer párrafo del texto", example: "de forma natural" },
+                    { num: "4️⃣", label: "El Meta Título y Meta Descripción", example: "" },
+                  ].map(({ num, label, example }) => (
+                    <li key={num} className="flex items-start gap-2.5">
+                      <span className="text-base flex-shrink-0 leading-snug">{num}</span>
+                      <span className="text-slate-200 font-bold text-sm md:text-base leading-snug">
+                        {label}
+                        {example && (
+                          <span className="text-slate-500 font-medium ml-1.5">({example})</span>
+                        )}
+                      </span>
+                    </li>
+                  ))}
+                </ol>
+              </div>
+            </div>
+          </div>
 
-           {/* Módulo Educativo ("Explicación del Búho") */}
-            {(() => {
-              const allCompleted = suggestions.length > 0 && suggestions.every(sug => completedSuggestions.has(`gold-${sug.text}`));
-              return (
-                <div className="w-full">
-                  <button 
-                    onClick={() => { playClick(); setShowOwl(!showOwl); }} 
-                    className={`w-full flex items-center justify-between p-5 rounded-2xl border-2 font-black transition-all ${showOwl ? 'bg-slate-800 border-slate-600 text-white text-xl md:text-2xl' : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 text-xl md:text-2xl'}`}
-                  >
-                    <span className="flex items-center gap-4">
-                      <span className="text-4xl">🦉</span> 
-                      {allCompleted ? "¡Mensaje Especial del Búho! 🦉" : "Explicación del Búho"}
-                    </span>
-                    <span className="text-3xl">{showOwl ? '−' : '+'}</span>
-                  </button>
-                  
-                  <div className={`overflow-hidden transition-all duration-300 ease-in-out mt-2 ${showOwl ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-                    <div className="bg-slate-900 p-6 rounded-2xl border-2 border-slate-700 shadow-xl flex gap-4 items-start relative">
-                       <div className="text-6xl md:text-7xl animate-bounce flex-shrink-0 drop-shadow-lg z-10">🦉</div>
-                       <div className="flex-1">
-                          <div className="bg-slate-800 text-slate-200 p-6 rounded-2xl rounded-tl-none font-bold text-base md:text-lg lg:text-xl leading-relaxed shadow-lg border border-slate-600 relative">
-                             {allCompleted ? (
-                               <p>
-                                 <strong className="text-yellow-450">¡Felicidades, buscador de oro! 🎉</strong> Has conquistado todas las misiones para la palabra clave actual. ¡Espectacular trabajo! Pero recordá: el SEO nunca se termina. Te invito a ingresar una <strong className="text-duo-yellow">NUEVA palabra clave</strong> en el panel de la izquierda para abrir otra veta de oro y reiniciar el tablero de misiones.
-                               </p>
-                             ) : (
-                               <p>El <strong className="text-duo-yellow">Buscador de Oro</strong> no analiza errores técnicos, escarba la mente de tu cliente real. Acá te mostramos qué palabras escribe la gente en Google en este milisegundo para comprar lo que vos vendés. Si creás una página o un producto para esa frase exacta, capturás la demanda antes que la competencia.</p>
-                             )}
-                             <div className="absolute top-0 -left-2 w-0 h-0 border-t-[10px] border-t-slate-800 border-l-[10px] border-l-transparent"></div>
-                          </div>
-                       </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })()}
-           
-           {/* Error Message */}
-           {error && (
-             <p className="text-red-500 font-bold text-center mt-4">{error}</p>
-           )}
-        </div>
-
-        {/* TABLERO DE MINAS DE ORO (Columna Derecha) */}
-        <div className="lg:col-span-7 w-full flex flex-col gap-6">
           {/* Results as Actionable Missions */}
           {suggestions.length > 0 ? (
             <div className="w-full space-y-6 animate-in fade-in duration-300">
-              <h2 className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100 mb-6 flex items-center gap-3 justify-center md:justify-start">
-                <span className="text-4xl">🪙</span> Resultados de Oro
+              <h2 className="text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-3 justify-center md:justify-start">
+                <span className="text-3xl">🪙</span> Resultados de Oro
               </h2>
-
-              {/* ── Consejo del Búho — Tutor de SEO Premium ── */}
-              <div className="relative rounded-2xl overflow-hidden border border-amber-500/30 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-[0_0_30px_rgba(251,191,36,0.08)] mb-2">
-                {/* Glow decorativo */}
-                <div className="absolute top-0 left-0 w-40 h-40 bg-amber-400 opacity-5 rounded-full blur-3xl pointer-events-none" />
-                <div className="absolute bottom-0 right-0 w-32 h-32 bg-orange-500 opacity-5 rounded-full blur-2xl pointer-events-none" />
-
-                {/* Pill de badge superior */}
-                <div className="relative z-10 px-5 pt-5 pb-1 flex items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-black uppercase tracking-widest rounded-full px-3 py-1">
-                    <span className="text-sm">🦉</span> Consejo Premium
-                  </span>
-                </div>
-
-                {/* Cuerpo del callout */}
-                <div className="relative z-10 px-5 pb-5 pt-3 flex gap-4 items-start">
-                  {/* Búho */}
-                  <div className="hidden sm:flex flex-shrink-0 w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 items-center justify-center text-3xl">
-                    🦉
-                  </div>
-
-                  {/* Texto */}
-                  <div className="flex-1 min-w-0">
-                    <p className="text-amber-300 font-black text-base md:text-lg mb-3 leading-snug">
-                      ¡Atención! Para que Google y mi radar detecten tu palabra clave, debe estar en lugares estratégicos.
-                    </p>
-                    <p className="text-slate-400 text-sm font-bold mb-3">
-                      Asegurate de incluirla en estos <span className="text-white font-black">4 puntos calientes</span> de tu web:
-                    </p>
-                    <ol className="space-y-2">
-                      {[
-                        { num: "1️⃣", label: "La URL / Slug", example: "ej: /apc-detailing" },
-                        { num: "2️⃣", label: "El Título Principal (H1)", example: "de la página" },
-                        { num: "3️⃣", label: "El primer párrafo del texto", example: "de forma natural" },
-                        { num: "4️⃣", label: "El Meta Título y Meta Descripción", example: "" },
-                      ].map(({ num, label, example }) => (
-                        <li key={num} className="flex items-start gap-2.5">
-                          <span className="text-base flex-shrink-0 leading-snug">{num}</span>
-                          <span className="text-slate-200 font-bold text-sm md:text-base leading-snug">
-                            {label}
-                            {example && (
-                              <span className="text-slate-500 font-medium ml-1.5">({example})</span>
-                            )}
-                          </span>
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                </div>
-              </div>
 
               {/* Todas descartadas — mensaje del Búho */}
               {suggestions.every((_, i) => discardedSuggestions.has(i)) ? (
@@ -612,8 +475,10 @@ export default function BuscadorDeOro() {
                   return (
                     <div
                       key={index}
-                      className={`card-3d bg-white dark:bg-slate-800 flex flex-col gap-4 p-6 md:p-8 transition-all duration-300 hover:shadow-lg relative ${
-                        isCompleted ? 'border-green-400 opacity-80 bg-green-50/50 dark:bg-green-900/10' : ''
+                      className={`card-3d flex flex-col gap-4 p-6 md:p-8 transition-all duration-300 hover:shadow-lg relative rounded-xl text-white ${
+                        isCompleted 
+                          ? 'bg-emerald-950/40 border-2 border-emerald-500/50 opacity-90' 
+                          : 'bg-slate-800 border-2 border-slate-700/50'
                       } ${
                         isDismissing ? 'opacity-0 scale-95 -translate-y-1' : 'opacity-100 scale-100'
                       }`}
@@ -623,7 +488,7 @@ export default function BuscadorDeOro() {
                         <button
                           onClick={() => handleDiscard(index)}
                           title="Descartar palabra clave"
-                          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all duration-200 text-lg font-black"
+                          className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-all duration-200 text-lg font-black"
                         >
                           ✕
                         </button>
@@ -631,48 +496,47 @@ export default function BuscadorDeOro() {
 
                       <div className="flex flex-wrap items-center gap-3 pr-8">
                         <span className="text-4xl">{isCompleted ? '✅' : '🎯'}</span>
-                        <h3 className={`text-2xl lg:text-3xl font-black ${isCompleted ? 'text-green-600 dark:text-green-400' : 'text-slate-800 dark:text-slate-100'}`}>
+                        <h3 className={`text-2xl lg:text-3xl font-black ${isCompleted ? 'text-green-400' : 'text-white'}`}>
                           {isCompleted ? '¡Misión Completada!' : 'Misión Oro'}
                         </h3>
-                        {/* ── Badge de Intención ── */}
+                        {/* ── Badges de Intención Carrito / Anotador ── */}
                         {!isCompleted && (
-                          <span className={`inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wide rounded-full px-3 py-1 border ${
+                          <span className={`inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider rounded-full px-3 py-1 border ${
                             isVenta
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/60'
-                              : 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-400 dark:border-violet-800/60'
+                              ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/35'
+                              : 'bg-violet-500/20 text-violet-300 border-violet-500/35'
                           }`}>
-                            {isVenta ? '🛒' : '📝'}
-                            {isVenta ? 'Producto / Servicio' : 'Blog / FAQ'}
+                            {isVenta ? '🛒 Carrito' : '📝 Anotador'}
                           </span>
                         )}
                       </div>
 
-                      <p className={`text-lg lg:text-xl font-bold ${isCompleted ? 'line-through text-slate-400' : 'text-slate-700 dark:text-slate-200'}`}>
-                        Tu web no menciona la frase exacta <strong className="text-duo-blue dark:text-cyan-400">"{sug.text}"</strong>.
+                      <p className={`text-lg lg:text-xl font-bold ${isCompleted ? 'line-through text-slate-450' : 'text-slate-200'}`}>
+                        Tu web no menciona la frase exacta <strong className="text-cyan-400 font-black">"${sug.text}"</strong>.
                       </p>
 
                       {isCompleted ? (
-                        <div className="mt-4 border-t-2 border-slate-100 dark:border-slate-700 pt-4">
+                        <div className="mt-2 border-t border-slate-700/50 pt-4">
                           <button
                             disabled
-                            className="w-full py-4 text-base md:text-lg lg:text-xl flex items-center justify-center gap-2 rounded-xl border border-green-250 bg-green-50 text-green-600 font-black dark:bg-green-950/20 dark:border-green-900/50 dark:text-green-400 cursor-not-allowed transition-all duration-200 shadow-sm"
+                            className="w-full py-4 text-base md:text-lg lg:text-xl flex items-center justify-center gap-2 rounded-xl border border-green-500/35 bg-green-950/20 text-green-400 font-black cursor-not-allowed transition-all duration-200 shadow-sm"
                           >
                             <span>✅ Misión Ganada (+20 XP)</span>
                           </button>
                         </div>
                       ) : (
                         <>
-                          <p className="text-base lg:text-lg font-bold text-slate-550 dark:text-slate-450 leading-relaxed">
+                          <p className="text-base lg:text-lg font-bold text-slate-300 leading-relaxed">
                             Agregála en un párrafo nuevo o en un subtítulo (H2) para capturar esos clientes que buscan exactamente esto en Google.
                           </p>
 
-                          <div className="mt-4 space-y-4 border-t-2 border-slate-100 dark:border-slate-700 pt-4">
-                            <label className="text-sm lg:text-base font-black text-slate-550 uppercase dark:text-slate-450 block">URL del artículo a verificar:</label>
+                          <div className="mt-2 space-y-4 border-t border-slate-700/50 pt-4">
+                            <label className="text-sm lg:text-base font-black text-slate-400 uppercase block">URL del artículo a verificar:</label>
                             <input
                               type="text"
                               defaultValue={siteUrl}
                               id={`url-input-${index}`}
-                              className="w-full p-4 text-base md:text-lg border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-indigo-500 outline-none font-bold text-slate-700 bg-gray-50 dark:bg-slate-900 dark:text-slate-200 transition-colors"
+                              className="w-full p-4 text-base md:text-lg border-2 border-slate-700 rounded-xl focus:border-cyan-500 outline-none font-bold text-white bg-slate-900 transition-colors placeholder:text-slate-500"
                               placeholder="Ej: https://miweb.com/blog/nota"
                             />
                             <button
@@ -683,8 +547,8 @@ export default function BuscadorDeOro() {
                               disabled={isVerifying}
                               className={`w-full py-4 text-base md:text-lg lg:text-xl flex items-center justify-center gap-2 rounded-xl border transition-all duration-200 shadow-sm font-black active:scale-[0.99] ${
                                 isVerifying
-                                  ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed dark:bg-slate-800 dark:border-slate-700 dark:text-slate-500'
-                                  : 'bg-slate-700 border-slate-800 text-white hover:bg-slate-600 hover:ring-2 hover:ring-slate-300 dark:bg-indigo-950/50 dark:border-indigo-800/80 dark:text-indigo-200 dark:hover:bg-indigo-900/60 dark:hover:text-white dark:hover:ring-2 dark:hover:ring-indigo-950'
+                                  ? 'bg-slate-700 border-slate-650 text-slate-500 cursor-not-allowed'
+                                  : 'bg-slate-655 border-slate-700 text-white hover:bg-slate-600 hover:ring-2 hover:ring-slate-500'
                               }`}
                             >
                               <span>{isVerifying ? '⏳ Escaneando web...' : '🔍 Verificar en mi Web'}</span>
@@ -699,24 +563,201 @@ export default function BuscadorDeOro() {
             </div>
           ) : (
              /* Empty State after search or initial state */
-             <div className="text-center py-16 px-6 card-3d bg-white/50 dark:bg-slate-800/50 border-dashed border-2 border-slate-200 dark:border-slate-700 shadow-none">
+             <div className="text-center py-16 px-6 card-3d bg-white/50 dark:bg-slate-800/50 border-dashed border-2 border-slate-200 dark:border-slate-700 shadow-none rounded-2xl">
                {!loading && query && !error ? (
                  <div className="space-y-4">
                    <div className="text-7xl opacity-50 mb-2">🌵</div>
-                   <p className="text-slate-500 font-black text-2xl">No encontramos oro para esta búsqueda.</p>
-                   <p className="text-slate-450 font-bold text-lg">¡Probá con otra palabra más general o un sinónimo!</p>
+                   <p className="text-slate-550 dark:text-slate-400 font-black text-2xl">No encontramos oro para esta búsqueda.</p>
+                   <p className="text-slate-455 dark:text-slate-500 font-bold text-lg">¡Probá con otra palabra más general o un sinónimo!</p>
                  </div>
                ) : (
                  <div className="space-y-4">
                    <div className="text-7xl opacity-50 mb-2 animate-pulse">⛏️</div>
-                   <p className="text-slate-500 font-black text-2xl">Esperando para escarbar...</p>
-                   <p className="text-slate-455 font-bold text-lg">Usá el panel izquierdo para buscar tu primera mina de oro.</p>
+                   <p className="text-slate-550 dark:text-slate-400 font-black text-2xl">Esperando para escarbar...</p>
+                   <p className="text-slate-455 dark:text-slate-500 font-bold text-lg">Usá el panel derecho para buscar tu primera mina de oro.</p>
                  </div>
                )}
              </div>
           )}
         </div>
+
+        {/* Columna Derecha / Sidebar (Estadísticas y Surtidor de Búsquedas) - lg:col-span-4 */}
+        <div className="lg:col-span-4 w-full flex flex-col gap-6 lg:sticky lg:top-48">
+          
+          {/* Panel Estadísticas del Jugador */}
+          <div className="card-3d bg-white dark:bg-slate-800 p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 shadow-sm flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-duo-yellow/10 border border-duo-yellow/20 flex items-center justify-center text-3xl">
+                🦉
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">Progreso del Jugador</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">¡Sumá XP completando misiones!</p>
+              </div>
+            </div>
+            
+            <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xl font-black text-duo-yellow">NIVEL ${Math.floor(xp / 100) + 1}</span>
+                <span className="text-sm font-bold text-slate-500 dark:text-slate-400">${xp % 100} / 100 XP</span>
+              </div>
+              <div className="w-full h-6 bg-gray-100 dark:bg-slate-900 rounded-full border-2 border-slate-200 dark:border-slate-700 overflow-hidden">
+                <div className="h-full bg-duo-yellow transition-all duration-1000" style={{ width: `${xp % 100}%` }}></div>
+              </div>
+            </div>
+          </div>
+
+          {/* Panel Surtidor de Búsquedas (Form & Créditos) */}
+          <div className="card-3d bg-white dark:bg-slate-800 p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 shadow-sm flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-3xl">
+                🪙
+              </div>
+              <div>
+                <h3 className="text-lg font-black text-slate-800 dark:text-slate-100">Surtidor de Búsquedas</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold">Encontrá palabras de oro</p>
+              </div>
+            </div>
+
+            {/* Contador de fichas diarias */}
+            {!isVip() ? (
+              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2">
+                <span className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-wider">Fichas de hoy</span>
+                <div className="flex items-center gap-1.5">
+                  {[...Array(DAILY_LIMIT)].map((_, i) => (
+                    <div
+                      key={i}
+                      className={`w-4 h-4 rounded-full border-2 transition-all ${
+                        i < dailyCredits
+                          ? "bg-amber-500 border-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]"
+                          : "bg-slate-200 border-slate-350 dark:bg-slate-700 dark:border-slate-600"
+                      }`}
+                    />
+                  ))}
+                  <span className={`text-xs font-black ml-1 ${
+                    dailyCredits >= DAILY_LIMIT ? "text-red-500 dark:text-red-400" : "text-amber-500 dark:text-amber-400"
+                  }`}>
+                    {dailyCredits}/{DAILY_LIMIT}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/40 rounded-xl px-3.5 py-2">
+                <span className="text-xs font-black text-green-700 dark:text-green-400 uppercase tracking-wider">🔑 Modo Admin</span>
+                <span className="text-xs font-black text-green-600 dark:text-green-300">∞ fichas</span>
+              </div>
+            )}
+
+            {/* Search Form / Bloqueo */}
+            {!isVip() && dailyCredits >= DAILY_LIMIT ? (
+              <div className="w-full space-y-4 animate-in fade-in duration-300 border-t border-slate-100 dark:border-slate-700 pt-3">
+                <div className="text-5xl text-center animate-bounce">🦉</div>
+                <div className="space-y-1.5 text-center">
+                  <h3 className="text-lg font-black text-amber-500 dark:text-amber-400">¡Frená en boxes, campeón!</h3>
+                  <p className="text-xs font-bold text-slate-600 dark:text-slate-300 leading-relaxed">
+                    Usaste tus ${DAILY_LIMIT} fichas gratuitas de hoy. Se recarga en 24h.
+                  </p>
+                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 leading-tight">
+                    ¿Querés optimizar todo tu negocio ahora? Pasá al Plan Premium.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    playClick();
+                    alert("🚀 Próximamente disponible. ¡Gracias por tu interés en el Plan Premium!");
+                  }}
+                  className="w-full btn-3d bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white text-base font-black py-3.5 flex items-center justify-center gap-2"
+                >
+                  🚀 Desbloquear Premium
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleSearch} className="w-full space-y-3 border-t border-slate-100 dark:border-slate-700 pt-3">
+                 <input
+                   type="text"
+                   value={query}
+                   onChange={(e) => setQuery(e.target.value)}
+                   placeholder="Ej: limpieza de tapizados..."
+                   className="w-full p-3 text-base border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-duo-yellow outline-none font-black text-slate-800 dark:text-slate-100 dark:bg-slate-900/50"
+                 />
+
+                 <div className="relative">
+                   <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
+                     <span className="text-sm select-none">🚫</span>
+                   </div>
+                   <input
+                     type="text"
+                     value={excludedWords}
+                     onChange={(e) => setExcludedWords(e.target.value)}
+                     placeholder="Excluir palabras (ej: full car, marcas)"
+                     className="w-full pl-9 pr-3 py-2.5 text-xs border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl focus:border-red-400 focus:border-solid outline-none font-bold text-slate-600 dark:text-slate-350 dark:bg-slate-900/50 placeholder:text-slate-400 transition-all"
+                   />
+                 </div>
+
+                 <button
+                   type="submit"
+                   disabled={loading || !query.trim()}
+                   className={`btn-3d w-full text-base py-3.5 font-black ${
+                     loading || !query.trim() 
+                       ? "btn-white text-slate-400 dark:bg-slate-900 dark:border-slate-800" 
+                       : "bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white"
+                   }`}
+                 >
+                   {loading ? "BUSCANDO..." : `BUSCAR OPORTUNIDAD`}
+                 </button>
+              </form>
+            )}
+          </div>
+
+          {/* Módulo Educativo ("Explicación del Búho") */}
+          {(() => {
+            const allCompleted = suggestions.length > 0 && suggestions.every(sug => completedSuggestions.has(`gold-${sug.text}`));
+            return (
+              <div className="w-full">
+                <button 
+                  onClick={() => { playClick(); setShowOwl(!showOwl); }} 
+                  className={`w-full flex items-center justify-between p-4 rounded-xl border-2 font-black transition-all ${
+                    showOwl 
+                      ? 'bg-slate-800 border-slate-700 text-white text-base' 
+                      : 'bg-white dark:bg-slate-800 border-duo-white-shadow dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-600 text-base'
+                  }`}
+                >
+                  <span className="flex items-center gap-3">
+                    <span className="text-2xl">🦉</span> 
+                    {allCompleted ? "¡Mensaje del Búho!" : "Explicación del Búho"}
+                  </span>
+                  <span className="text-xl">{showOwl ? '−' : '+'}</span>
+                </button>
+                
+                <div className={`overflow-hidden transition-all duration-300 ease-in-out mt-2 ${showOwl ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 shadow-xl flex gap-3 items-start relative">
+                     <div className="text-4xl animate-bounce flex-shrink-0 drop-shadow-lg z-10">🦉</div>
+                     <div className="flex-1">
+                        <div className="bg-slate-800 text-slate-200 p-4 rounded-xl rounded-tl-none font-bold text-xs leading-relaxed shadow-lg border border-slate-700 relative">
+                           {allCompleted ? (
+                             <p>
+                               <strong className="text-yellow-400">¡Felicidades, buscador! 🎉</strong> Has conquistado todas las misiones. Ingresá una <strong className="text-duo-yellow">NUEVA palabra clave</strong> en el panel de arriba para abrir otra veta de oro.
+                             </p>
+                           ) : (
+                             <p>El <strong className="text-duo-yellow">Buscador de Oro</strong> te muestra qué palabras escribe la gente en Google en este milisegundo. Si las agregás a tu web, capturás la demanda antes que la competencia.</p>
+                           )}
+                           <div className="absolute top-0 -left-2 w-0 h-0 border-t-[10px] border-t-slate-800 border-l-[10px] border-l-transparent"></div>
+                        </div>
+                     </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+          
+          {/* Error Message */}
+          {error && (
+            <p className="text-red-500 font-bold text-center mt-2 text-sm">{error}</p>
+          )}
+        </div>
+
       </div>
     </div>
   );
+
 }
