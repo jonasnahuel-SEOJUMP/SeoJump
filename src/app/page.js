@@ -221,7 +221,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`min-h-screen bg-[#f7f7f7] dark:bg-slate-900 flex flex-col items-center p-8 font-fredoka relative overflow-hidden transition-colors duration-300 text-slate-800 dark:text-slate-100 ${step > 1 && step < 6 ? 'justify-center' : ''}`}>
+    <div className={`min-h-screen bg-[#f7f7f7] dark:bg-slate-900 flex flex-col items-center p-8 font-fredoka relative overflow-hidden transition-colors duration-300 text-slate-800 dark:text-slate-100 ${step > 1 && step < 6 ? 'justify-center' : ''} ${step < 6 ? 'max-w-lg mx-auto w-full border-x dark:border-slate-800 shadow-2xl' : ''}`}>
       
       {/* Confetti Effect */}
       {showConfetti && (
@@ -256,7 +256,7 @@ export default function Home() {
         )}
 
         {step === 1 && !showIntroModal && (
-          <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center animate-in fade-in zoom-in duration-500">
+          <div className="w-full flex flex-col gap-12 items-center animate-in fade-in zoom-in duration-500">
             
             {/* COLUMNA IZQUIERDA: Marketing y Valor */}
             <div className="space-y-10 text-left bg-slate-900 p-8 md:p-12 rounded-3xl border-2 border-slate-700 shadow-2xl relative overflow-hidden">
