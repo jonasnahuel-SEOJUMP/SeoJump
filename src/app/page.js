@@ -256,10 +256,10 @@ export default function Home() {
         )}
 
         {step === 1 && !showIntroModal && (
-          <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center animate-in fade-in zoom-in duration-500">
+          <div className="w-full max-w-xl md:max-w-3xl mx-auto px-4 py-8 flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-500">
             
-            {/* COLUMNA IZQUIERDA: Marketing y Valor */}
-            <div className="space-y-10 text-left bg-slate-900 p-8 md:p-12 rounded-3xl border-2 border-slate-700 shadow-2xl relative overflow-hidden">
+            {/* Marketing y Valor (antes COLUMNA IZQUIERDA) */}
+            <div className="w-full space-y-10 text-left bg-slate-900 p-8 md:p-12 rounded-3xl border-2 border-slate-700 shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 w-64 h-64 bg-duo-green opacity-10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
               <div className="absolute bottom-0 left-0 w-48 h-48 bg-yellow-500 opacity-5 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
 
@@ -303,8 +303,8 @@ export default function Home() {
               </div>
             </div>
 
-            {/* COLUMNA DERECHA: Acción */}
-            <div className="flex flex-col items-center justify-center space-y-8 p-4 md:p-8">
+            {/* Acción (antes COLUMNA DERECHA) */}
+            <div className="w-full flex flex-col items-center justify-center space-y-8 p-4">
               <div className="w-full max-w-sm text-center space-y-6">
                 <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-4">
                   ¿Listo para despegar?
@@ -326,9 +326,9 @@ export default function Home() {
                   </p>
                 </div>
 
-                <div className="pt-6">
+                <div className="pt-6 w-full flex justify-center">
                   {session ? (
-                    <div className="flex flex-col items-center gap-4">
+                    <div className="flex flex-col items-center gap-4 w-full">
                       <div className="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 px-6 py-3 w-full rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-sm">
                         {session.user?.image ? (
                           <img src={session.user.image} alt="User" className="w-8 h-8 rounded-full border border-slate-200" />
