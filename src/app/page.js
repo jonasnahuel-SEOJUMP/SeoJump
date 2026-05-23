@@ -221,7 +221,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`min-h-screen bg-[#f7f7f7] dark:bg-slate-900 flex flex-col items-center p-8 font-fredoka relative overflow-hidden transition-colors duration-300 text-slate-800 dark:text-slate-100 ${step > 1 && step < 6 ? 'justify-center' : ''} ${step < 6 ? 'max-w-lg md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto w-full border-x dark:border-slate-800 shadow-2xl' : ''}`}>
+    <div className={`min-h-screen bg-[#f7f7f7] dark:bg-slate-900 flex flex-col items-center p-8 font-fredoka relative overflow-hidden transition-colors duration-300 text-slate-800 dark:text-slate-100 ${step > 1 && step < 6 ? 'justify-center' : ''} ${step < 6 ? 'max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto w-full border-x dark:border-slate-800 shadow-2xl' : ''}`}>
       
       {/* Confetti Effect */}
       {showConfetti && (
@@ -360,19 +360,19 @@ export default function Home() {
         )}
 
         {step === 1 && showIntroModal && (
-          <div className="w-full text-center space-y-8 animate-in zoom-in duration-500">
+          <div className="w-full max-w-xl mx-auto text-center space-y-8 animate-in zoom-in duration-500">
              <div className="text-8xl animate-bounce">🦉</div>
-             <h2 className="text-4xl md:text-5xl font-extrabold text-yellow-400 tracking-tight drop-shadow-md">
+             <h2 className="text-2xl md:text-3xl font-extrabold text-yellow-400 tracking-tight drop-shadow-md">
                ¡Atención, Jugador!
              </h2>
-             <div className="bg-slate-900 text-white p-8 rounded-3xl border-2 border-slate-700 shadow-xl relative text-left max-w-3xl mx-auto">
-               <p className="text-lg md:text-xl font-bold leading-relaxed mb-5">
+             <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl border-2 border-slate-700 shadow-xl relative text-left w-full mx-auto">
+               <p className="text-base md:text-lg font-bold leading-relaxed mb-5">
                  Antes de arrancar, tenés que saber una <span className="text-yellow-400 font-black">regla de oro</span>: este juego tiene <span className="text-cyan-400 font-black">consecuencias en tu vida real</span>.
                </p>
-               <p className="text-lg md:text-xl font-bold leading-relaxed mb-5">
+               <p className="text-base md:text-lg font-bold leading-relaxed mb-5">
                  Cada H1, Meta o texto ALT que optimices acá viaja directo a <span className="text-green-400 font-black">Google</span>. Sumar XP en SEOJUMP significa que clientes reales van a encontrar tu negocio en su celular.
                </p>
-               <p className="text-xl md:text-2xl font-bold text-white text-center pt-2">
+               <p className="text-lg md:text-xl font-bold text-white text-center pt-2">
                  ¿Listo para <span className="text-green-400 font-black">vender más</span>?
                </p>
                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-0 h-0 border-b-[16px] border-b-slate-900 border-x-[12px] border-x-transparent"></div>
@@ -383,7 +383,7 @@ export default function Home() {
                  setShowIntroModal(false);
                  nextStep();
                }}
-               className="btn-3d btn-green text-xl w-full py-4 mt-8"
+               className="btn-3d btn-green text-lg w-full py-3.5 mt-8"
              >
                ¡ENTENDIDO, VAMOS A JUGAR!
              </button>
@@ -408,19 +408,19 @@ export default function Home() {
               </div>
             </nav>
 
-            <h2 className="text-3xl font-black text-slate-800 text-center">
+            <h2 className="text-xl md:text-2xl font-black text-slate-800 text-center">
               ¿Cuál es tu sitio web?
             </h2>
-             <div className="card-3d bg-white">
+             <div className="card-3d bg-white w-full max-w-md mx-auto">
                <input 
                  type="text" 
                  placeholder="ej: miweb.com"
                  value={url}
                  onChange={(e) => setUrl(e.target.value)}
-                 className="w-full p-3 md:p-4 text-3xl md:text-4xl border-2 border-slate-200 rounded-xl focus:border-duo-blue outline-none transition-colors font-black text-slate-750 placeholder-slate-400 dark:bg-slate-800 dark:border-slate-700"
+                 className="w-full p-3 md:p-4 text-lg md:text-xl border-2 border-slate-200 rounded-xl focus:border-duo-blue outline-none transition-colors font-black text-slate-750 placeholder-slate-400 dark:bg-slate-800 dark:border-slate-700"
                />
              </div>
-             <div className="grid grid-cols-1 gap-4">
+             <div className="grid grid-cols-1 gap-4 w-full max-w-md mx-auto">
                <button 
                  onClick={() => { 
                    playClick(); 
@@ -428,7 +428,7 @@ export default function Home() {
                    nextStep(); 
                  }} 
                  disabled={!url.trim()}
-                 className={`btn-3d btn-blue text-3xl md:text-4xl py-4 md:py-5 font-black tracking-wide ${!url.trim() ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                 className={`btn-3d btn-blue text-lg md:text-xl py-3.5 md:py-4 font-black tracking-wide ${!url.trim() ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                >
                  CONTINUAR
                </button>
@@ -456,8 +456,8 @@ export default function Home() {
         )}
 
         {step === 3 && (
-          <div className="w-full space-y-6 animate-in slide-in-from-right duration-300">
-            <h2 className="text-3xl font-black text-slate-800 text-center">
+          <div className="w-full max-w-md mx-auto space-y-6 animate-in slide-in-from-right duration-300">
+            <h2 className="text-xl md:text-2xl font-black text-slate-800 text-center">
               ¿Cuál es tu objetivo?
             </h2>
             <div className="space-y-3">
@@ -469,7 +469,7 @@ export default function Home() {
                 <button 
                   key={option.id}
                   onClick={() => { playClick(); setGoal(option.id); }}
-                  className={`btn-3d w-full text-3xl md:text-4xl py-3 md:py-4 px-6 font-black ${goal === option.id ? `${option.color} text-white` : 'btn-white text-slate-650 dark:text-slate-200 dark:bg-slate-800 dark:border-slate-700'}`}
+                  className={`btn-3d w-full text-lg md:text-xl py-3 px-6 font-black ${goal === option.id ? `${option.color} text-white` : 'btn-white text-slate-650 dark:text-slate-200 dark:bg-slate-800 dark:border-slate-700'}`}
                 >
                   {option.label}
                 </button>
@@ -479,11 +479,11 @@ export default function Home() {
               <button 
                 onClick={() => { playClick(); handleAnalyze(); }} 
                 disabled={!goal}
-                className={`btn-3d btn-green text-3xl md:text-4xl py-4 md:py-5 font-black tracking-wide ${!goal ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                className={`btn-3d btn-green text-lg md:text-xl py-3.5 md:py-4 font-black tracking-wide ${!goal ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
               >
                 {session ? "ANALIZAR SITIO" : "CONECTAR Y ANALIZAR"}
               </button>
-              <button onClick={() => { playClick(); prevStep(); }} className="btn-3d btn-white text-2xl md:text-3xl py-3.5 md:py-4 font-extrabold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
+              <button onClick={() => { playClick(); prevStep(); }} className="btn-3d btn-white text-base md:text-lg py-2.5 md:py-3 font-extrabold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
                 VOLVER
               </button>
             </div>
@@ -502,11 +502,11 @@ export default function Home() {
                 🏎️
               </div>
             </div>
-            <div className="space-y-4">
-              <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100">
+            <div className="space-y-4 max-w-md mx-auto w-full">
+              <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-slate-100">
                 🦉 Conectando con los servidores del sitio web...
               </h2>
-              <p className="text-xl font-bold text-duo-blue animate-pulse">
+              <p className="text-lg font-bold text-duo-blue animate-pulse">
                 {scanMessage}
               </p>
               <div className="w-full h-6 bg-gray-200 rounded-full border-2 border-slate-200 overflow-hidden">
@@ -523,14 +523,14 @@ export default function Home() {
         )}
 
         {step === 5 && (
-          <div className="w-full text-center space-y-8 animate-in fade-in duration-500">
+          <div className="w-full max-w-md mx-auto text-center space-y-8 animate-in fade-in duration-500">
              <div className="text-8xl">✨</div>
-             <h2 className="text-4xl font-black text-duo-green">¡Todo listo!</h2>
+             <h2 className="text-2xl md:text-3xl font-black text-duo-green">¡Todo listo!</h2>
              <div className="card-3d text-left">
-                <p className="text-xl font-bold text-slate-800 mb-4">
+                <p className="text-lg md:text-xl font-bold text-slate-800 mb-4">
                   Hemos analizado <span className="text-duo-blue">{url}</span>.
                 </p>
-                <p className="text-slate-600 font-bold italic">
+                <p className="text-slate-600 font-bold italic text-base">
                   "Tu sitio tiene potencial, pero faltan algunos detalles técnicos para llegar a la cima."
                 </p>
              </div>
@@ -543,7 +543,7 @@ export default function Home() {
                      router.push("/buscador-de-oro");
                    }
                  }} 
-                 className="btn-3d btn-green text-3xl md:text-4xl py-4 md:py-5 font-black tracking-wide w-full"
+                 className="btn-3d btn-green text-lg md:text-xl py-3.5 md:py-4 font-black tracking-wide w-full"
                >
                 {session ? "VER MI DASHBOARD" : "CONECTAR PARA CONTINUAR"}
              </button>
