@@ -63,36 +63,36 @@ export default async function BlogPost({ params }) {
       </header>
 
       {/* Main Post Article */}
-      <article className="w-full bg-white dark:bg-slate-850 p-6 md:p-10 rounded-3xl border-2 border-duo-white-shadow dark:border-slate-700/80 shadow-sm space-y-6">
+      <article className="w-full bg-slate-800 border-2 border-slate-700/80 p-6 md:p-10 rounded-3xl text-white shadow-sm space-y-6">
         
         {/* Post Metadata Header */}
-        <header className="space-y-4 border-b-2 border-slate-100 dark:border-slate-800 pb-6">
-          <div className="flex items-center gap-3 text-xs md:text-sm font-bold text-slate-450 dark:text-slate-500">
+        <header className="space-y-4 border-b border-slate-700 pb-6">
+          <div className="flex items-center gap-3 text-xs md:text-sm font-bold text-slate-400">
             <time dateTime={post.date}>{post.date}</time>
             <span>•</span>
             <span>Por {post.author}</span>
           </div>
           
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 dark:text-white leading-tight tracking-tight">
+          <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white leading-tight tracking-tight">
             {post.title}
           </h1>
           
-          <p className="text-lg md:text-xl font-bold text-slate-500 dark:text-slate-350 leading-relaxed italic">
+          <p className="text-lg md:text-xl font-bold text-slate-300 leading-relaxed italic">
             "{post.description}"
           </p>
         </header>
 
         {/* Rendered markdown content */}
         <section 
-          className="prose dark:prose-invert max-w-none space-y-4"
+          className="prose prose-invert max-w-none space-y-4"
           dangerouslySetInnerHTML={{ __html: htmlContent }}
         />
         
         {/* Post Footer Call to Action */}
-        <footer className="border-t-2 border-slate-100 dark:border-slate-800 pt-8 mt-10 text-center space-y-4">
+        <footer className="border-t border-slate-700 pt-8 mt-10 text-center space-y-4">
           <div className="text-4xl">🦉</div>
-          <h3 className="text-xl font-black text-slate-800 dark:text-white">¿Entendiste la lección, jugador?</h3>
-          <p className="text-sm md:text-base font-bold text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+          <h3 className="text-xl font-black text-white">¿Entendiste la lección, jugador?</h3>
+          <p className="text-sm md:text-base font-bold text-slate-400 max-w-md mx-auto leading-relaxed">
             Poné en práctica estos conocimientos en tu panel del buscador para detectar oportunidades reales y sumarle XP a tu web.
           </p>
           <div className="pt-4">

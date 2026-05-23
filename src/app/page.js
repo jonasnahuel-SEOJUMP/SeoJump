@@ -223,6 +223,22 @@ export default function Home() {
   return (
     <div className={`min-h-screen bg-[#f7f7f7] dark:bg-slate-900 flex flex-col items-center p-8 font-fredoka relative overflow-hidden transition-colors duration-300 text-slate-800 dark:text-slate-100 ${step > 1 && step < 6 ? 'justify-center' : ''} ${step < 6 ? 'max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto w-full border-x dark:border-slate-800 shadow-2xl' : ''}`}>
       
+      {/* Global Top Navbar for Landing Page */}
+      {step === 1 && (
+        <div className="w-full flex items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 mb-6">
+          <span className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
+            🦉 SEOJUMP
+          </span>
+          <Link
+            href="/blog"
+            onClick={playClick}
+            className="btn-3d btn-white hover:text-cyan-500 text-xs px-4 py-2 font-black uppercase tracking-wider transition-colors"
+          >
+            📖 Academia SEO
+          </Link>
+        </div>
+      )}
+
       {/* Confetti Effect */}
       {showConfetti && (
         <div className="absolute inset-0 pointer-events-none z-50">
@@ -620,6 +636,9 @@ export default function Home() {
                      🔒 Fase 4 (Nivel 6)
                    </div>
                  )}
+                 <Link href="/blog" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-300 hover:text-cyan-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+                   📖 Academia SEO
+                 </Link>
                </nav>
                <div className="text-center pt-2 lg:hidden">
                  <button onClick={() => { playClick(); signOut(); }} className="text-slate-500 text-xs font-bold hover:text-red-500 transition-colors">

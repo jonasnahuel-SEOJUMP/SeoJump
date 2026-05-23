@@ -46,24 +46,24 @@ export default function BlogIndex() {
           {posts.map((post) => (
             <article 
               key={post.slug}
-              className="card-3d bg-white dark:bg-slate-850 p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700/80 hover:shadow-lg transition-all duration-300 flex flex-col justify-between group"
+              className="card-3d bg-slate-800 border-2 border-slate-700/80 text-white p-6 rounded-2xl hover:shadow-lg transition-all duration-300 flex flex-col justify-between group"
             >
               <div className="space-y-4">
                 {/* Meta details */}
-                <div className="flex items-center justify-between text-xs font-bold text-slate-400 dark:text-slate-500">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-400">
                   <time dateTime={post.date}>{post.date}</time>
                   <span>⏱️ {post.readTime}</span>
                 </div>
 
                 {/* Title */}
-                <h2 className="text-xl md:text-2xl font-black text-slate-800 dark:text-white group-hover:text-duo-blue dark:group-hover:text-cyan-400 transition-colors leading-tight">
+                <h2 className="text-xl md:text-2xl font-black text-white group-hover:text-cyan-400 transition-colors leading-tight">
                   <Link href={`/blog/${post.slug}`}>
                     {post.title}
                   </Link>
                 </h2>
 
                 {/* Description */}
-                <p className="text-slate-600 dark:text-slate-300 font-semibold text-sm md:text-base leading-relaxed">
+                <p className="text-slate-350 font-semibold text-sm md:text-base leading-relaxed">
                   {post.description}
                 </p>
               </div>
@@ -81,10 +81,10 @@ export default function BlogIndex() {
           ))}
         </main>
       ) : (
-        <div className="text-center py-16 px-6 card-3d bg-white/50 dark:bg-slate-800/50 border-dashed border-2 border-slate-200 dark:border-slate-700 shadow-none rounded-2xl w-full">
+        <div className="text-center py-16 px-6 card-3d bg-slate-800/50 border-dashed border-2 border-slate-700 shadow-none rounded-2xl w-full">
           <div className="text-6xl mb-4">🌵</div>
-          <p className="text-slate-500 dark:text-slate-400 font-black text-xl">Aún no se han escrito artículos.</p>
-          <p className="text-slate-400 dark:text-slate-500 font-bold text-sm">Vuelve pronto para comenzar nuevas lecturas.</p>
+          <p className="text-white font-black text-xl">Aún no se han escrito artículos.</p>
+          <p className="text-slate-400 font-bold text-sm">Vuelve pronto para comenzar nuevas lecturas.</p>
         </div>
       )}
 
