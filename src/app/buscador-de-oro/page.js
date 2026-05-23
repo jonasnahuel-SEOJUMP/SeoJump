@@ -88,7 +88,13 @@ export default function BuscadorDeOro() {
   const [dismissingIndex, setDismissingIndex] = useState(null);
 
   // ── Helpers de créditos diarios ──────────────────────────────────────────
-  const getTodayStr = () => new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const getTodayStr = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
 
   const readCredits = () => {
     // VIPs siempre tienen créditos disponibles
