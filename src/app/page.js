@@ -221,7 +221,7 @@ export default function Home() {
   };
 
   return (
-    <div className={`min-h-screen bg-[#f7f7f7] dark:bg-slate-900 flex flex-col items-center p-8 font-fredoka relative overflow-hidden transition-colors duration-300 text-slate-800 dark:text-slate-100 ${step > 1 && step < 6 ? 'justify-center' : ''} ${step < 6 ? 'max-w-lg mx-auto w-full border-x dark:border-slate-800 shadow-2xl' : ''}`}>
+    <div className={`min-h-screen bg-[#f7f7f7] dark:bg-slate-900 flex flex-col items-center p-8 font-fredoka relative overflow-hidden transition-colors duration-300 text-slate-800 dark:text-slate-100 ${step > 1 && step < 6 ? 'justify-center' : ''} ${step < 6 ? 'max-w-lg md:max-w-3xl lg:max-w-4xl xl:max-w-5xl mx-auto w-full border-x dark:border-slate-800 shadow-2xl' : ''}`}>
       
       {/* Confetti Effect */}
       {showConfetti && (
@@ -256,7 +256,7 @@ export default function Home() {
         )}
 
         {step === 1 && !showIntroModal && (
-          <div className="w-full flex flex-col gap-12 items-center animate-in fade-in zoom-in duration-500">
+          <div className="w-full max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center animate-in fade-in zoom-in duration-500">
             
             {/* COLUMNA IZQUIERDA: Marketing y Valor */}
             <div className="space-y-10 text-left bg-slate-900 p-8 md:p-12 rounded-3xl border-2 border-slate-700 shadow-2xl relative overflow-hidden">
@@ -266,7 +266,7 @@ export default function Home() {
               {/* Título principal */}
               <div className="space-y-5">
                 <div className="text-6xl">🏆</div>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
+                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.1]">
                   Dejá de tirar plata en agencias.{" "}
                   <span className="text-duo-green">Tomá el control</span> de tu SEO{" "}
                   <span className="text-duo-yellow">jugando.</span>
@@ -282,21 +282,21 @@ export default function Home() {
                 <div className="flex items-start gap-5">
                   <div className="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-orange-500/30">🏎️</div>
                   <div>
-                    <h3 className="text-xl md:text-2xl font-black text-orange-400">Poné Primera en 10 Segundos</h3>
+                    <h3 className="text-lg md:text-xl font-black text-orange-400">Poné Primera en 10 Segundos</h3>
                     <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Clavá tu URL y nuestro motor escaneará tu chasis web al instante para encontrar tus palabras de oro.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-5">
                   <div className="w-14 h-14 bg-yellow-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-yellow-500/30">💰</div>
                   <div>
-                    <h3 className="text-xl md:text-2xl font-black text-yellow-400">Ahorrate cientos de miles de pesos al mes</h3>
+                    <h3 className="text-lg md:text-xl font-black text-yellow-400">Ahorrate cientos de miles de pesos al mes</h3>
                     <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Hacele el rulo a las agencias. Automatizá las auditorías de etiquetas, títulos y metas con misiones que completás jugando en tus ratos libres.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-5">
                   <div className="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-green-500/30">📈</div>
                   <div>
-                    <h3 className="text-xl md:text-2xl font-black text-green-400">Más Tráfico, Más Ventas</h3>
+                    <h3 className="text-lg md:text-xl font-black text-green-400">Más Tráfico, Más Ventas</h3>
                     <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Cada luz verde que encendés en el tablero es una optimización real que impacta en Google para traerte clientes con la billetera en la mano.</p>
                   </div>
                 </div>
@@ -313,7 +313,7 @@ export default function Home() {
                 <button 
                   onMouseEnter={() => playClick()} 
                   onClick={() => { playClick(); setShowIntroModal(true); }} 
-                  className="btn-3d btn-green text-2xl md:text-3xl px-8 py-5 w-full transform hover:scale-105 transition-all focus:ring-4 focus:ring-green-300/50"
+                  className="btn-3d btn-green text-xl md:text-2xl px-6 py-4 w-full transform hover:scale-105 transition-all focus:ring-4 focus:ring-green-300/50"
                 >
                   EMPEZAR A JUGAR
                 </button>
