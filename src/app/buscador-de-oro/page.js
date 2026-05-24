@@ -228,9 +228,13 @@ export default function BuscadorDeOro() {
           ? { text: purifyText(s), intent: 'venta' }
           : { text: purifyText(s.text || ''), intent: s.intent === 'atraccion' ? 'atraccion' : 'venta' }
       );
+      if (!purifiedSug || purifiedSug.length === 0) {
+        throw new Error("🏜️ No encontramos palabras clave con volumen de búsqueda para este término. Intentá con otro tema para no perder tu ficha.");
+      }
+
       setSuggestions(purifiedSug);
 
-      // Guardar en localStorage y consumir crédito solo si la búsqueda fue exitosa
+      // Guardar en localStorage y consumir crédito solo si la búsqueda fue exitosa y arrojó sugerencias
       localStorage.setItem("gold-tu-busqueda", query);
       localStorage.setItem("gold-suggestions", JSON.stringify(purifiedSug));
       const used = consumeCredit();
