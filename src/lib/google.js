@@ -72,7 +72,7 @@ async function querySearchConsole(accessToken, siteUrl, body) {
   return response;
 }
 
-export async function getSearchConsoleData(accessToken, siteUrl) {
+export async function getSearchConsoleData(accessToken, siteUrl, goldKeyword) {
   const endDate = new Date().toISOString().split('T')[0];
   const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -84,8 +84,25 @@ export async function getSearchConsoleData(accessToken, siteUrl) {
     rowLimit: 10,
   };
 
+  if (goldKeyword) {
+    body.dimensionFilterGroups = [
+      {
+        filters: [
+          {
+            dimension: 'query',
+            operator: 'contains',
+            expression: goldKeyword
+          }
+        ]
+      }
+    ];
+  }
+
   console.log('--- DEBUG SEARCH CONSOLE ---');
   console.log('Input URL:', siteUrl);
+  if (goldKeyword) {
+    console.log('Filter (query contains):', goldKeyword);
+  }
 
   try {
     const verifiedProperty = await getVerifiedSiteProperty(accessToken, siteUrl);

@@ -95,7 +95,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
       return { success: false, error: "No hay sesión activa o falta el token de acceso" }
     }
 
-    const rows = await getSearchConsoleData(session.accessToken, siteUrl)
+    const rows = await getSearchConsoleData(session.accessToken, siteUrl, goldKeyword)
 
     if (!rows || rows.length === 0) {
       return { success: true, data: [] }
