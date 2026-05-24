@@ -103,6 +103,8 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
 
     const missions = rows.map((row, index) => {
       const fullPageUrl = row.keys[0]
+      const rawKeyword = row.keys[1] || ""
+      const cleanKeyword = rawKeyword.replace(/^[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+/, '').trim()
       
       let pagePath = fullPageUrl
       try {
@@ -131,7 +133,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
       }
 
       // Rotate through mission types based on index
-      const MISSION_TYPES = buildMissionTypes(goldKeyword)
+      const MISSION_TYPES = buildMissionTypes(cleanKeyword || goldKeyword)
       const missionDef = MISSION_TYPES[index % MISSION_TYPES.length]
 
       return {
@@ -145,6 +147,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
         icon: missionDef.icon,
         color: missionDef.color,
         pistas: missionDef.pistas,
+        keyword: cleanKeyword || goldKeyword || "",
         // Real metrics from Search Console
         clicks: row.clicks,
         impressions: row.impressions,

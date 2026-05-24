@@ -79,8 +79,11 @@ export async function getSearchConsoleData(accessToken, siteUrl, goldKeyword) {
   const body = {
     startDate,
     endDate,
-    dimensions: ['page'],
-    orderBy: [{ fieldName: 'clicks', sortOrder: 'ASCENDING' }], // Worst performers first
+    dimensions: ['page', 'query'],
+    orderBy: [
+      { fieldName: 'clicks', sortOrder: 'descending' },
+      { fieldName: 'impressions', sortOrder: 'descending' }
+    ],
     rowLimit: 10,
   };
 

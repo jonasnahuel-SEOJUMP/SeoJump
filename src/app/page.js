@@ -191,7 +191,7 @@ export default function Home() {
     setMissionStatus("checking");
 
     try {
-      const result = await verifyMission(selectedMission.page, selectedMission.type, h1Value);
+      const result = await verifyMission(selectedMission.page, selectedMission.type, h1Value, selectedMission.keyword);
       setVerifyResult(result);
       if (result.success) {
         setMissionStatus("success");

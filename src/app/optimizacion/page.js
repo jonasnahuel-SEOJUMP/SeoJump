@@ -210,7 +210,7 @@ export default function Optimizacion() {
     setVerifyResult(null);
     setMissionStatus("checking");
     try {
-      const result = await verifyMission(selectedMission.page, selectedMission.type, h1Value, goldKeyword || undefined);
+      const result = await verifyMission(selectedMission.page, selectedMission.type, h1Value, selectedMission.keyword || goldKeyword || undefined);
       setVerifyResult(result);
       if (result.success) {
         setMissionStatus("success");
