@@ -147,6 +147,9 @@ export default function Home() {
           // Fetch real missions before proceeding
           const goldKeyword = localStorage.getItem("gold-tu-busqueda") || undefined;
           getRealMissions(url, goldKeyword).then(realMissions => {
+            if (!realMissions || realMissions.length === 0) {
+              throw new Error("EMPTY_MISSIONS");
+            }
             setMissions(realMissions);
             setMissionError(null);
             // Persist missions so they survive navigation away and back
@@ -156,8 +159,18 @@ export default function Home() {
             setTimeout(() => setStep(5), 1000);
           }).catch(err => {
             console.error("Failed to fetch missions:", err);
-            setMissionError(err.message || 'Error al obtener datos de Search Console');
-            setTimeout(() => setStep(5), 1000);
+            let errMsg = "";
+            if (err.message === "EMPTY_MISSIONS") {
+              errMsg = "No pudimos generar misiones para tu sitio en esa URL. Probá con otra URL o vinculá tu Search Console.";
+            } else if (err.message === "MISSING_SEARCH_CONSOLE_SCOPE") {
+              errMsg = "No pudimos generar misiones. Vinculá tu Search Console primero.";
+            } else {
+              errMsg = err.message || 'Error al obtener datos de Search Console';
+            }
+            setMissionError(errMsg);
+            // Do not advance: return to Step 2 (URL input)
+            setStep(2);
+            setScanProgress(0);
           });
         }
       }, 50);
@@ -448,6 +461,27 @@ export default function Home() {
                >
                  CONTINUAR
                </button>
+
+               {missionError && (
+                 <div className="p-4 bg-red-50 dark:bg-red-955/20 border-2 border-red-200 dark:border-red-800 text-red-500 rounded-xl font-bold text-sm text-center space-y-3 animate-in fade-in duration-300">
+                   <p>⚠️ {missionError}</p>
+                   {missionError.includes("Search Console") && (
+                     <button
+                       onClick={() => {
+                         playClick();
+                         signIn("google", {
+                           authorizationParams: {
+                             scope: "openid email profile https://www.googleapis.com/auth/webmasters.readonly"
+                           }
+                         });
+                       }}
+                       className="w-full btn-3d bg-green-500 border-green-600 border-b-4 hover:bg-green-450 active:border-b-0 active:translate-y-1 text-white text-xs font-black py-2.5 flex items-center justify-center gap-1.5"
+                     >
+                       Conectar Google Search Console
+                     </button>
+                   )}
+                 </div>
+               )}
               
               <div className="relative py-4">
                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-300"></span></div>
@@ -621,26 +655,32 @@ export default function Home() {
                  <Link href="/buscador-de-oro" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-300 hover:text-duo-yellow text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
                    🔍 Fase 1: Búsqueda
                  </Link>
-                 {hasGoldKeyword ? (
+                 {missions && missions.length > 0 && hasGoldKeyword ? (
                    <Link href="/contenido" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-300 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
                      ✍️ Fase 2: Contenido
                    </Link>
                  ) : (
-                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1" title="Debes elegir tu palabra de oro primero en la Fase 1">
+                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1" title={!missions || missions.length === 0 ? "Debes cargar misiones vinculando tu Search Console primero" : "Debes elegir tu palabra de oro primero en la Fase 1"}>
                      🔒 Fase 2: Contenido
                    </div>
                  )}
-                  <Link href="/optimizacion" onClick={playClick}
-                    className={`flex-1 btn-3d text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors btn-white text-slate-650 dark:text-slate-300 hover:text-duo-green`}>
-                    🛠️ Fase 3: Optimización
-                  </Link>
-                 {xp >= 500 ? (
-                   <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-600 dark:text-slate-300 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+                 {missions && missions.length > 0 ? (
+                   <Link href="/optimizacion" onClick={playClick}
+                     className={`flex-1 btn-3d text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors btn-white text-slate-650 dark:text-slate-300 hover:text-duo-green`}>
+                     🛠️ Fase 3: Optimización
+                   </Link>
+                 ) : (
+                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1" title="Debes cargar misiones vinculando tu Search Console primero">
+                     🔒 Fase 3: Optimización
+                   </div>
+                 )}
+                 {missions && missions.length > 0 && xp >= 500 ? (
+                   <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-300 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
                      🕵️‍♂️ Fase 4: Indexación
                    </Link>
                  ) : (
-                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1">
-                     🔒 Fase 4 (Nivel 6)
+                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1" title={xp >= 500 ? "Debes cargar misiones vinculando tu Search Console primero" : "🔒 Fase 4 (Nivel 6)"}>
+                     🔒 Fase 4 {xp < 500 && "(Nivel 6)"}
                    </div>
                  )}
                  <Link href="/blog" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-300 hover:text-cyan-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">

@@ -86,6 +86,7 @@ export default function BuscadorDeOro() {
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [discardedSuggestions, setDiscardedSuggestions] = useState(new Set());
   const [dismissingIndex, setDismissingIndex] = useState(null);
+  const [hasMissions, setHasMissions] = useState(false);
 
   // ── Helpers de créditos diarios ──────────────────────────────────────────
   const getTodayStr = () => {
@@ -169,6 +170,15 @@ export default function BuscadorDeOro() {
     const credits = readCredits();
     setDailyCredits(credits);
 
+    const savedMissions = localStorage.getItem("seojump_missions");
+    if (savedMissions) {
+      try {
+        const parsed = JSON.parse(savedMissions);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setHasMissions(true);
+        }
+      } catch (e) {}
+    }
   }, [router]);
 
   // Auth Protection
@@ -362,19 +372,31 @@ export default function BuscadorDeOro() {
             <div className="flex-1 btn-3d bg-yellow-50 text-duo-yellow font-black text-center py-5 px-6 text-lg lg:text-xl border-2 border-duo-yellow border-b-4 cursor-default">
               🔍 Fase 1: Búsqueda
             </div>
-            <button onClick={() => { playClick(); router.push("/contenido"); }} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-              ✍️ Fase 2: Contenido
-            </button>
-            <button onClick={() => { playClick(); router.push("/optimizacion"); }} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-slate-800 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-              🛠️ Fase 3: Optimización
-            </button>
-            {xp >= 500 ? (
+            {hasMissions && (query || localStorage.getItem("gold-tu-busqueda")) ? (
+              <button onClick={() => { playClick(); router.push("/contenido"); }} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+                ✍️ Fase 2: Contenido
+              </button>
+            ) : (
+              <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1" title={!hasMissions ? "Debes cargar misiones vinculando tu Search Console primero" : "Debes elegir tu palabra de oro primero en la Fase 1"}>
+                🔒 Fase 2: Contenido
+              </div>
+            )}
+            {hasMissions ? (
+              <button onClick={() => { playClick(); router.push("/optimizacion"); }} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-slate-800 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+                🛠️ Fase 3: Optimización
+              </button>
+            ) : (
+              <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1" title="Debes cargar misiones vinculando tu Search Console primero">
+                🔒 Fase 3: Optimización
+              </div>
+            )}
+            {hasMissions && xp >= 500 ? (
               <button onClick={() => { playClick(); router.push("/detective-de-enlaces"); }} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
                 🕵️‍♂️ Fase 4: Indexación
               </button>
             ) : (
-              <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1">
-                🔒 Fase 4 (Nivel 6)
+              <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1" title={xp >= 500 ? "Debes cargar misiones vinculando tu Search Console primero" : "🔒 Fase 4 (Nivel 6)"}>
+                🔒 Fase 4 {xp < 500 && "(Nivel 6)"}
               </div>
             )}
          </nav>

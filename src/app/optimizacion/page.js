@@ -93,6 +93,7 @@ export default function Optimizacion() {
   const [completedIds, setCompletedIds]= useState(new Set());
   const [hasGoldKeyword, setHasGoldKeyword] = useState(false);
   const [goldKeyword, setGoldKeyword]   = useState("");
+  const [hasMissions, setHasMissions]   = useState(false);
 
   // Mission detail states
   const [selectedMission, setSelectedMission] = useState(null);
@@ -141,6 +142,7 @@ export default function Optimizacion() {
         const parsed = JSON.parse(savedMissions);
         if (Array.isArray(parsed) && parsed.length > 0) {
           setMissions(parsed);
+          setHasMissions(true);
         } else {
           setMissionError("No encontramos misiones guardadas. Volvé al Inicio y re-analizá tu sitio.");
         }
@@ -151,8 +153,13 @@ export default function Optimizacion() {
       if (savedUrl) {
         setMissionError(null);
         getRealMissions(savedUrl, keyword || undefined).then(realMissions => {
-          setMissions(realMissions);
-          localStorage.setItem("seojump_missions", JSON.stringify(realMissions));
+          if (realMissions && realMissions.length > 0) {
+            setMissions(realMissions);
+            setHasMissions(true);
+            localStorage.setItem("seojump_missions", JSON.stringify(realMissions));
+          } else {
+            setMissionError("No encontramos misiones. Volvé al Inicio y re-analizá tu sitio.");
+          }
         }).catch(err => {
           console.error("Failed to fetch missions:", err);
           setMissionError(err.message || 'Error al obtener misiones');
@@ -273,27 +280,34 @@ export default function Optimizacion() {
         {/* Navigation Tabs */}
         <nav className="flex flex-wrap md:flex-nowrap gap-3 md:gap-4 w-full mt-2">
           <Link href="/buscador-de-oro" onClick={playClick}
-            className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-300 hover:text-duo-yellow text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+            className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-duo-yellow text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
             🔍 Fase 1: Búsqueda
           </Link>
-          {hasGoldKeyword ? (
+          {hasMissions && hasGoldKeyword ? (
             <Link href="/contenido" onClick={playClick}
-              className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-300 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+              className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
               ✍️ Fase 2: Contenido
             </Link>
           ) : (
-            <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center"
-              title="Elegí tu palabra de oro en la Fase 1 primero">
+            <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+              title={!hasMissions ? "Debes cargar misiones vinculando tu Search Console primero" : "Elegí tu palabra de oro en la Fase 1 primero"}>
               🔒 Fase 2: Contenido
             </div>
           )}
           <div className="flex-1 btn-3d bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 text-center py-5 px-6 text-lg lg:text-xl font-black border-b-4 border-duo-green cursor-default">
             🛠️ Fase 3: Optimización
           </div>
-          <Link href="/detective-de-enlaces" onClick={playClick}
-            className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-300 hover:text-purple-600 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-            🕵️‍♂️ Fase 4: Indexación
-          </Link>
+          {hasMissions && xp >= 500 ? (
+            <Link href="/detective-de-enlaces" onClick={playClick}
+              className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-300 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+              🕵️‍♂️ Fase 4: Indexación
+            </Link>
+          ) : (
+            <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+              title={xp >= 500 ? "Debes cargar misiones vinculando tu Search Console primero" : "🔒 Fase 4 (Nivel 6)"}>
+              🔒 Fase 4 {xp < 500 && "(Nivel 6)"}
+            </div>
+          )}
         </nav>
       </header>
 

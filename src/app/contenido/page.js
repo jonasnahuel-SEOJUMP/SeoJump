@@ -42,6 +42,7 @@ export default function ContenidoFase2() {
   const [siteUrl, setSiteUrl] = useState("");
   const [activeKeyword, setActiveKeyword] = useState("");
   const [completedMissions, setCompletedMissions] = useState(new Set());
+  const [hasMissions, setHasMissions] = useState(false);
 
   // Track Level Up sound
   const prevXpRef = useRef(0);
@@ -86,6 +87,15 @@ export default function ContenidoFase2() {
       } catch (e) {}
     }
 
+    const savedMissions = localStorage.getItem("seojump_missions");
+    if (savedMissions) {
+      try {
+        const parsed = JSON.parse(savedMissions);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          setHasMissions(true);
+        }
+      } catch (e) {}
+    }
   }, [router]);
 
   // Auth Protection
@@ -238,16 +248,22 @@ export default function ContenidoFase2() {
             <div className="flex-1 btn-3d bg-blue-50 text-blue-600 font-black text-center py-5 px-6 text-lg lg:text-xl border-2 border-blue-500 border-b-4 cursor-default">
               ✍️ Fase 2: Contenido
             </div>
-            <Link href="/optimizacion" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-600 dark:text-slate-300 hover:text-duo-green text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-              🛠️ Fase 3: Optimización
-            </Link>
-            {xp >= 500 ? (
-              <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-600 dark:text-slate-300 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+            {hasMissions ? (
+              <Link href="/optimizacion" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-600 dark:text-slate-300 hover:text-duo-green text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+                🛠️ Fase 3: Optimización
+              </Link>
+            ) : (
+              <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1" title="Debes cargar misiones vinculando tu Search Console primero">
+                🔒 Fase 3: Optimización
+              </div>
+            )}
+            {hasMissions && xp >= 500 ? (
+              <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
                 🕵️‍♂️ Fase 4: Indexación
               </Link>
             ) : (
-              <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1">
-                🔒 Fase 4 (Nivel 6)
+              <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1" title={xp >= 500 ? "Debes cargar misiones vinculando tu Search Console primero" : "🔒 Fase 4 (Nivel 6)"}>
+                🔒 Fase 4 {xp < 500 && "(Nivel 6)"}
               </div>
             )}
          </nav>
