@@ -66,8 +66,9 @@ export default function BuscadorDeOro() {
   const isVip = () => {
     // Bypass 1: estamos en localhost
     if (typeof window !== "undefined" && window.location.hostname === "localhost") return true;
-    // Bypass 2: el email del usuario logueado es admin
+    // Bypass 2: el email del usuario logueado es admin o QA
     const userEmail = session?.user?.email?.toLowerCase() || "";
+    if (userEmail === "mimussol@gmail.com") return true;
     if (userEmail && ADMIN_EMAILS.includes(userEmail)) return true;
     return false;
   };

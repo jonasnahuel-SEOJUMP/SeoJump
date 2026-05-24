@@ -101,10 +101,17 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
       return { success: true, data: [] }
     }
 
-    const missions = rows.map((row, index) => {
+    // Sort by clicks desc, then impressions desc
+    const sortedRows = [...rows].sort((a, b) => {
+      const clicksDiff = (b.clicks || 0) - (a.clicks || 0);
+      if (clicksDiff !== 0) return clicksDiff;
+      return (b.impressions || 0) - (a.impressions || 0);
+    });
+
+    const missions = sortedRows.map((row, index) => {
       const fullPageUrl = row.keys[0]
       const rawKeyword = row.keys[1] || ""
-      const cleanKeyword = rawKeyword.replace(/^[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+/, '').trim()
+      const cleanKeyword = rawKeyword.replace(/^[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+/g, '').trim()
       
       let pagePath = fullPageUrl
       try {
