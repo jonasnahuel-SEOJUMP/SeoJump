@@ -311,15 +311,15 @@ export default function Home() {
                 <div className="flex items-start gap-5">
                   <div className="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-orange-500/30">🏎️</div>
                   <div>
-                    <h3 className="text-lg md:text-xl font-black text-orange-400">Poné Primera en 10 Segundos</h3>
-                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Clavá tu URL y nuestro motor escaneará tu chasis web al instante para encontrar tus palabras de oro.</p>
+                    <h3 className="text-lg md:text-xl font-black text-orange-400">Optimizá tu web en tus ratos libres</h3>
+                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Ingresá el enlace de tu página y nuestra Inteligencia Artificial escaneará toda tu estructura al instante para encontrar las palabras exactas que buscan tus clientes.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-5">
                   <div className="w-14 h-14 bg-yellow-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-yellow-500/30">💰</div>
                   <div>
-                    <h3 className="text-lg md:text-xl font-black text-yellow-400">Ahorrate cientos de miles de pesos al mes</h3>
-                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Hacele el rulo a las agencias. Automatizá las auditorías de etiquetas, títulos y metas con misiones que completás jugando en tus ratos libres.</p>
+                    <h3 className="text-lg md:text-xl font-black text-yellow-400">Tomá el Control de tu Página Web</h3>
+                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Ahorrate cientos de miles de pesos al mes en agencias. Automatizá las mejoras de tu sitio y optimizá tu web paso a paso usando nuestra app un ratito cada día.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-5">
