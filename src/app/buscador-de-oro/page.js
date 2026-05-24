@@ -285,7 +285,10 @@ export default function BuscadorDeOro() {
           localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
           
           // Check if all suggestions are completed now
-          const allNowCompleted = suggestions.length > 0 && suggestions.every(s => updated.has(`gold-${s.text}`));
+          const allNowCompleted = suggestions.length > 0 && suggestions.every(s => {
+            const cleanS = (s.text || "").replace(/\$/g, '').replace(/^[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+/g, '').trim();
+            return updated.has(`gold-${cleanS}`);
+          });
           if (allNowCompleted) {
             setShowOwl(true);
           }
@@ -504,7 +507,9 @@ export default function BuscadorDeOro() {
               ) : (
                 suggestions.map((sug, index) => {
                   if (discardedSuggestions.has(index)) return null;
-                  const missionId = `gold-${sug.text}`;
+                  const rawKeyword = sug.text || "";
+                  const cleanKeyword = rawKeyword.replace(/\$/g, '').replace(/^[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+/g, '').trim();
+                  const missionId = `gold-${cleanKeyword}`;
                   const isCompleted = completedSuggestions.has(missionId);
                   const isVerifying = verifyingIndex === index;
                   const isDismissing = dismissingIndex === index;
@@ -550,7 +555,7 @@ export default function BuscadorDeOro() {
                       </div>
 
                       <p className={`text-lg lg:text-xl font-bold ${isCompleted ? 'line-through text-slate-450' : 'text-slate-200'}`}>
-                        Tu web no menciona la frase exacta <strong className="text-cyan-400 font-black">"${sug.text}"</strong>.
+                        Tu web no menciona la frase exacta <strong className="text-cyan-400 font-black">"${cleanKeyword}"</strong>.
                       </p>
 
                       {isCompleted ? (
@@ -580,7 +585,7 @@ export default function BuscadorDeOro() {
                             <button
                               onClick={() => {
                                 const targetUrl = document.getElementById(`url-input-${index}`).value;
-                                handleVerify(sug.text, index, targetUrl);
+                                handleVerify(cleanKeyword, index, targetUrl);
                               }}
                               disabled={isVerifying}
                               className={`w-full py-4 text-base md:text-lg lg:text-xl flex items-center justify-center gap-2 rounded-xl border transition-all duration-200 shadow-sm font-black active:scale-[0.99] ${
@@ -746,7 +751,10 @@ export default function BuscadorDeOro() {
 
           {/* Módulo Educativo ("Explicación del Búho") */}
           {(() => {
-            const allCompleted = suggestions.length > 0 && suggestions.every(sug => completedSuggestions.has(`gold-${sug.text}`));
+            const allCompleted = suggestions.length > 0 && suggestions.every(sug => {
+              const cleanS = (sug.text || "").replace(/\$/g, '').replace(/^[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+/g, '').trim();
+              return completedSuggestions.has(`gold-${cleanS}`);
+            });
             return (
               <div className="w-full">
                 <button 

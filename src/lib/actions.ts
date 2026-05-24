@@ -111,7 +111,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
     const missions = sortedRows.map((row, index) => {
       const fullPageUrl = row.keys[0]
       const rawKeyword = row.keys[1] || ""
-      const cleanKeyword = rawKeyword.replace(/^[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ]+/g, '').trim()
+      const cleanKeyword = rawKeyword.replace(/\$/g, '').replace(/^[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+/g, '').trim()
       
       let pagePath = fullPageUrl
       try {
