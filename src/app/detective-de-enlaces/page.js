@@ -118,10 +118,19 @@ export default function DetectiveDeEnlaces() {
             <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-3xl hover:scale-110 transition-transform">
               {theme === "light" ? "🌙" : "☀️"}
             </button>
-            {session?.user?.image
-              ? <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow" />
-              : <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white text-xl">👤</div>
-            }
+            <button
+              onClick={() => {
+                playClick();
+                router.push("/perfil");
+              }}
+              className="hover:scale-105 transition-transform focus:outline-none"
+              title="Ver Perfil"
+            >
+              {session?.user?.image
+                ? <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow" />
+                : <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white text-xl">👤</div>
+              }
+            </button>
           </div>
         </div>
 

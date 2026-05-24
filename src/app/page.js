@@ -630,11 +630,13 @@ export default function Home() {
                      <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-3xl hover:scale-110 transition-transform" title="Cambiar Tema">
                        {theme === "light" ? '🌙' : '☀️'}
                      </button>
-                     {session?.user?.image ? (
-                       <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow flex-shrink-0" />
-                     ) : (
-                       <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white flex-shrink-0 text-xl">👤</div>
-                     )}
+                     <Link href="/perfil" onClick={playClick} className="hover:scale-105 transition-transform flex-shrink-0" title="Ver Perfil">
+                       {session?.user?.image ? (
+                         <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow flex-shrink-0" />
+                       ) : (
+                         <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white flex-shrink-0 text-xl">👤</div>
+                       )}
+                     </Link>
                    </div>
                  </div>
                </header>
