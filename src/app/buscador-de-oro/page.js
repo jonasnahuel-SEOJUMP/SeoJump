@@ -555,7 +555,7 @@ export default function BuscadorDeOro() {
                       </div>
 
                       <p className={`text-lg lg:text-xl font-bold ${isCompleted ? 'line-through text-slate-450' : 'text-slate-200'}`}>
-                        Tu web no menciona la frase exacta <strong className="text-cyan-400 font-black">"${cleanKeyword}"</strong>.
+                        Tu web no menciona la frase exacta <strong className="text-cyan-400 font-black">"{cleanKeyword}"</strong>.
                       </p>
 
                       {isCompleted ? (
