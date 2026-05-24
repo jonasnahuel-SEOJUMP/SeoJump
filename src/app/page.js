@@ -147,7 +147,11 @@ export default function Home() {
           clearInterval(interval);
           // Fetch real missions before proceeding
           const goldKeyword = localStorage.getItem("gold-tu-busqueda") || undefined;
-          getRealMissions(url, goldKeyword).then(realMissions => {
+          getRealMissions(url, goldKeyword).then(res => {
+            if (!res.success) {
+              throw new Error(res.error);
+            }
+            const realMissions = res.data;
             if (!realMissions || realMissions.length === 0) {
               throw new Error("EMPTY_MISSIONS");
             }

@@ -88,17 +88,17 @@ const buildMissionTypes = (goldKeyword?: string) => [
 ]
 
 export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
-  const session = await auth()
-
-  if (!session?.accessToken) {
-    throw new Error("No hay sesión activa o falta el token de acceso")
-  }
-
   try {
+    const session = await auth()
+
+    if (!session?.accessToken) {
+      return { success: false, error: "No hay sesión activa o falta el token de acceso" }
+    }
+
     const rows = await getSearchConsoleData(session.accessToken, siteUrl)
 
     if (!rows || rows.length === 0) {
-      return []
+      return { success: true, data: [] }
     }
 
     const missions = rows.map((row, index) => {
@@ -153,10 +153,10 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
       }
     })
 
-    return missions
-  } catch (error) {
+    return { success: true, data: missions }
+  } catch (error: any) {
     console.error("Error generating real missions:", error)
-    throw error  // Re-throw so page.js can show the reconnect button
+    return { success: false, error: error.message || "Error al obtener datos de Search Console" }
   }
 }
 
@@ -461,19 +461,24 @@ export async function verifyContentMission(pageUrl: string, searchPhrase: string
 }
 
 export async function requestGoogleIndexing(urlToIndex: string) {
-  const session = await auth();
-
-  if (!session?.accessToken) {
-    throw new Error("No hay sesión activa o falta el token de acceso");
-  }
-
-  let siteUrl = "";
   try {
-    const parsed = new URL(urlToIndex);
-    siteUrl = `${parsed.protocol}//${parsed.host}/`;
-  } catch (e) {
-    siteUrl = urlToIndex; // fallback
-  }
+    const session = await auth();
 
-  return await submitGoogleIndexing(session.accessToken, siteUrl, urlToIndex);
+    if (!session?.accessToken) {
+      return { success: false, message: "No hay sesión activa o falta el token de acceso" };
+    }
+
+    let siteUrl = "";
+    try {
+      const parsed = new URL(urlToIndex);
+      siteUrl = `${parsed.protocol}//${parsed.host}/`;
+    } catch (e) {
+      siteUrl = urlToIndex; // fallback
+    }
+
+    return await submitGoogleIndexing(session.accessToken, siteUrl, urlToIndex);
+  } catch (error: any) {
+    console.error("Error requesting Google indexing:", error);
+    return { success: false, message: error.message || "Error al solicitar indexación." };
+  }
 }

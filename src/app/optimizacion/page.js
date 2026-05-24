@@ -153,7 +153,11 @@ export default function Optimizacion() {
     } else {
       if (savedUrl) {
         setMissionError(null);
-        getRealMissions(savedUrl, keyword || undefined).then(realMissions => {
+        getRealMissions(savedUrl, keyword || undefined).then(res => {
+          if (!res.success) {
+            throw new Error(res.error);
+          }
+          const realMissions = res.data;
           if (realMissions && realMissions.length > 0) {
             setMissions(realMissions);
             setHasMissions(true);

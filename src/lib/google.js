@@ -22,7 +22,7 @@ async function getVerifiedSiteProperty(accessToken, userInputUrl) {
     const errData = await response.json().catch(() => ({}));
     const code = errData?.error?.code;
     const msg = errData?.error?.message;
-    if (code === 403 && (msg?.includes('insufficient authentication scopes') || msg?.includes('Insufficient Permission'))) {
+    if (code === 403) {
       throw new Error('MISSING_SEARCH_CONSOLE_SCOPE');
     }
     throw new Error(msg || "Error al obtener las propiedades de Search Console");
@@ -105,7 +105,7 @@ export async function getSearchConsoleData(accessToken, siteUrl) {
       const code = errorData?.error?.code;
       const msg = errorData?.error?.message;
       console.log(`❌ Failed querySearchConsole: [${code}] ${msg}`);
-      if (code === 403 && (msg?.includes('insufficient authentication scopes') || msg?.includes('Insufficient Permission'))) {
+      if (code === 403) {
         throw new Error('MISSING_SEARCH_CONSOLE_SCOPE');
       }
       throw new Error(msg || "Error querying Search Console data");
@@ -152,7 +152,7 @@ export async function submitGoogleIndexing(accessToken, siteUrl, urlToIndex) {
       const errorData = await response.json().catch(() => ({}));
       const code = errorData?.error?.code;
       const msg = errorData?.error?.message;
-      if (code === 403 && (msg?.includes('insufficient authentication scopes') || msg?.includes('Insufficient Permission'))) {
+      if (code === 403) {
         throw new Error('MISSING_SEARCH_CONSOLE_SCOPE');
       }
       throw new Error(msg || "Error en la API de Google");
