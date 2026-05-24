@@ -5,6 +5,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import LoginButton from "../components/LoginButton";
+import NotificationBell from "../components/NotificationBell";
 import { getRealMissions, verifyMission } from "../lib/actions";
 import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
@@ -630,6 +631,7 @@ export default function Home() {
                      <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-3xl hover:scale-110 transition-transform" title="Cambiar Tema">
                        {theme === "light" ? '🌙' : '☀️'}
                      </button>
+                     <NotificationBell />
                      <Link href="/perfil" onClick={playClick} className="hover:scale-105 transition-transform flex-shrink-0" title="Ver Perfil">
                        {session?.user?.image ? (
                          <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow flex-shrink-0" />

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { requestGoogleIndexing } from "../../lib/actions";
+import NotificationBell from "../../components/NotificationBell";
 
 export default function DetectiveDeEnlaces() {
   const { data: session, status } = useSession();
@@ -72,6 +73,25 @@ export default function DetectiveDeEnlaces() {
         const newXp = xp + 50;
         setXp(newXp);
         localStorage.setItem("seojump_xp", newXp.toString());
+
+        // Create and save new notification
+        const newNotification = {
+          id: Date.now().toString(),
+          text: "🚀 ¡Lanzamiento exitoso! Google ya recibió la señal para indexar tu web. (+50 XP)",
+          read: false,
+          date: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' - ' + new Date().toLocaleDateString(),
+          type: "indexation"
+        };
+        const rawNotifs = localStorage.getItem("seojump_notifications");
+        let notifs = [];
+        if (rawNotifs) {
+          try {
+            notifs = JSON.parse(rawNotifs);
+          } catch (e) {}
+        }
+        notifs.unshift(newNotification);
+        localStorage.setItem("seojump_notifications", JSON.stringify(notifs));
+        window.dispatchEvent(new Event("seojump_notifications_updated"));
       } else {
         throw new Error(res.message || "Error al solicitar indexación.");
       }
@@ -118,6 +138,7 @@ export default function DetectiveDeEnlaces() {
             <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-3xl hover:scale-110 transition-transform">
               {theme === "light" ? "🌙" : "☀️"}
             </button>
+            <NotificationBell />
             <button
               onClick={() => {
                 playClick();

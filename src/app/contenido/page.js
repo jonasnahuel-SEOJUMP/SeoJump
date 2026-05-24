@@ -7,6 +7,7 @@ import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { verifyContentMission } from "../../lib/actions";
 import Link from "next/link";
+import NotificationBell from "../../components/NotificationBell";
 
 // Helper to sanitize/purify text
 const purifyText = (text) => {
@@ -231,6 +232,7 @@ export default function ContenidoFase2() {
               >
                 {theme === "light" ? '🌙' : '☀️'}
               </button>
+              <NotificationBell />
               <button
                 onClick={() => {
                   playClick();

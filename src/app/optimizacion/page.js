@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { getRealMissions, verifyMission } from "../../lib/actions";
+import NotificationBell from "../../components/NotificationBell";
 
 // Mapa de tipos de página para badges
 const getBadgeInfo = (url) => {
@@ -270,6 +271,7 @@ export default function Optimizacion() {
             <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-3xl hover:scale-110 transition-transform">
               {theme === "light" ? '🌙' : '☀️'}
             </button>
+            <NotificationBell />
             <button
               onClick={() => {
                 playClick();

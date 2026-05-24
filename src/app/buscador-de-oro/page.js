@@ -6,6 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { verifyContentMission } from "../../lib/actions";
+import NotificationBell from "../../components/NotificationBell";
 
 // Filtro Purificador Universal (UI-safe and encoding-safe parser)
 const purifyText = (text) => {
@@ -358,6 +359,7 @@ export default function BuscadorDeOro() {
               >
                 {theme === "light" ? '🌙' : '☀️'}
               </button>
+              <NotificationBell />
               <button
                 onClick={() => {
                   playClick();
