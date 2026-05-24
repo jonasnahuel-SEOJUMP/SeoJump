@@ -471,6 +471,7 @@ export default function Home() {
                        onClick={() => {
                          playClick();
                          signIn("google", {
+                           callbackUrl: "/",
                            authorizationParams: {
                              scope: "openid email profile https://www.googleapis.com/auth/webmasters"
                            }
@@ -792,6 +793,7 @@ export default function Home() {
                                 onClick={() => {
                                   playClick();
                                   signIn("google", {
+                                    callbackUrl: "/",
                                     authorizationParams: {
                                       scope: "openid email profile https://www.googleapis.com/auth/webmasters"
                                     }

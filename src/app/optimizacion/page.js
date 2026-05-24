@@ -464,6 +464,7 @@ export default function Optimizacion() {
                           onClick={() => {
                             playClick();
                             signIn("google", {
+                              callbackUrl: "/optimizacion",
                               authorizationParams: {
                                 scope: "openid email profile https://www.googleapis.com/auth/webmasters"
                               }

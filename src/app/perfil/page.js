@@ -170,6 +170,7 @@ export default function Perfil() {
                 onClick={() => {
                   playClick();
                   signIn("google", {
+                    callbackUrl: "/perfil",
                     authorizationParams: {
                       scope: "openid email profile https://www.googleapis.com/auth/webmasters"
                     }
