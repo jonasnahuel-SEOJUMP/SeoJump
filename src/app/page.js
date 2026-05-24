@@ -471,7 +471,7 @@ export default function Home() {
                          playClick();
                          signIn("google", {
                            authorizationParams: {
-                             scope: "openid email profile https://www.googleapis.com/auth/webmasters.readonly"
+                             scope: "openid email profile https://www.googleapis.com/auth/webmasters"
                            }
                          });
                        }}
@@ -781,7 +781,7 @@ export default function Home() {
                                   Vinculá tu Search Console 🏁
                                 </h3>
                                 <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-relaxed">
-                                  Para cargar las misiones SEO reales de tu sitio web, necesitamos permiso de lectura (solo lectura) de tus propiedades de Google Search Console. Es 100% seguro y no modificará nada.
+                                  Para cargar las misiones SEO reales de tu sitio y permitir la indexación automática, necesitamos permiso de conexión de tus propiedades de Google Search Console. Es 100% seguro.
                                 </p>
                               </div>
                               <button
@@ -789,7 +789,7 @@ export default function Home() {
                                   playClick();
                                   signIn("google", {
                                     authorizationParams: {
-                                      scope: "openid email profile https://www.googleapis.com/auth/webmasters.readonly"
+                                      scope: "openid email profile https://www.googleapis.com/auth/webmasters"
                                     }
                                   });
                                 }}

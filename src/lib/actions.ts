@@ -1,7 +1,7 @@
 "use server"
 
 import { signIn, signOut, auth } from "../auth"
-import { getSearchConsoleData } from "./google"
+import { getSearchConsoleData, submitGoogleIndexing } from "./google"
 
 export async function login() {
   await signIn("google")
@@ -458,4 +458,22 @@ export async function verifyContentMission(pageUrl: string, searchPhrase: string
       message: `No encontramos tu frase exacta en la web. ¿Ya aplicaste el cambio y vaciaste la caché?`,
     }
   }
+}
+
+export async function requestGoogleIndexing(urlToIndex: string) {
+  const session = await auth();
+
+  if (!session?.accessToken) {
+    throw new Error("No hay sesión activa o falta el token de acceso");
+  }
+
+  let siteUrl = "";
+  try {
+    const parsed = new URL(urlToIndex);
+    siteUrl = `${parsed.protocol}//${parsed.host}/`;
+  } catch (e) {
+    siteUrl = urlToIndex; // fallback
+  }
+
+  return await submitGoogleIndexing(session.accessToken, siteUrl, urlToIndex);
 }

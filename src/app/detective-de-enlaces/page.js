@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
+import { requestGoogleIndexing } from "../../lib/actions";
 
 export default function DetectiveDeEnlaces() {
   const { data: session, status } = useSession();
@@ -23,6 +24,7 @@ export default function DetectiveDeEnlaces() {
   const [keywordChecked, setKeywordChecked] = useState(false);
   const [savedChecked, setSavedChecked] = useState(false);
   const [indexingStatus, setIndexingStatus] = useState("idle"); // idle | loading | success
+  const [indexingError, setIndexingError] = useState(null);
 
   useEffect(() => {
     const savedXp = localStorage.getItem("seojump_xp");
@@ -53,18 +55,35 @@ export default function DetectiveDeEnlaces() {
 
   const allChecked = h1Checked && keywordChecked && savedChecked;
 
-  const handleRequestIndex = () => {
+  const handleRequestIndex = async () => {
     if (!allChecked) return;
     playClick();
     setIndexingStatus("loading");
+    setIndexingError(null);
 
-    setTimeout(() => {
-      setIndexingStatus("success");
-      if (playSuccess) playSuccess();
-      const newXp = xp + 50;
-      setXp(newXp);
-      localStorage.setItem("seojump_xp", newXp);
-    }, 1800);
+    try {
+      if (!siteUrl) {
+        throw new Error("No pudimos determinar la URL de tu sitio. Volvé al Inicio y re-analizá.");
+      }
+      const res = await requestGoogleIndexing(siteUrl);
+      if (res.success) {
+        setIndexingStatus("success");
+        if (playSuccess) playSuccess();
+        const newXp = xp + 50;
+        setXp(newXp);
+        localStorage.setItem("seojump_xp", newXp.toString());
+      } else {
+        throw new Error(res.message || "Error al solicitar indexación.");
+      }
+    } catch (err) {
+      console.error("Indexation failed:", err);
+      setIndexingStatus("idle");
+      let errMsg = err.message || "Error de conexión con la API de Google.";
+      if (errMsg.includes("insufficient") || errMsg === "MISSING_SEARCH_CONSOLE_SCOPE") {
+        errMsg = "Permisos insuficientes. Volvé a la Fase 3 y conectá tu Google Search Console con acceso completo.";
+      }
+      setIndexingError(errMsg);
+    }
   };
 
   if (status === "loading" || !session) {
@@ -303,6 +322,12 @@ export default function DetectiveDeEnlaces() {
                   {indexingStatus === "loading" ? "📡 ENVIANDO ALERTA A GOOGLE..." : "📡 Solicitar Indexación a Google"}
                 </button>
               </div>
+
+              {indexingError && (
+                <div className="p-4 bg-red-950/20 border-2 border-red-800 text-red-400 rounded-xl font-bold text-sm text-center animate-in fade-in duration-300">
+                  ⚠️ {indexingError}
+                </div>
+              )}
 
               {/* Optional footer info */}
               {indexingStatus === "idle" && (

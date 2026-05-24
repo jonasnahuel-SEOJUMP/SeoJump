@@ -93,3 +93,49 @@ export async function getSearchConsoleData(accessToken, siteUrl) {
   console.warn(`No matching Search Console property found for: ${siteUrl}`);
   return [];
 }
+
+export async function submitGoogleIndexing(accessToken, siteUrl, urlToIndex) {
+  const urlVariants = generateUrlVariants(siteUrl);
+  
+  // Try to submit the sitemap of the site as a notification of change
+  const cleanSiteUrl = siteUrl.replace(/\/$/, '');
+  const sitemapUrl = `${cleanSiteUrl}/sitemap.xml`;
+
+  console.log('--- SUBMIT INDEXING TO SEARCH CONSOLE ---');
+  console.log('Site URL:', siteUrl);
+  console.log('URL to Index:', urlToIndex);
+  console.log('Sitemap to submit:', sitemapUrl);
+
+  let lastError = null;
+
+  for (const variant of urlVariants) {
+    try {
+      console.log(`Submitting sitemap to property variant: ${variant}`);
+      const response = await fetch(
+        `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(variant)}/sitemaps/${encodeURIComponent(sitemapUrl)}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+
+      if (response.ok) {
+        console.log(`✅ Sitemap submitted successfully to "${variant}"`);
+        return { success: true, variant, message: "Indexación solicitada con éxito a través de sitemap." };
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        const code = errorData?.error?.code;
+        const msg = errorData?.error?.message;
+        console.log(`❌ Failed to submit to "${variant}": [${code}] ${msg}`);
+        lastError = new Error(msg || "Error en la API de Google");
+      }
+    } catch (err) {
+      console.error(`Error trying variant "${variant}" for sitemap submission:`, err.message);
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("No se pudo encontrar una propiedad de Search Console coincidente para este sitio.");
+}
