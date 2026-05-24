@@ -326,8 +326,8 @@ export default function Home() {
                 <div className="flex items-start gap-5">
                   <div className="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-green-500/30">📈</div>
                   <div>
-                    <h3 className="text-lg md:text-xl font-black text-green-400">Más Tráfico, Más Ventas</h3>
-                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Cada luz verde que encendés en el tablero es una optimización real que impacta en Google para traerte clientes con la billetera en la mano.</p>
+                    <h3 className="text-lg md:text-xl font-black text-green-400">Resultados en Tiempo Real</h3>
+                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">No esperes semanas a que Google descubra tus mejoras. Usá nuestro botón de indexación directa para avisarle al buscador al instante y superar a tu competencia.</p>
                   </div>
                 </div>
               </div>
