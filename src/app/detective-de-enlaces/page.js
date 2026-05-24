@@ -9,19 +9,29 @@ import { useTheme } from "../../hooks/useTheme";
 
 export default function DetectiveDeEnlaces() {
   const { data: session, status } = useSession();
-  const { isMuted, toggleMute, playClick, playThemeToggle } = useAudio();
+  const { isMuted, toggleMute, playClick, playThemeToggle, playSuccess } = useAudio();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
 
   const [xp, setXp] = useState(0);
   const [hasGoldKeyword, setHasGoldKeyword] = useState(false);
   const [hasMissions, setHasMissions] = useState(false);
+  const [siteUrl, setSiteUrl] = useState("");
+
+  // Checkbox states for Launch Authorization
+  const [h1Checked, setH1Checked] = useState(false);
+  const [keywordChecked, setKeywordChecked] = useState(false);
+  const [savedChecked, setSavedChecked] = useState(false);
+  const [indexingStatus, setIndexingStatus] = useState("idle"); // idle | loading | success
 
   useEffect(() => {
     const savedXp = localStorage.getItem("seojump_xp");
     if (savedXp) setXp(parseInt(savedXp, 10));
     const keyword = localStorage.getItem("gold-tu-busqueda");
     setHasGoldKeyword(!!keyword);
+
+    const savedUrl = localStorage.getItem("seojump_site_url");
+    if (savedUrl) setSiteUrl(savedUrl);
 
     const savedMissions = localStorage.getItem("seojump_missions");
     if (savedMissions) {
@@ -40,6 +50,22 @@ export default function DetectiveDeEnlaces() {
       router.push("/");
     }
   }, [session, status, router]);
+
+  const allChecked = h1Checked && keywordChecked && savedChecked;
+
+  const handleRequestIndex = () => {
+    if (!allChecked) return;
+    playClick();
+    setIndexingStatus("loading");
+
+    setTimeout(() => {
+      setIndexingStatus("success");
+      if (playSuccess) playSuccess();
+      const newXp = xp + 50;
+      setXp(newXp);
+      localStorage.setItem("seojump_xp", newXp);
+    }, 1800);
+  };
 
   if (status === "loading" || !session) {
     return (
@@ -131,18 +157,38 @@ export default function DetectiveDeEnlaces() {
             </div>
           </div>
 
-          {/* Locked badge */}
-          <div className="card-3d bg-slate-800 text-white border-slate-700 p-6 text-center space-y-4 relative overflow-hidden">
+          {/* Status Card */}
+          <div className="card-3d bg-slate-800 text-white border-slate-700 p-6 space-y-4 relative overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-purple-900/20 pointer-events-none" />
-            <div className="text-6xl animate-pulse relative z-10">🔒</div>
-            <h3 className="text-lg font-black text-purple-300 relative z-10">Contenido Premium</h3>
-            <p className="text-sm font-bold text-slate-400 leading-relaxed relative z-10">
-              Esta fase se desbloquea en la versión oficial. Seguí sumando XP en las fases anteriores.
-            </p>
-            <div className="w-full bg-slate-700 rounded-full h-3 border border-slate-600 relative z-10">
-              <div className="h-full bg-purple-500 rounded-full" style={{ width: `${Math.min((xp / 500) * 100, 100)}%` }} />
+            <div className="flex items-center gap-3 relative z-10">
+              <span className="text-3xl">📡</span>
+              <h3 className="text-lg font-black text-purple-300">Radar de Indexación</h3>
             </div>
-            <p className="text-xs font-black text-slate-500 relative z-10">{xp} / 500 XP acumulados</p>
+            
+            <div className="space-y-3 pt-2 text-left relative z-10 font-bold text-xs">
+              <div className="border-b border-slate-700 pb-2">
+                <span className="text-slate-400 block mb-1">SITIO WEB:</span>
+                <span className="text-white break-all font-mono">{siteUrl || "No especificado"}</span>
+              </div>
+              {hasGoldKeyword && (
+                <div className="border-b border-slate-700 pb-2">
+                  <span className="text-slate-400 block mb-1">PALABRA DE ORO:</span>
+                  <span className="text-duo-yellow font-black">"{localStorage.getItem("gold-tu-busqueda")}"</span>
+                </div>
+              )}
+              <div>
+                <span className="text-slate-400 block mb-1">ESTADO GOOGLE:</span>
+                {indexingStatus === "success" ? (
+                  <span className="text-emerald-400 flex items-center gap-1.5 animate-pulse font-black">
+                    🟢 Solicitado (Escaneo Prioritario)
+                  </span>
+                ) : (
+                  <span className="text-amber-400 flex items-center gap-1.5 font-black">
+                    🟡 Pendiente de Lanzamiento
+                  </span>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Go back CTA */}
@@ -152,86 +198,119 @@ export default function DetectiveDeEnlaces() {
           </Link>
         </div>
 
-        {/* CENTER: Coming soon hero */}
+        {/* CENTER: Guided process */}
         <div className="flex-1 w-full flex flex-col gap-8">
 
           {/* Hero card */}
-          <div className="w-full bg-slate-900 rounded-3xl border-2 border-slate-700 shadow-2xl overflow-hidden relative">
+          <div className="w-full bg-slate-900 rounded-3xl border-2 border-slate-700 shadow-2xl overflow-hidden relative p-8 md:p-12 space-y-8">
             {/* Glow decoration */}
             <div className="absolute top-0 right-0 w-96 h-96 bg-purple-700 opacity-10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
             <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-700 opacity-10 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none" />
 
-            <div className="relative z-10 p-8 md:p-12 flex flex-col items-center text-center gap-8">
-              {/* Detective icon cluster */}
-              <div className="relative">
-                <div className="text-9xl filter drop-shadow-2xl animate-pulse">🕵️‍♂️</div>
-                <div className="absolute -bottom-2 -right-4 text-5xl">🔗</div>
-                <div className="absolute -top-2 -left-4 text-4xl opacity-60">🔍</div>
-              </div>
-
-              {/* Badge */}
-              <div className="inline-flex items-center gap-2 bg-purple-900/50 border border-purple-600/50 rounded-full px-5 py-2">
-                <span className="w-2 h-2 bg-purple-400 rounded-full animate-pulse" />
-                <span className="text-sm font-black text-purple-300 tracking-widest uppercase">Próximamente · Versión Premium</span>
-              </div>
-
-              {/* Title */}
-              <div className="space-y-3">
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white leading-tight">
-                  🕵️‍♂️ Detective de <span className="text-purple-400">Enlaces</span>
+            <div className="relative z-10 flex flex-col gap-6 w-full text-left">
+              {/* Header Title */}
+              <div className="flex flex-col md:flex-row items-center gap-4 border-b border-slate-800 pb-6 justify-between">
+                <h1 className="text-3xl md:text-4xl font-black text-white flex items-center gap-3">
+                  Autorización de Lanzamiento 🚀
                 </h1>
-                <p className="text-xl md:text-2xl font-black text-purple-300">
-                  Fase 4 — Indexación & Search Console
-                </p>
-              </div>
-
-              {/* Owl message */}
-              <div className="w-full max-w-2xl bg-slate-800/80 rounded-2xl border border-slate-700 p-6 md:p-8 flex gap-5 items-start text-left">
-                <div className="text-5xl md:text-6xl animate-bounce flex-shrink-0">🦉</div>
-                <div className="space-y-3">
-                  <p className="text-base md:text-lg font-bold text-slate-200 leading-relaxed">
-                    En esta fase vas a poder conectar tu{" "}
-                    <span className="text-green-400 font-black">Google Search Console</span>{" "}
-                    para enviar tus URLs modificadas directo a los servidores de Google con un solo clic,{" "}
-                    <span className="text-purple-400 font-black">indexando tus páginas en minutos</span>{" "}
-                    y midiendo tus clics reales en este tablero.
-                  </p>
-                  <p className="text-base md:text-lg font-black text-yellow-400">
-                    ¡Seguí sumando XP en las fases anteriores para tener tu chasis listo! 🏎️
-                  </p>
+                <div className="bg-purple-900/50 border border-purple-600/50 rounded-full px-4 py-1.5 text-xs font-black text-purple-300 uppercase tracking-wider">
+                  Fase 4: Indexación
                 </div>
               </div>
 
-              {/* Feature preview grid */}
-              <div className="w-full grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
-                {[
-                  { icon: "⚡", color: "text-yellow-400", title: "Indexación Express", desc: "Enviá URLs a Google en segundos, sin esperar semanas." },
-                  { icon: "📊", color: "text-blue-400", title: "Métricas Reales", desc: "Clics, impresiones y posición directamente de Search Console." },
-                  { icon: "🔗", color: "text-purple-400", title: "Detector de 404", desc: "Encontrá links rotos antes de que Google te penalice." },
-                ].map(({ icon, color, title, desc }) => (
-                  <div key={title} className="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 space-y-2">
-                    <div className={`text-4xl ${color}`}>{icon}</div>
-                    <h3 className="text-lg font-black text-white">{title}</h3>
-                    <p className="text-sm font-bold text-slate-400 leading-relaxed">{desc}</p>
-                    <div className="inline-flex items-center gap-1.5 bg-slate-700/50 rounded-lg px-3 py-1">
-                      <span className="w-1.5 h-1.5 bg-purple-400 rounded-full" />
-                      <span className="text-xs font-black text-slate-400">Próximamente</span>
-                    </div>
-                  </div>
-                ))}
+              {/* Caja informativa / Alert banner */}
+              <div className="p-5 bg-purple-950/20 border-2 border-purple-800/60 rounded-2xl space-y-2">
+                <h4 className="font-black text-purple-300 text-base flex items-center gap-2">
+                  💡 ¿Qué significa solicitar la indexación?
+                </h4>
+                <p className="text-sm font-bold text-slate-350 leading-relaxed">
+                  Normalmente, Google puede tardar semanas en notar tus mejoras. Al usar esta herramienta, le enviamos una alerta directa a sus robots para que escaneen y actualicen tu posición hoy mismo.
+                </p>
               </div>
 
-              {/* CTA to earlier phases */}
-              <div className="flex flex-col sm:flex-row gap-4 w-full max-w-lg">
-                <Link href="/optimizacion" onClick={playClick}
-                  className="flex-1 btn-3d btn-green text-center text-xl font-black py-4">
-                  🛠️ IR A FASE 3
-                </Link>
-                <Link href="/buscador-de-oro" onClick={playClick}
-                  className="flex-1 btn-3d btn-white text-slate-700 dark:text-slate-200 text-center text-xl font-black py-4">
-                  🔍 IR A FASE 1
-                </Link>
+              {/* Checklist */}
+              {indexingStatus !== "success" ? (
+                <div className="bg-slate-800/80 rounded-2xl border border-slate-750 p-6 md:p-8 space-y-6">
+                  <h3 className="text-lg font-black text-white flex items-center gap-2 mb-2">
+                    📋 Verificaciones antes de despegar
+                  </h3>
+                  <p className="text-xs text-slate-400 font-bold">
+                    Asegurate de haber cumplido todos los pasos para evitar indexar una página sin cambios:
+                  </p>
+                  
+                  <div className="space-y-4">
+                    <label className="flex items-start gap-4 cursor-pointer select-none group">
+                      <input
+                        type="checkbox"
+                        checked={h1Checked}
+                        onChange={(e) => { playClick(); setH1Checked(e.target.checked); }}
+                        className="w-6 h-6 rounded-md border-2 border-slate-650 bg-slate-900 checked:bg-green-500 checked:border-green-600 focus:ring-0 accent-green-500 transition-colors mt-0.5"
+                      />
+                      <span className="text-base font-bold text-slate-350 group-hover:text-white transition-colors leading-snug">
+                        Ya actualicé el Título Principal (H1) en mi página web.
+                      </span>
+                    </label>
+
+                    <label className="flex items-start gap-4 cursor-pointer select-none group">
+                      <input
+                        type="checkbox"
+                        checked={keywordChecked}
+                        onChange={(e) => { playClick(); setKeywordChecked(e.target.checked); }}
+                        className="w-6 h-6 rounded-md border-2 border-slate-650 bg-slate-900 checked:bg-green-500 checked:border-green-600 focus:ring-0 accent-green-500 transition-colors mt-0.5"
+                      />
+                      <span className="text-base font-bold text-slate-355 group-hover:text-white transition-colors leading-snug">
+                        Ya incluí la palabra clave dentro del texto de mi página.
+                      </span>
+                    </label>
+
+                    <label className="flex items-start gap-4 cursor-pointer select-none group">
+                      <input
+                        type="checkbox"
+                        checked={savedChecked}
+                        onChange={(e) => { playClick(); setSavedChecked(e.target.checked); }}
+                        className="w-6 h-6 rounded-md border-2 border-slate-655 bg-slate-900 checked:bg-green-500 checked:border-green-600 focus:ring-0 accent-green-500 transition-colors mt-0.5"
+                      />
+                      <span className="text-base font-bold text-slate-355 group-hover:text-white transition-colors leading-snug">
+                        Guardé y publiqué los cambios en mi plataforma.
+                      </span>
+                    </label>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-emerald-950/20 border-2 border-emerald-800/60 rounded-2xl p-6 md:p-8 text-center space-y-4 animate-in zoom-in-95 duration-300">
+                  <div className="text-6xl animate-bounce">🚀</div>
+                  <h3 className="text-2xl font-black text-emerald-400">¡Lanzamiento Autorizado!</h3>
+                  <p className="text-base font-bold text-slate-300 leading-relaxed max-w-lg mx-auto">
+                    Le enviamos una señal de indexación prioritaria a Google Search Console. Sus robots volverán a escanear tu URL en las próximas horas para registrar tus mejoras.
+                  </p>
+                  <div className="text-yellow-400 font-black text-lg">
+                    ¡Ganaste +50 XP por completar el Lanzamiento! 🏆
+                  </div>
+                </div>
+              )}
+
+              {/* Action Button */}
+              <div className="pt-4">
+                <button
+                  disabled={!allChecked || indexingStatus === "loading" || indexingStatus === "success"}
+                  onClick={handleRequestIndex}
+                  className={`w-full btn-3d font-black py-4 text-lg flex items-center justify-center gap-2.5 transition-all ${
+                    allChecked && indexingStatus !== "success"
+                      ? "bg-green-500 border-green-600 border-b-4 hover:bg-green-450 active:border-b-0 active:translate-y-1 text-white shadow-lg shadow-green-500/20"
+                      : "bg-slate-800 border-slate-700 text-slate-500 cursor-not-allowed opacity-50"
+                  }`}
+                >
+                  {indexingStatus === "loading" ? "📡 ENVIANDO ALERTA A GOOGLE..." : "📡 Solicitar Indexación a Google"}
+                </button>
               </div>
+
+              {/* Optional footer info */}
+              {indexingStatus === "idle" && (
+                <p className="text-xs text-slate-550 text-center font-bold">
+                  ⚠️ Asegurate de marcar todas las casillas. Solicitar la indexación sin haber realizado cambios en tu sitio web no surtirá efecto.
+                </p>
+              )}
+
             </div>
           </div>
 
