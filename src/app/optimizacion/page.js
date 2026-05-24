@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { verifyMission } from "../../lib/actions";
+import { getRealMissions, verifyMission } from "../../lib/actions";
 
 // Mapa de tipos de página para badges
 const getBadgeInfo = (url) => {
@@ -148,7 +148,18 @@ export default function Optimizacion() {
         setMissionError("Error al cargar las misiones. Volvé al Inicio.");
       }
     } else {
-      setMissionError("Todavía no analizaste tu sitio. Volvé al Inicio para iniciar el análisis.");
+      if (savedUrl) {
+        setMissionError(null);
+        getRealMissions(savedUrl, keyword || undefined).then(realMissions => {
+          setMissions(realMissions);
+          localStorage.setItem("seojump_missions", JSON.stringify(realMissions));
+        }).catch(err => {
+          console.error("Failed to fetch missions:", err);
+          setMissionError(err.message || 'Error al obtener misiones');
+        });
+      } else {
+        setMissionError("Todavía no analizaste tu sitio. Volvé al Inicio para iniciar el análisis.");
+      }
     }
   }, []);
 
@@ -413,13 +424,40 @@ export default function Optimizacion() {
               ) : (
                 <div className="text-center py-12 space-y-4 card-3d">
                   {missionError ? (
-                    <>
-                      <div className="text-6xl">⚠️</div>
-                      <p className="text-red-400 font-bold text-lg">{missionError}</p>
-                      <Link href="/" className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4">
-                        VOLVER AL INICIO
-                      </Link>
-                    </>
+                    missionError === "MISSING_SEARCH_CONSOLE_SCOPE" ? (
+                      <div className="max-w-md mx-auto p-6 md:p-8 bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-200 dark:border-slate-700 shadow-xl text-center space-y-6 animate-in zoom-in-95 duration-300">
+                        <div className="text-6xl animate-bounce">🔑</div>
+                        <div className="space-y-3">
+                          <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-tight">
+                            Vinculá tu Search Console 🏁
+                          </h3>
+                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-relaxed">
+                            Para cargar las misiones SEO reales de tu sitio web, necesitamos permiso de lectura (solo lectura) de tus propiedades de Google Search Console. Es 100% seguro y no modificará nada.
+                          </p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            playClick();
+                            signIn("google", {
+                              authorizationParams: {
+                                scope: "openid email profile https://www.googleapis.com/auth/webmasters.readonly"
+                              }
+                            });
+                          }}
+                          className="w-full btn-3d bg-green-500 border-green-600 border-b-4 hover:bg-green-450 active:border-b-0 active:translate-y-1 text-white text-base font-black py-3.5 flex items-center justify-center gap-2 shadow-lg hover:shadow-green-500/20"
+                        >
+                          Conectar Google Search Console
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="text-6xl">⚠️</div>
+                        <p className="text-red-400 font-bold text-lg">{missionError}</p>
+                        <Link href="/" className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4">
+                          VOLVER AL INICIO
+                        </Link>
+                      </>
+                    )
                   ) : (
                     <p className="text-slate-500 font-bold">Cargando misiones...</p>
                   )}

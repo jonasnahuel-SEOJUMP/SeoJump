@@ -77,7 +77,7 @@ export async function getSearchConsoleData(accessToken, siteUrl) {
 
         // If it's a scope/auth error (403 insufficient scopes), no point retrying variants
         if (code === 403 && msg?.includes('insufficient authentication scopes')) {
-          throw new Error('Request had insufficient authentication scopes.');
+          throw new Error('MISSING_SEARCH_CONSOLE_SCOPE');
         }
       }
     } catch (err) {
