@@ -1,29 +1,59 @@
 /**
  * Utility to interact with Google Search Console API
- * Tries multiple URL formats to find a matching property.
  */
+
+const normalizeUrl = (u) => (u || '').replace(/\/$/, '').toLowerCase();
 
 /**
- * Generates all possible URL formats for a given user input.
- * Search Console properties can be registered in many ways.
+ * Fetches verified sites from GSC and finds a matching property
+ * using trailing slash normalization.
  */
-function generateUrlVariants(input) {
-  // Strip protocol and trailing slashes to get the raw domain
-  const raw = input
-    .replace(/^https?:\/\//, '')
-    .replace(/\/$/, '');
+async function getVerifiedSiteProperty(accessToken, userInputUrl) {
+  const response = await fetch(
+    "https://www.googleapis.com/webmasters/v3/sites",
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
 
-  const withWww = raw.startsWith('www.') ? raw : `www.${raw}`;
-  const withoutWww = raw.startsWith('www.') ? raw.slice(4) : raw;
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    const code = errData?.error?.code;
+    const msg = errData?.error?.message;
+    if (code === 403 && (msg?.includes('insufficient authentication scopes') || msg?.includes('Insufficient Permission'))) {
+      throw new Error('MISSING_SEARCH_CONSOLE_SCOPE');
+    }
+    throw new Error(msg || "Error al obtener las propiedades de Search Console");
+  }
 
-  return [
-    `https://${withWww}/`,
-    `https://${withoutWww}/`,
-    `http://${withWww}/`,
-    `http://${withoutWww}/`,
-    `sc-domain:${withoutWww}`,
-    `sc-domain:${withWww}`,
-  ];
+  const data = await response.json();
+  const siteEntry = data.siteEntry || [];
+
+  const normalizedInput = normalizeUrl(userInputUrl);
+
+  // Try to find a match by comparing normalized URLs
+  const match = siteEntry.find(site => {
+    return normalizeUrl(site.siteUrl) === normalizedInput;
+  });
+
+  if (match) {
+    return match.siteUrl; // Use exact GSC registered property URL
+  }
+
+  // Fallback check: check if it matches a domain property (e.g. sc-domain:example.com)
+  const domainOnly = userInputUrl.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/^www\./, '').toLowerCase();
+  const domainMatch = siteEntry.find(site => {
+    const cleanSite = site.siteUrl.replace(/^sc-domain:/, '').replace(/\/$/, '').replace(/^www\./, '').toLowerCase();
+    return cleanSite === domainOnly;
+  });
+
+  if (domainMatch) {
+    return domainMatch.siteUrl;
+  }
+
+  return null;
 }
 
 async function querySearchConsole(accessToken, siteUrl, body) {
@@ -54,50 +84,42 @@ export async function getSearchConsoleData(accessToken, siteUrl) {
     rowLimit: 10,
   };
 
-  const urlVariants = generateUrlVariants(siteUrl);
-
   console.log('--- DEBUG SEARCH CONSOLE ---');
   console.log('Input URL:', siteUrl);
-  console.log('Trying variants:', urlVariants);
 
-  for (const variant of urlVariants) {
-    try {
-      console.log(`Trying: ${variant}`);
-      const response = await querySearchConsole(accessToken, variant, body);
-
-      if (response.ok) {
-        const data = await response.json();
-        console.log(`✅ Success with "${variant}" — Found ${data.rows?.length || 0} rows`);
-        return data.rows || [];
-      } else {
-        const errorData = await response.json();
-        const code = errorData?.error?.code;
-        const msg = errorData?.error?.message;
-        console.log(`❌ Failed "${variant}": [${code}] ${msg}`);
-
-        // If it's a scope/auth error (403 insufficient scopes), no point retrying variants
-        if (code === 403 && msg?.includes('insufficient authentication scopes')) {
-          throw new Error('MISSING_SEARCH_CONSOLE_SCOPE');
-        }
-      }
-    } catch (err) {
-      // Re-throw auth errors immediately
-      if (err.message?.includes('insufficient authentication scopes')) {
-        throw err;
-      }
-      console.error(`Error trying variant "${variant}":`, err.message);
+  try {
+    const verifiedProperty = await getVerifiedSiteProperty(accessToken, siteUrl);
+    if (!verifiedProperty) {
+      console.warn(`No matching Search Console property found for: ${siteUrl}`);
+      return [];
     }
-  }
 
-  // All variants failed — return empty without throwing (URL not in Search Console)
-  console.warn(`No matching Search Console property found for: ${siteUrl}`);
-  return [];
+    console.log(`✅ Success finding matching GSC property: "${verifiedProperty}"`);
+    const response = await querySearchConsole(accessToken, verifiedProperty, body);
+
+    if (response.ok) {
+      const data = await response.json();
+      return data.rows || [];
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      const code = errorData?.error?.code;
+      const msg = errorData?.error?.message;
+      console.log(`❌ Failed querySearchConsole: [${code}] ${msg}`);
+      if (code === 403 && (msg?.includes('insufficient authentication scopes') || msg?.includes('Insufficient Permission'))) {
+        throw new Error('MISSING_SEARCH_CONSOLE_SCOPE');
+      }
+      throw new Error(msg || "Error querying Search Console data");
+    }
+  } catch (err) {
+    if (err.message === 'MISSING_SEARCH_CONSOLE_SCOPE') {
+      throw err;
+    }
+    console.error("Error in getSearchConsoleData:", err.message);
+    return [];
+  }
 }
 
 export async function submitGoogleIndexing(accessToken, siteUrl, urlToIndex) {
-  const urlVariants = generateUrlVariants(siteUrl);
-  
-  // Try to submit the sitemap of the site as a notification of change
   const cleanSiteUrl = siteUrl.replace(/\/$/, '');
   const sitemapUrl = `${cleanSiteUrl}/sitemap.xml`;
 
@@ -106,36 +128,37 @@ export async function submitGoogleIndexing(accessToken, siteUrl, urlToIndex) {
   console.log('URL to Index:', urlToIndex);
   console.log('Sitemap to submit:', sitemapUrl);
 
-  let lastError = null;
-
-  for (const variant of urlVariants) {
-    try {
-      console.log(`Submitting sitemap to property variant: ${variant}`);
-      const response = await fetch(
-        `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(variant)}/sitemaps/${encodeURIComponent(sitemapUrl)}`,
-        {
-          method: 'PUT',
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-
-      if (response.ok) {
-        console.log(`✅ Sitemap submitted successfully to "${variant}"`);
-        return { success: true, variant, message: "Indexación solicitada con éxito a través de sitemap." };
-      } else {
-        const errorData = await response.json().catch(() => ({}));
-        const code = errorData?.error?.code;
-        const msg = errorData?.error?.message;
-        console.log(`❌ Failed to submit to "${variant}": [${code}] ${msg}`);
-        lastError = new Error(msg || "Error en la API de Google");
-      }
-    } catch (err) {
-      console.error(`Error trying variant "${variant}" for sitemap submission:`, err.message);
-      lastError = err;
+  try {
+    const verifiedProperty = await getVerifiedSiteProperty(accessToken, siteUrl);
+    if (!verifiedProperty) {
+      throw new Error("No se pudo encontrar una propiedad de Search Console coincidente para este sitio.");
     }
-  }
 
-  throw lastError || new Error("No se pudo encontrar una propiedad de Search Console coincidente para este sitio.");
+    console.log(`Submitting sitemap to property: ${verifiedProperty}`);
+    const response = await fetch(
+      `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(verifiedProperty)}/sitemaps/${encodeURIComponent(sitemapUrl)}`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (response.ok) {
+      console.log(`✅ Sitemap submitted successfully to "${verifiedProperty}"`);
+      return { success: true, variant: verifiedProperty, message: "Indexación solicitada con éxito a través de sitemap." };
+    } else {
+      const errorData = await response.json().catch(() => ({}));
+      const code = errorData?.error?.code;
+      const msg = errorData?.error?.message;
+      if (code === 403 && (msg?.includes('insufficient authentication scopes') || msg?.includes('Insufficient Permission'))) {
+        throw new Error('MISSING_SEARCH_CONSOLE_SCOPE');
+      }
+      throw new Error(msg || "Error en la API de Google");
+    }
+  } catch (err) {
+    console.error(`Error submitting sitemap:`, err.message);
+    throw err;
+  }
 }

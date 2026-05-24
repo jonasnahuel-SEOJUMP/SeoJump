@@ -18,10 +18,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, account }) {
-      // First login: store access token, refresh token and expiry
+      // First login or dynamic elevation of scopes: store/update access token, scope, refresh token and expiry
       if (account) {
         token.accessToken = account.access_token
-        token.refreshToken = account.refresh_token
+        token.scope = account.scope
+        if (account.refresh_token) {
+          token.refreshToken = account.refresh_token
+        }
         token.accessTokenExpires = account.expires_at
           ? account.expires_at * 1000  // Convert to ms
           : Date.now() + 3600 * 1000   // Default 1 hour
@@ -40,6 +43,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
     async session({ session, token }) {
       session.accessToken = token.accessToken as string | undefined
+      session.scope = token.scope as string | undefined
       session.error = token.error as string | undefined
       return session
     },
