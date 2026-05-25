@@ -489,7 +489,21 @@ export default function BuscadorDeOro() {
           </div>
 
           {/* Results as Actionable Missions */}
-          {suggestions.length > 0 ? (
+          {loading ? (
+            <div className="text-center py-20 px-6 card-3d bg-slate-900 border-2 border-amber-500/30 rounded-3xl shadow-[0_0_40px_rgba(251,191,36,0.15)] animate-pulse relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent animate-infinite duration-2000" />
+              <div className="text-7xl mb-6 animate-bounce">⛏️</div>
+              <h3 className="text-2xl md:text-3xl font-black text-amber-400 mb-2">Minando el oro con IA...</h3>
+              <p className="text-base md:text-lg font-bold text-slate-300 max-w-md mx-auto leading-relaxed">
+                Escaneando tu web y consultando con Gemini para descubrir las mejores oportunidades de SEO... ¡Preparate para la recompensa!
+              </p>
+              <div className="flex justify-center gap-2 mt-6">
+                <span className="w-3.5 h-3.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '0s' }}></span>
+                <span className="w-3.5 h-3.5 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                <span className="w-3.5 h-3.5 rounded-full bg-amber-300 animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+              </div>
+            </div>
+          ) : suggestions.length > 0 ? (
             <div className="w-full space-y-6 animate-in fade-in duration-300">
               <h2 className="text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-3 justify-center md:justify-start">
                 <span className="text-3xl">🪙</span> Resultados de Oro
@@ -547,7 +561,7 @@ export default function BuscadorDeOro() {
                           <span className={`inline-flex items-center gap-1.5 text-xs font-black uppercase tracking-wider rounded-full px-3 py-1 border ${
                             isVenta
                               ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/35'
-                              : 'bg-violet-500/20 text-violet-300 border-violet-500/35'
+                              : 'bg-violet-500/20 text-violet-350 border-violet-500/35'
                           }`}>
                             {isVenta ? '🛒 Carrito' : '📝 Anotador'}
                           </span>
@@ -607,7 +621,7 @@ export default function BuscadorDeOro() {
           ) : (
              /* Empty State after search or initial state */
              <div className="text-center py-16 px-6 card-3d bg-white/50 dark:bg-slate-800/50 border-dashed border-2 border-slate-200 dark:border-slate-700 shadow-none rounded-2xl">
-               {!loading && query && !error ? (
+               {query && !error ? (
                  <div className="space-y-4">
                    <div className="text-7xl opacity-50 mb-2">🌵</div>
                    <p className="text-slate-550 dark:text-slate-400 font-black text-2xl">No encontramos oro para esta búsqueda.</p>
@@ -641,8 +655,8 @@ export default function BuscadorDeOro() {
             
             <div className="border-t border-slate-100 dark:border-slate-700 pt-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xl font-black text-duo-yellow">NIVEL ${Math.floor(xp / 100) + 1}</span>
-                <span className="text-sm font-bold text-slate-500 dark:text-slate-400">${xp % 100} / 100 XP</span>
+                <span className="text-xl font-black text-duo-yellow">NIVEL {Math.floor(xp / 100) + 1}</span>
+                <span className="text-sm font-bold text-slate-500 dark:text-slate-400">{xp % 100} / 100 XP</span>
               </div>
               <div className="w-full h-6 bg-gray-100 dark:bg-slate-900 rounded-full border-2 border-slate-200 dark:border-slate-700 overflow-hidden">
                 <div className="h-full bg-duo-yellow transition-all duration-1000" style={{ width: `${xp % 100}%` }}></div>

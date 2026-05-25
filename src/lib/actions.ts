@@ -2,6 +2,7 @@
 
 import { signIn, signOut, auth } from "../auth"
 import { getSearchConsoleData, submitGoogleIndexing } from "./google"
+import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export async function login() {
   await signIn("google")
@@ -490,5 +491,237 @@ export async function requestGoogleIndexing(urlToIndex: string) {
   } catch (error: any) {
     console.error("Error requesting Google indexing:", error);
     return { success: false, message: error.message || "Error al solicitar indexación." };
+  }
+}
+
+/**
+ * Intenta extraer el nicho/rubro del sitio a partir de su URL y del nombre del dominio.
+ */
+function inferNichoFromUrl(siteUrl: string): string {
+  if (!siteUrl) return '';
+  try {
+    const raw = siteUrl.trim().toLowerCase();
+    const url = raw.startsWith('http') ? raw : `https://${raw}`;
+    const parsed = new URL(url);
+    const hostname = parsed.hostname.replace(/^www\./, '');
+    const domainSlug = hostname.split('.')[0];
+
+    const NICHO_MAP = [
+      { match: /detail|car\s?wash|pulido|encerado|nano|wax|ceramic|coating|ppf/i, nicho: 'detailing vehicular' },
+      { match: /zapato|calzado|zapatilla|shoe|boot/i, nicho: 'calzado' },
+      { match: /ropa|indumentaria|moda|fashion|cloth/i, nicho: 'indumentaria' },
+      { match: /gastro|restaurant|comida|food|menu|bistro|pizza|burger|sushi/i, nicho: 'gastronomía' },
+      { match: /gym|fitness|muscula|entrena|sport|deporte/i, nicho: 'gimnasio' },
+      { match: /ferret|herram|tool|pintur|bazar|ferreteria/i, nicho: 'ferretería y herramientas' },
+      { match: /farm|salud|clinica|medic|dental|optica/i, nicho: 'salud' },
+      { match: /inmob|prop|alquil|venta casa|real.?estat/i, nicho: 'inmobiliaria' },
+      { match: /pet|mascotas|veterinar|perr|gat/i, nicho: 'veterinaria y mascotas' },
+      { match: /electr|tecno|celular|phone|compu|laptop/i, nicho: 'electrónica y tecnología' },
+      { match: /muebl|deco|hogar|home|sofa|silla|cama/i, nicho: 'muebles y decoración' },
+      { match: /joyeria|bijou|pulsera|collar|anillo|jewelry/i, nicho: 'joyería y accesorios' },
+      { match: /jardin|plant|flores|vivero|garden/i, nicho: 'jardinería' },
+      { match: /libreria|papeler|escolar|book|libro/i, nicho: 'librería y papelería' },
+    ];
+
+    for (const { match, nicho } of NICHO_MAP) {
+      if (match.test(domainSlug) || match.test(hostname)) {
+        return nicho;
+      }
+    }
+    return '';
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Escanea metadatos Title, Description y H1 de forma rápida con timeout de 4 segundos.
+ */
+async function scrapeMetadata(siteUrl: string): Promise<{ title: string; description: string; h1: string }> {
+  const result = { title: "", description: "", h1: "" };
+  if (!siteUrl) return result;
+  
+  let targetUrl = siteUrl.trim();
+  if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+    targetUrl = "https://" + targetUrl;
+  }
+  
+  try {
+    const res = await fetch(targetUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
+      },
+      signal: AbortSignal.timeout(4000),
+    });
+    
+    if (!res.ok) {
+      return result;
+    }
+    
+    const html = await res.text();
+    
+    // Extract Title
+    const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    if (titleMatch) {
+      result.title = titleMatch[1].replace(/<[^>]+>/g, '').trim();
+    }
+    
+    // Extract Meta Description
+    const descMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i) ||
+                      html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i);
+    if (descMatch) {
+      result.description = descMatch[1].trim();
+    }
+    
+    // Extract H1
+    const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+    if (h1Match) {
+      result.h1 = h1Match[1].replace(/<[^>]+>/g, '').trim();
+    }
+  } catch (error) {
+    console.error("Error scraping metadata:", error);
+  }
+  
+  return result;
+}
+
+/**
+ * Server Action híbrida para obtener sugerencias predictivas SEO con IA (Gemini).
+ */
+export async function getAIPredictiveSuggestions(siteUrl: string, seedKeyword: string, excludedWords?: string) {
+  try {
+    // 1. Scraping metadatos
+    const meta = await scrapeMetadata(siteUrl);
+    const inferredNicho = inferNichoFromUrl(siteUrl);
+    const businessNiche = [inferredNicho, meta.title, meta.description, meta.h1].filter(Boolean).join(" | ");
+
+    // 2. Obtener data de Search Console
+    let gscRows: any[] = [];
+    try {
+      const session = await auth();
+      if (session?.accessToken) {
+        gscRows = await getSearchConsoleData(session.accessToken, siteUrl, seedKeyword);
+      }
+    } catch (err: any) {
+      console.warn("Could not retrieve GSC data:", err.message);
+    }
+
+    // 3. Obtener API key
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return { success: false, error: "GEMINI_API_KEY no configurada en las variables de entorno." };
+    }
+
+    // Parse excluded words
+    const excludedList = excludedWords
+      ? excludedWords.split(',').map(w => w.trim().toLowerCase()).filter(Boolean)
+      : [];
+
+    const hasGscData = gscRows && gscRows.length > 0;
+    
+    let gscContext = "";
+    if (hasGscData) {
+      gscContext = gscRows.map(row => {
+        const page = row.keys[0];
+        const query = row.keys[1];
+        return `Página: ${page}, Query: ${query}, Clicks: ${row.clicks}, Impresiones: ${row.impressions}`;
+      }).join("\n");
+    }
+
+    const systemInstructions = `
+Actúas como un consultor SEO experto de nivel premium. Tu objetivo es generar exactamente 10 palabras clave de cola larga (long-tail) que tengan una alta intención comercial o transaccional, y en menor medida informacional.
+
+Contexto del negocio:
+- URL del sitio: ${siteUrl}
+- Nicho/Metadatos detectados: ${businessNiche || "No se pudo detectar el nicho."}
+- Palabra clave semilla: "${seedKeyword}"
+${hasGscData ? `\nDatos reales de Google Search Console para esta semilla:\n${gscContext}` : "\n[AVISO CRÍTICO] La API de Search Console no devolvió resultados para esta semilla (búsqueda vacía). Debes apoyarte FUERTEMENTE en el nicho del negocio, el contenido de los metadatos y la palabra clave semilla para inventar de manera predictiva 10 misiones espectaculares y altamente relevantes."}
+
+Reglas estrictas de generación:
+1. Genera EXACTAMENTE 10 sugerencias de palabras clave de cola larga (long-tail).
+2. Cada palabra clave debe contener de manera obligatoria la palabra clave semilla "${seedKeyword}" (o variaciones gramaticales muy cercanas).
+3. Cada sugerencia debe clasificarse con:
+   - "keyword": El término de búsqueda exacto.
+   - "intent": Debe ser "transaccional" o "informacional".
+   - "relevancia": Debe ser "alta", "media" o "baja".
+4. NUNCA incluyas caracteres especiales como '$' ni ningún otro símbolo extraño al inicio del término. Todas las palabras clave deben estar completamente limpias.
+5. Evita usar las siguientes palabras excluidas: ${excludedList.join(", ") || "Ninguna"}.
+6. Devuelve la respuesta ESTRICTAMENTE en formato JSON con el siguiente esquema de array, sin bloques de código markdown ni explicaciones adicionales:
+[
+  { "keyword": "...", "intent": "transaccional" | "informacional", "relevancia": "alta" | "media" | "baja" }
+]
+`;
+
+    // 4. Llamar a la API de Gemini
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "gemini-2.0-flash",
+      generationConfig: {
+        responseMimeType: "application/json"
+      }
+    });
+
+    const result = await model.generateContent(systemInstructions);
+    const responseText = await result.response.text();
+
+    // 5. Parsear y Validar JSON
+    let parsed: any[] = [];
+    try {
+      const jsonStart = responseText.indexOf('[');
+      const jsonEnd = responseText.lastIndexOf(']');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        parsed = JSON.parse(responseText.substring(jsonStart, jsonEnd + 1));
+      } else {
+        parsed = JSON.parse(responseText);
+      }
+    } catch (parseErr) {
+      console.error("Error parsing Gemini JSON response:", responseText, parseErr);
+      return { success: false, error: "La IA devolvió un formato no válido. Intentá de nuevo." };
+    }
+
+    if (!Array.isArray(parsed)) {
+      return { success: false, error: "La IA no devolvió una lista de sugerencias." };
+    }
+
+    // 6. Sanitizar y mapear
+    const finalSuggestions = parsed
+      .map((item: any) => {
+        if (!item) return null;
+        const rawKeyword = item.keyword || item.text || "";
+        
+        // Limpieza agresiva de caracteres extraños ($) y basura inicial
+        const cleanKeyword = rawKeyword
+          .replace(/\$/g, '')
+          .replace(/^[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+/g, '')
+          .trim();
+
+        if (!cleanKeyword) return null;
+
+        // Comprobar exclusión
+        const lowerKeyword = cleanKeyword.toLowerCase();
+        const isExcluded = excludedList.some(ex => lowerKeyword.includes(ex));
+        if (isExcluded) return null;
+
+        const mappedIntent = (item.intent === 'informacional' || item.intent === 'atraccion') 
+          ? 'atraccion' 
+          : 'venta';
+
+        return {
+          text: cleanKeyword,
+          intent: mappedIntent
+        };
+      })
+      .filter(Boolean);
+
+    return {
+      success: true,
+      suggestions: finalSuggestions,
+      nicho: inferredNicho || "General"
+    };
+
+  } catch (error: any) {
+    console.error("Error in getAIPredictiveSuggestions:", error);
+    return { success: false, error: error.message || "Error al procesar la sugerencia con IA." };
   }
 }
