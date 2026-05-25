@@ -724,34 +724,49 @@ Reglas estrictas de generación:
 ]
 `;
 
-    // 4. Llamar a la API de Gemini
+    // 4. Llamar a la API de Gemini con mecanismo de reintento (retry) y retroceso exponencial (exponential backoff)
     let responseText = "";
-    try {
-      console.log("Initializing GoogleGenerativeAI with API Key length:", apiKey ? apiKey.length : 0);
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({
-        model: "gemini-flash-latest",
-        generationConfig: {
-          responseMimeType: "application/json"
-        }
-      });
+    const maxRetries = 3;
+    let attempt = 0;
+    let delayMs = 1000;
 
-      const result = await model.generateContent(
-        {
-          contents: [{ role: 'user', parts: [{ text: systemInstructions }] }]
-        },
-        {
-          timeout: 30000 // Timeout de 30 segundos
+    while (attempt < maxRetries) {
+      try {
+        console.log(`Initializing GoogleGenerativeAI with API Key (Attempt ${attempt + 1}/${maxRetries})`);
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const model = genAI.getGenerativeModel({
+          model: "gemini-1.5-flash",
+          generationConfig: {
+            responseMimeType: "application/json"
+          }
+        });
+
+        const result = await model.generateContent(
+          {
+            contents: [{ role: 'user', parts: [{ text: systemInstructions }] }]
+          },
+          {
+            timeout: 30000 // Timeout de 30 segundos
+          }
+        );
+        responseText = await result.response.text();
+        break; // Éxito, salir del bucle
+      } catch (geminiErr: any) {
+        attempt++;
+        console.error(`Attempt ${attempt} to call Gemini API failed:`, geminiErr.message || geminiErr);
+        
+        if (attempt >= maxRetries) {
+          return { 
+            success: false, 
+            error: `La Inteligencia Artificial de Google (Gemini) está experimentando una alta demanda temporal en sus servidores (Error 503). Por favor, intenta buscar de nuevo en unos segundos.`,
+            stack: geminiErr.stack
+          };
         }
-      );
-      responseText = await result.response.text();
-    } catch (geminiErr: any) {
-      console.error("Gemini API call failed during initialization or request execution. API Key length used:", apiKey ? apiKey.length : 0, geminiErr);
-      return { 
-        success: false, 
-        error: `Gemini API Call Failed: ${geminiErr.message}`,
-        stack: geminiErr.stack
-      };
+        
+        console.log(`Waiting ${delayMs}ms before retrying Gemini API...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        delayMs *= 2; // Retroceso exponencial
+      }
     }
 
     // 5. Parsear y Validar JSON
