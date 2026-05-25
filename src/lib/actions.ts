@@ -1,5 +1,7 @@
 "use server"
 
+import fs from "fs"
+import path from "path"
 import { signIn, signOut, auth } from "../auth"
 import { getSearchConsoleData, submitGoogleIndexing } from "./google"
 import { GoogleGenerativeAI } from "@google/generative-ai"
@@ -10,6 +12,95 @@ export async function login() {
 
 export async function logout() {
   await signOut()
+}
+
+/**
+ * Sanitiza y valida las entradas del usuario (keywords y URLs) antes de ser procesadas.
+ */
+function sanitizeInput(text: string, type: 'keyword' | 'url'): { isValid: boolean; sanitized: string; error?: string } {
+  if (!text || !text.trim()) {
+    return { 
+      isValid: false, 
+      sanitized: "", 
+      error: `La entrada del ${type === 'keyword' ? 'término de búsqueda' : 'sitio web'} está vacía o contiene solo espacios.` 
+    };
+  }
+
+  const clean = text.trim();
+
+  if (type === 'keyword') {
+    // Permitir letras, números, espacios y acentos comunes
+    const cleanKeyword = clean.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s]/g, "");
+    if (cleanKeyword.length < 2) {
+      return { 
+        isValid: false, 
+        sanitized: clean, 
+        error: "La palabra clave es demasiado corta. Debe tener al menos 2 caracteres válidos." 
+      };
+    }
+    if (cleanKeyword.length > 80) {
+      return { 
+        isValid: false, 
+        sanitized: clean, 
+        error: "La palabra clave es demasiado larga. Por favor usa un término de hasta 80 caracteres." 
+      };
+    }
+    return { isValid: true, sanitized: cleanKeyword };
+  } else {
+    const cleanUrl = clean.toLowerCase();
+    // Expresión regular para validar dominio o URL básico
+    const domainRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+    if (!domainRegex.test(cleanUrl)) {
+      return { 
+        isValid: false, 
+        sanitized: clean, 
+        error: "La URL ingresada no es válida. Asegurate de usar un formato de dominio correcto (ej: miweb.com)." 
+      };
+    }
+    return { isValid: true, sanitized: cleanUrl };
+  }
+}
+
+/**
+ * Guarda un registro persistente del error en un archivo JSON local en el servidor.
+ */
+function logErrorToFile(actionName: string, input: any, status: string | number, message: string) {
+  try {
+    const logFilePath = path.join(process.cwd(), "error_log.json");
+    const logEntry = {
+      action: actionName,
+      input,
+      timestamp: new Date().toISOString(),
+      status: String(status),
+      message: message || "Error desconocido"
+    };
+
+    let logs: any[] = [];
+    if (fs.existsSync(logFilePath)) {
+      try {
+        const fileContent = fs.readFileSync(logFilePath, "utf8");
+        logs = JSON.parse(fileContent);
+        if (!Array.isArray(logs)) {
+          logs = [];
+        }
+      } catch (parseErr) {
+        console.error("Error parsing existing error_log.json, resetting:", parseErr);
+        logs = [];
+      }
+    }
+
+    logs.push(logEntry);
+
+    // Conservar solo los últimos 100 registros para evitar crecimiento infinito
+    if (logs.length > 100) {
+      logs = logs.slice(logs.length - 100);
+    }
+
+    fs.writeFileSync(logFilePath, JSON.stringify(logs, null, 2), "utf8");
+    console.log(`[API Log] Error guardado exitosamente en error_log.json para acción ${actionName}`);
+  } catch (fsErr) {
+    console.error("No se pudo escribir en error_log.json:", fsErr);
+  }
 }
 
 /**
@@ -89,6 +180,22 @@ const buildMissionTypes = (goldKeyword?: string) => [
 ]
 
 export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
+  // Sanitizar entradas
+  const urlSanit = sanitizeInput(siteUrl, 'url');
+  if (!urlSanit.isValid) {
+    return { success: false, error: urlSanit.error };
+  }
+  const cleanSiteUrl = urlSanit.sanitized;
+
+  let cleanGoldKeyword = "";
+  if (goldKeyword) {
+    const kwSanit = sanitizeInput(goldKeyword, 'keyword');
+    if (!kwSanit.isValid) {
+      return { success: false, error: kwSanit.error };
+    }
+    cleanGoldKeyword = kwSanit.sanitized;
+  }
+
   try {
     const session = await auth()
 
@@ -96,7 +203,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
       return { success: false, error: "No hay sesión activa o falta el token de acceso" }
     }
 
-    const rows = await getSearchConsoleData(session.accessToken, siteUrl, goldKeyword)
+    const rows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined)
 
     if (!rows || rows.length === 0) {
       return { success: true, data: [] }
@@ -167,6 +274,12 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
     return { success: true, data: missions }
   } catch (error: any) {
     console.error("Error generating real missions:", error)
+    logErrorToFile(
+      "getRealMissions",
+      { siteUrl: cleanSiteUrl, goldKeyword: cleanGoldKeyword },
+      error.status || "500",
+      error.message || String(error)
+    );
     return { success: false, error: error.message || "Error al obtener datos de Search Console" }
   }
 }
@@ -635,18 +748,31 @@ async function scrapeMetadata(siteUrl: string): Promise<{ title: string; descrip
  * Server Action híbrida para obtener sugerencias predictivas SEO con IA (Gemini).
  */
 export async function getAIPredictiveSuggestions(siteUrl: string, seedKeyword: string, excludedWords?: string) {
+  // Sanitizar entradas
+  const urlSanit = sanitizeInput(siteUrl, 'url');
+  if (!urlSanit.isValid) {
+    return { success: false, error: urlSanit.error };
+  }
+  const cleanSiteUrl = urlSanit.sanitized;
+
+  const kwSanit = sanitizeInput(seedKeyword, 'keyword');
+  if (!kwSanit.isValid) {
+    return { success: false, error: kwSanit.error };
+  }
+  const cleanSeedKeyword = kwSanit.sanitized;
+
   try {
-    const normalizedSiteUrl = siteUrl.trim().toLowerCase().replace(/\/$/, '');
+    const normalizedSiteUrl = cleanSiteUrl.replace(/\/$/, '');
 
     // 1. Scraping metadatos con caché y fallback a nicho genérico
     let meta = { title: "", description: "", h1: "" };
     let inferredNicho = "";
     try {
-      inferredNicho = inferNichoFromUrl(siteUrl);
+      inferredNicho = inferNichoFromUrl(cleanSiteUrl);
       
       let cached = metadataCache.get(normalizedSiteUrl);
       if (!cached) {
-        cached = await scrapeMetadata(siteUrl);
+        cached = await scrapeMetadata(cleanSiteUrl);
         metadataCache.set(normalizedSiteUrl, cached);
       }
       meta = cached;
@@ -664,7 +790,7 @@ export async function getAIPredictiveSuggestions(siteUrl: string, seedKeyword: s
     try {
       const session = await auth();
       if (session?.accessToken) {
-        gscRows = await getSearchConsoleData(session.accessToken, siteUrl, seedKeyword);
+        gscRows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanSeedKeyword);
       }
     } catch (err: any) {
       console.warn("GSC step failed, ignoring GSC context:", err.message);
@@ -704,14 +830,14 @@ export async function getAIPredictiveSuggestions(siteUrl: string, seedKeyword: s
 Actúas como un consultor SEO experto de nivel premium. Tu objetivo es generar exactamente 10 palabras clave de cola larga (long-tail) que tengan una alta intención comercial o transaccional, y en menor medida informacional.
 
 Contexto del negocio:
-- URL del sitio: ${siteUrl}
+- URL del sitio: ${cleanSiteUrl}
 - Nicho/Metadatos detectados: ${businessNiche}
-- Palabra clave semilla: "${seedKeyword}"
+- Palabra clave semilla: "${cleanSeedKeyword}"
 ${hasGscData ? `\nDatos reales de Google Search Console para esta semilla:\n${gscContext}` : "\n[AVISO CRÍTICO] La API de Search Console no devolvió resultados para esta semilla (búsqueda vacía). Debes apoyarte FUERTEMENTE en el nicho del negocio, el contenido de los metadatos y la palabra clave semilla para inventar de manera predictiva 10 misiones espectaculares y altamente relevantes."}
 
 Reglas estrictas de generación:
 1. Genera EXACTAMENTE 10 sugerencias de palabras clave de cola larga (long-tail).
-2. Cada palabra clave debe contener de manera obligatoria la palabra clave semilla "${seedKeyword}" (o variaciones gramaticales muy cercanas).
+2. Cada palabra clave debe contener de manera obligatoria la palabra clave semilla "${cleanSeedKeyword}" (o variaciones gramaticales muy cercanas).
 3. Cada sugerencia debe clasificarse con:
    - "keyword": El término de búsqueda exacto.
    - "intent": Debe ser "transaccional" o "informacional".
@@ -761,6 +887,14 @@ Reglas estrictas de generación:
         console.error(`[API Debug] Error Message: ${geminiErr.message}`);
         console.error(`[API Debug] Error Status: ${geminiErr.status || "N/A"}`);
         console.error("FULL GEMINI ERROR OBJECT:", geminiErr);
+        
+        // Log persistently to error_log.json on the server
+        logErrorToFile(
+          "getAIPredictiveSuggestions", 
+          { siteUrl: cleanSiteUrl, seedKeyword: cleanSeedKeyword }, 
+          geminiErr.status || "503", 
+          geminiErr.message || String(geminiErr)
+        );
         
         if (attempt >= maxRetries) {
           return { 
@@ -841,6 +975,12 @@ Reglas estrictas de generación:
 
   } catch (error: any) {
     console.error("Error in getAIPredictiveSuggestions:", error);
+    logErrorToFile(
+      "getAIPredictiveSuggestions_Global",
+      { siteUrl: cleanSiteUrl, seedKeyword: cleanSeedKeyword },
+      error.status || "500",
+      error.message || String(error)
+    );
     return { 
       success: false, 
       error: `Inesperado: ${error.message}`,

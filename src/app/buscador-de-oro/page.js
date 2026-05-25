@@ -8,6 +8,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { verifyContentMission } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import NotificationBell from "../../components/NotificationBell";
+import AICatch from "../../components/AICatch";
 
 // Filtro Purificador Universal (UI-safe and encoding-safe parser)
 const purifyText = (text) => {
@@ -93,6 +94,16 @@ export default function BuscadorDeOro() {
   const [prog, setProg] = useState(null);
   const [prestigeCycles, setPrestigeCycles] = useState(0);
   const [serverLoading, setServerLoading] = useState(true);
+  const [cooldown, setCooldown] = useState(0);
+
+  // Efecto para controlar la cuenta regresiva del cooldown de seguridad
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setInterval(() => {
+      setCooldown((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [cooldown]);
 
   // ── Helpers de créditos diarios ──────────────────────────────────────────
   const getTodayStr = () => {
@@ -259,8 +270,8 @@ export default function BuscadorDeOro() {
   }, [session, status, router]);
 
   const handleSearch = async (e) => {
-    e.preventDefault();
-    if (!query.trim() || loading) return;
+    if (e && e.preventDefault) e.preventDefault();
+    if (!query.trim() || loading || cooldown > 0) return;
 
     // Verificar límite diario ANTES de la búsqueda
     const currentCredits = readCredits();
@@ -330,6 +341,7 @@ export default function BuscadorDeOro() {
       } else {
         setError(err.message);
       }
+      setCooldown(5);
     } finally {
       setLoading(false);
     }
@@ -860,9 +872,9 @@ export default function BuscadorDeOro() {
                  </div>
                   <button
                     type="submit"
-                    disabled={loading || !query.trim()}
+                    disabled={loading || !query.trim() || cooldown > 0}
                     className={`btn-3d w-full text-base py-3.5 font-black flex items-center justify-center gap-2 transition-all ${
-                      loading || !query.trim() 
+                      loading || !query.trim() || cooldown > 0
                         ? "btn-white text-slate-400 dark:bg-slate-900 dark:border-slate-800 cursor-not-allowed" 
                         : "bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white active:scale-[0.99]"
                     }`}
@@ -875,6 +887,8 @@ export default function BuscadorDeOro() {
                         </svg>
                         <span>BUSCANDO...</span>
                       </>
+                    ) : cooldown > 0 ? (
+                      <span>⌛ ESPERÁ {cooldown}S...</span>
                     ) : (
                       `BUSCAR OPORTUNIDAD`
                     )}
@@ -927,9 +941,13 @@ export default function BuscadorDeOro() {
             );
           })()}
           
-          {/* Error Message */}
+          {/* Error Catcher / AICatch */}
           {error && (
-            <p className="text-red-500 font-bold text-center mt-2 text-sm">{error}</p>
+            <AICatch 
+              error={error} 
+              onRetry={handleSearch} 
+              onClear={() => setError(null)} 
+            />
           )}
         </div>
 
