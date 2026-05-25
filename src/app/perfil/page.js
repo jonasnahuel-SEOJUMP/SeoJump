@@ -57,22 +57,22 @@ export default function Perfil() {
     <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-4xl mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka">
       
       {/* ─── HEADER ─── */}
-      <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 sticky top-4 z-10 transition-colors duration-300">
-        <div className="flex items-center justify-between">
+      <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 sticky top-4 z-10 transition-colors duration-300">
+        <div className="flex items-center justify-between gap-2">
           <button
             onClick={() => {
               playClick();
               router.push("/");
             }}
-            className="text-slate-500 text-base md:text-lg font-black hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-2"
+            className="text-slate-500 text-sm md:text-lg font-black hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1.5 flex-shrink-0"
           >
-            ← VOLVER AL DASHBOARD
+            ← <span className="hidden sm:inline">VOLVER AL DASHBOARD</span><span className="sm:hidden">DASHBOARD</span>
           </button>
-          <div className="flex items-center gap-4">
-            <button onClick={toggleMute} className="text-3xl hover:scale-110 transition-transform" title={isMuted ? "Activar sonido" : "Silenciar"}>
+          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+            <button onClick={toggleMute} className="text-2xl md:text-3xl hover:scale-110 transition-transform flex-shrink-0" title={isMuted ? "Activar sonido" : "Silenciar"}>
               {isMuted ? "🔇" : "🔊"}
             </button>
-            <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-3xl hover:scale-110 transition-transform">
+            <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-2xl md:text-3xl hover:scale-110 transition-transform flex-shrink-0">
               {theme === "light" ? "🌙" : "☀️"}
             </button>
           </div>

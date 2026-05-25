@@ -452,21 +452,21 @@ export default function BuscadorDeOro() {
       )}
 
       {/* Navigation Header */}
-      <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 sticky top-4 z-10 transition-colors duration-300">
-         <div className="flex items-center justify-between">
+      <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 sticky top-4 z-10 transition-colors duration-300">
+         <div className="flex items-center justify-between gap-2">
            <button 
              onClick={() => {
                playClick();
                router.push("/");
              }}
-             className="text-slate-500 text-base md:text-lg font-black hover:text-slate-800 flex items-center gap-2"
+             className="text-slate-500 text-sm md:text-lg font-black hover:text-slate-800 flex items-center gap-1.5 flex-shrink-0"
            >
-             ← VOLVER AL DASHBOARD
+             ← <span className="hidden sm:inline">VOLVER AL DASHBOARD</span><span className="sm:hidden">DASHBOARD</span>
            </button>
-           <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                 <span className="text-3xl">🔥</span>
-                 <span className="font-black text-2xl text-orange-500">{Math.floor(xp / 100) + 1}</span>
+           <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+              <div className="flex items-center gap-1">
+                 <span className="text-2xl md:text-3xl">🔥</span>
+                 <span className="font-black text-lg md:text-2xl text-orange-500">{Math.floor(xp / 100) + 1}</span>
               </div>
               {prestigeCycles > 0 && (
                 <span className="px-2.5 py-1 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 font-black text-xs rounded-full shadow-sm animate-pulse">
@@ -475,14 +475,14 @@ export default function BuscadorDeOro() {
               )}
               <button 
                 onClick={toggleMute} 
-                className="text-3xl hover:scale-110 transition-transform"
+                className="text-2xl md:text-3xl hover:scale-110 transition-transform flex-shrink-0"
                 title={isMuted ? "Activar sonido" : "Silenciar"}
               >
                 {isMuted ? '🔇' : '🔊'}
               </button>
               <button 
                 onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} 
-                className="text-3xl hover:scale-110 transition-transform"
+                className="text-2xl md:text-3xl hover:scale-110 transition-transform flex-shrink-0"
                 title={theme === "light" ? "Activar Modo Oscuro" : "Activar Modo Claro"}
               >
                 {theme === "light" ? '🌙' : '☀️'}
@@ -493,13 +493,13 @@ export default function BuscadorDeOro() {
                   playClick();
                   router.push("/perfil");
                 }}
-                className="hover:scale-105 transition-transform focus:outline-none"
+                className="hover:scale-105 transition-transform focus:outline-none flex-shrink-0"
                 title="Ver Perfil"
               >
                 {session?.user?.image ? (
-                  <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow" />
+                  <img src={session.user.image} alt="Avatar" className="w-8 h-8 md:w-12 md:h-12 rounded-full border-2 border-duo-green-shadow" />
                 ) : (
-                  <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white text-xl">
+                  <div className="w-8 h-8 md:w-12 md:h-12 bg-duo-green rounded-full flex items-center justify-center border-b-2 md:border-b-4 border-duo-green-shadow text-white text-sm md:text-xl">
                      👤
                   </div>
                 )}
@@ -507,38 +507,38 @@ export default function BuscadorDeOro() {
            </div>
          </div>
          {/* Navigation Tabs */}
-         <nav className="flex flex-wrap md:flex-nowrap gap-3 md:gap-4 w-full mt-2">
-            <div className="flex-1 btn-3d bg-yellow-50 text-duo-yellow font-black text-center py-5 px-6 text-lg lg:text-xl border-2 border-duo-yellow border-b-4 cursor-default">
-              🔍 Fase 1: Búsqueda
+         <nav className="flex flex-wrap md:flex-nowrap gap-2 md:gap-4 w-full mt-2">
+            <div className="flex-1 btn-3d bg-yellow-50 text-duo-yellow font-black text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl border-2 border-duo-yellow border-b-4 cursor-default">
+              <span className="md:hidden">🔍 F1</span><span className="hidden md:inline">🔍 Fase 1: Búsqueda</span>
             </div>
             {prog?.p2?.unlocked ? (
-              <Link href="/contenido" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-                ✍️ Fase 2: Contenido
+              <Link href="/contenido" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-blue-500 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+                <span className="md:hidden">✍️ F2</span><span className="hidden md:inline">✍️ Fase 2: Contenido</span>
               </Link>
             ) : (
-              <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+              <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
                 title="🔒 Completá el 70% de la Fase 1 para avanzar">
-                🔒 Fase 2: Contenido
+                <span className="md:hidden">🔒 F2</span><span className="hidden md:inline">🔒 Fase 2: Contenido</span>
               </div>
             )}
             {prog?.p3?.unlocked ? (
-              <Link href="/optimizacion" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-green text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-                🛠️ Fase 3: Optimización
+              <Link href="/optimizacion" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-green text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+                <span className="md:hidden">🛠️ F3</span><span className="hidden md:inline">🛠️ Fase 3: Optimización</span>
               </Link>
             ) : (
-              <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+              <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
                 title="🔒 Completá el 70% de la Fase 2 para avanzar">
-                🔒 Fase 3: Optimización
+                <span className="md:hidden">🔒 F3</span><span className="hidden md:inline">🔒 Fase 3: Optimización</span>
               </div>
             )}
             {prog?.p4?.unlocked ? (
-              <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-                🕵️‍♂️ Fase 4: Indexación
+              <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-purple-650 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+                <span className="md:hidden">🕵️‍♂️ F4</span><span className="hidden md:inline">🕵️‍♂️ Fase 4: Indexación</span>
               </Link>
             ) : (
-              <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+              <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
                 title="🔒 Completá el 70% de la Fase 3 para avanzar">
-                🔒 Fase 4: Indexación
+                <span className="md:hidden">🔒 F4</span><span className="hidden md:inline">🔒 Fase 4: Indexación</span>
               </div>
             )}
          </nav>
@@ -655,7 +655,7 @@ export default function BuscadorDeOro() {
                   return (
                     <div
                       key={index}
-                      className={`card-3d flex flex-col gap-4 p-6 md:p-8 transition-all duration-300 hover:shadow-lg relative rounded-xl text-white ${
+                      className={`card-3d flex flex-col gap-4 p-4 sm:p-6 md:p-8 transition-all duration-300 hover:shadow-lg relative rounded-xl text-white ${
                         isCompleted 
                           ? 'bg-emerald-950/40 border-2 border-emerald-500/50 opacity-90' 
                           : 'bg-slate-800 border-2 border-slate-700/50'

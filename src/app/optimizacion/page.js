@@ -316,21 +316,21 @@ export default function Optimizacion() {
       )}
 
       {/* Navigation Header */}
-      <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 sticky top-4 z-10 transition-colors duration-300">
-        <div className="flex items-center justify-between">
+      <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 sticky top-4 z-10 transition-colors duration-300">
+        <div className="flex items-center justify-between gap-2">
           <Link href="/buscador-de-oro" onClick={playClick}
-            className="text-slate-500 text-base md:text-lg font-black hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-2">
-            ← VOLVER AL DASHBOARD
+            className="text-slate-500 text-sm md:text-lg font-black hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1.5 flex-shrink-0">
+            ← <span className="hidden sm:inline">VOLVER AL DASHBOARD</span><span className="sm:hidden">DASHBOARD</span>
           </Link>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-1.5">
-              <span className="text-3xl">🔥</span>
-              <span className="font-black text-2xl text-orange-500">{Math.floor(xp / 100) + 1}</span>
+          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+            <div className="flex items-center gap-1">
+              <span className="text-2xl md:text-3xl">🔥</span>
+              <span className="font-black text-lg md:text-2xl text-orange-500">{Math.floor(xp / 100) + 1}</span>
             </div>
-            <button onClick={toggleMute} className="text-3xl hover:scale-110 transition-transform" title={isMuted ? "Activar sonido" : "Silenciar"}>
+            <button onClick={toggleMute} className="text-2xl md:text-3xl hover:scale-110 transition-transform flex-shrink-0" title={isMuted ? "Activar sonido" : "Silenciar"}>
               {isMuted ? '🔇' : '🔊'}
             </button>
-            <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-3xl hover:scale-110 transition-transform">
+            <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-2xl md:text-3xl hover:scale-110 transition-transform flex-shrink-0">
               {theme === "light" ? '🌙' : '☀️'}
             </button>
             <NotificationBell />
@@ -339,47 +339,47 @@ export default function Optimizacion() {
                 playClick();
                 router.push("/perfil");
               }}
-              className="hover:scale-105 transition-transform focus:outline-none"
+              className="hover:scale-105 transition-transform focus:outline-none flex-shrink-0"
               title="Ver Perfil"
             >
               {session?.user?.image ? (
-                <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow" />
+                <img src={session.user.image} alt="Avatar" className="w-8 h-8 md:w-12 md:h-12 rounded-full border-2 border-duo-green-shadow" />
               ) : (
-                <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white text-xl">👤</div>
+                <div className="w-8 h-8 md:w-12 md:h-12 bg-duo-green rounded-full flex items-center justify-center border-b-2 md:border-b-4 border-duo-green-shadow text-white text-sm md:text-xl">👤</div>
               )}
             </button>
           </div>
         </div>
 
         {/* Navigation Tabs */}
-        <nav className="flex flex-wrap md:flex-nowrap gap-3 md:gap-4 w-full mt-2">
+        <nav className="flex flex-wrap md:flex-nowrap gap-2 md:gap-4 w-full mt-2">
           <Link href="/buscador-de-oro" onClick={playClick}
-            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-yellow text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-            🔍 Fase 1: Búsqueda
+            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+            <span className="md:hidden">🔍 F1</span><span className="hidden md:inline">🔍 Fase 1: Búsqueda</span>
           </Link>
           {prog?.p2?.unlocked ? (
             <Link href="/contenido" onClick={playClick}
-              className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-              ✍️ Fase 2: Contenido
+              className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-blue-500 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+              <span className="md:hidden">✍️ F2</span><span className="hidden md:inline">✍️ Fase 2: Contenido</span>
             </Link>
           ) : (
-            <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+            <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
               title="🔒 Completá el 70% de la Fase 1 para avanzar">
-              🔒 Fase 2: Contenido
+              <span className="md:hidden">🔒 F2</span><span className="hidden md:inline">🔒 Fase 2: Contenido</span>
             </div>
           )}
-          <div className="flex-1 btn-3d bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 text-center py-5 px-6 text-lg lg:text-xl font-black border-b-4 border-duo-green cursor-default">
-            🛠️ Fase 3: Optimización
+          <div className="flex-1 btn-3d bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black border-b-4 border-duo-green cursor-default">
+            <span className="md:hidden">🛠️ F3</span><span className="hidden md:inline">🛠️ Fase 3: Optimización</span>
           </div>
           {prog?.p4?.unlocked ? (
             <Link href="/detective-de-enlaces" onClick={playClick}
-              className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-              🕵️‍♂️ Fase 4: Indexación
+              className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-purple-650 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+              <span className="md:hidden">🕵️‍♂️ F4</span><span className="hidden md:inline">🕵️‍♂️ Fase 4: Indexación</span>
             </Link>
           ) : (
-            <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+            <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
               title="🔒 Completá el 70% de la Fase 3 para avanzar">
-              🔒 Fase 4
+              <span className="md:hidden">🔒 F4</span><span className="hidden md:inline">🔒 Fase 4</span>
             </div>
           )}
         </nav>
@@ -497,21 +497,21 @@ export default function Optimizacion() {
                       return (
                         <div key={mission.id}
                           onClick={() => { playClick(); openMission(mission); }}
-                          className="card-3d flex flex-col md:flex-row items-start gap-6 p-6 md:p-8 transition-colors group hover:bg-gray-50 dark:hover:bg-slate-750 cursor-pointer">
+                          className="card-3d flex flex-col md:flex-row items-start gap-4 md:gap-6 p-4 md:p-8 transition-colors group hover:bg-gray-50 dark:hover:bg-slate-750 cursor-pointer w-full overflow-hidden">
                           <div className={`w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center border-b-4 text-3xl font-black ${
                             mission.type === 'H1'  ? 'bg-duo-green border-duo-green-shadow text-white' :
                             mission.type === 'ALT' ? 'bg-duo-blue border-duo-blue-shadow text-white' :
                                                      'bg-duo-yellow border-duo-yellow-shadow text-white'
                           }`}>{mission.icon}</div>
-                          <div className="flex-1 min-w-0">
+                          <div className="flex-1 min-w-0 w-full">
                             <div className="flex items-center gap-3 flex-wrap mb-1.5">
-                              <h3 className="text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100 group-hover:text-duo-green transition-colors">{display.title}</h3>
+                              <h3 className="text-xl md:text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100 group-hover:text-duo-green transition-colors">{display.title}</h3>
                               <span className={`text-sm font-black px-3 py-1 rounded-md ${badge.color}`}>{badge.text}</span>
                             </div>
-                            <div className="flex items-center gap-3 mb-1.5">
-                              <code className="text-sm font-mono text-slate-500 dark:text-slate-400 truncate max-w-[300px] md:max-w-[450px]">{mission.page}</code>
+                            <div className="flex items-center gap-2 mb-1.5 w-full min-w-0">
+                              <code className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 truncate block w-full max-w-[200px] min-[400px]:max-w-[260px] sm:max-w-[380px] md:max-w-[450px]">{mission.page}</code>
                               <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(mission.page); playClick(); }}
-                                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors text-slate-400 hover:text-slate-600 text-lg" title="Copiar URL">📋</button>
+                                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors text-slate-400 hover:text-slate-600 text-lg flex-shrink-0" title="Copiar URL">📋</button>
                             </div>
                             <p className="text-sm text-slate-400 font-bold italic mb-2">{badge.wpPath}</p>
                             <p className="font-bold text-slate-650 dark:text-slate-350 text-base md:text-lg lg:text-xl leading-relaxed mb-2">{display.description}</p>
@@ -525,8 +525,8 @@ export default function Optimizacion() {
                               <span>👁️ {mission.impressions} impresiones</span>
                               <span>📊 Pos. {mission.position?.toFixed(1)}</span>
                             </div>
-                            <div className="mt-4">
-                              <button className="btn-3d text-lg lg:text-xl py-3 px-6 btn-green w-full md:w-auto font-black">
+                            <div className="mt-4 w-full">
+                              <button className="btn-3d !text-sm sm:!text-base md:!text-lg lg:!text-xl !py-2.5 !px-4 sm:!py-3 sm:!px-6 btn-green w-full md:w-auto font-black">
                                 EMPEZAR (+{mission.xp} XP)
                               </button>
                             </div>

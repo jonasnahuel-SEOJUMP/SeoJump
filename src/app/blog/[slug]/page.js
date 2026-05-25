@@ -50,14 +50,14 @@ export default async function BlogPost({ params }) {
     <div className="flex-1 flex flex-col items-center p-4 md:p-6 overflow-y-auto animate-in slide-in-from-bottom duration-500 w-full max-w-3xl mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative">
       
       {/* Navigation Header */}
-      <header className="w-full flex items-center justify-between bg-white dark:bg-slate-800 p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 transition-colors duration-300">
+      <header className="w-full flex items-center justify-between gap-2 bg-white dark:bg-slate-800 p-4 md:p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 transition-colors duration-300">
          <Link 
            href="/blog"
-           className="text-slate-500 text-base md:text-lg font-black hover:text-slate-800 dark:hover:text-white flex items-center gap-2"
+           className="text-slate-500 text-sm md:text-lg font-black hover:text-slate-800 dark:hover:text-white flex items-center gap-1.5 flex-shrink-0"
          >
-           ← VOLVER AL BLOG
+           ← <span className="hidden sm:inline">VOLVER AL BLOG</span><span className="sm:hidden">BLOG</span>
          </Link>
-         <span className="text-xs font-black bg-duo-blue/10 border border-duo-blue/20 text-duo-blue dark:text-cyan-400 rounded-full px-3 py-1 uppercase tracking-wide">
+         <span className="text-xs font-black bg-duo-blue/10 border border-duo-blue/20 text-duo-blue dark:text-cyan-400 rounded-full px-3 py-1 uppercase tracking-wide flex-shrink-0">
            📖 {post.readTime}
          </span>
       </header>

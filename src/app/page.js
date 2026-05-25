@@ -329,7 +329,7 @@ export default function Home() {
   }
 
   return (
-    <div className={`min-h-screen bg-transparent flex flex-col items-center p-8 font-fredoka relative overflow-hidden transition-colors duration-300 text-slate-100 ${step > 1 && step < 6 ? 'justify-center' : ''} ${step < 6 ? 'max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto w-full border-x dark:border-slate-800 shadow-2xl' : ''}`}>
+    <div className={`min-h-screen bg-transparent flex flex-col items-center justify-center px-4 py-8 md:p-8 w-full font-fredoka relative overflow-hidden transition-colors duration-300 text-slate-100 ${step < 6 ? 'max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto border-x dark:border-slate-800 shadow-2xl' : ''}`}>
       
       {/* Global Top Navbar for Landing Page */}
       {step === 1 && (
@@ -515,20 +515,20 @@ export default function Home() {
         )}
 
         {step === 2 && (
-          <div className="w-full space-y-6 animate-in slide-in-from-right duration-300">
+          <div className="w-full max-w-md mx-auto px-4 flex flex-col items-center justify-center text-center space-y-6 animate-in slide-in-from-right duration-300">
             {/* Colorful Tabs Preview */}
-            <nav className="flex flex-wrap md:flex-nowrap gap-3 md:gap-4 w-full opacity-85 pointer-events-none mb-6">
-              <div className="flex-1 min-w-[120px] btn-3d bg-yellow-50 text-duo-yellow text-center py-1.5 px-2 text-lg md:text-xl lg:text-2xl border-b-4 border-duo-yellow font-black">
-                🔍 Fase 1
+            <nav className="flex gap-2 w-full opacity-85 pointer-events-none mb-6">
+              <div className="flex-1 min-w-[65px] btn-3d bg-yellow-50 text-duo-yellow text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-duo-yellow font-black">
+                🔍 F1
               </div>
-              <div className="flex-1 min-w-[120px] btn-3d bg-blue-50 text-blue-600 text-center py-1.5 px-2 text-lg md:text-xl lg:text-2xl border-b-4 border-blue-500 font-black">
-                ✍️ Fase 2
+              <div className="flex-1 min-w-[65px] btn-3d bg-blue-50 text-blue-600 text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-blue-500 font-black">
+                ✍️ F2
               </div>
-              <div className="flex-1 min-w-[120px] btn-3d bg-white text-slate-800 text-center py-1.5 px-2 text-lg md:text-xl lg:text-2xl border-b-4 border-duo-green font-black">
-                🛠️ Fase 3
+              <div className="flex-1 min-w-[65px] btn-3d bg-white text-slate-800 text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-duo-green font-black">
+                🛠️ F3
               </div>
-              <div className="flex-1 min-w-[120px] btn-3d bg-purple-50 text-purple-600 text-center py-1.5 px-2 text-lg md:text-xl lg:text-2xl border-b-4 border-purple-600 font-black">
-                🕵️‍♂️ Fase 4
+              <div className="flex-1 min-w-[65px] btn-3d bg-purple-50 text-purple-600 text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-purple-600 font-black">
+                🕵️‍♂️ F4
               </div>
             </nav>
 
@@ -544,69 +544,69 @@ export default function Home() {
                  className="w-full p-3 md:p-4 text-lg md:text-xl border-2 border-slate-200 rounded-xl focus:border-duo-blue outline-none transition-colors font-black text-slate-750 placeholder-slate-400 dark:bg-slate-800 dark:border-slate-700"
                />
              </div>
-             <div className="grid grid-cols-1 gap-4 w-full max-w-md mx-auto">
-               <button 
-                 onClick={() => { 
-                   playClick(); 
-                   localStorage.setItem("seojump_site_url", url);
-                   nextStep(); 
-                 }} 
-                 disabled={!url.trim()}
-                 className={`btn-3d btn-blue text-lg md:text-xl py-3.5 md:py-4 font-black tracking-wide ${!url.trim() ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
-               >
-                 CONTINUAR
-               </button>
+             <div className="flex flex-col gap-4 w-full max-w-md mx-auto">
+                <button 
+                  onClick={() => { 
+                    playClick(); 
+                    localStorage.setItem("seojump_site_url", url);
+                    nextStep(); 
+                  }} 
+                  disabled={!url.trim()}
+                  className={`btn-3d btn-blue w-full text-lg md:text-xl py-3.5 md:py-4 font-black tracking-wide ${!url.trim() ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                >
+                  CONTINUAR
+                </button>
 
-               {missionError && (
-                 <div className="p-4 bg-red-50 dark:bg-red-955/20 border-2 border-red-200 dark:border-red-800 text-red-500 rounded-xl font-bold text-sm text-center space-y-3 animate-in fade-in duration-300">
-                   <p>⚠️ {missionError}</p>
-                   {missionError.includes("Search Console") && (
-                     <button
-                       onClick={() => {
-                         playClick();
-                         signIn("google", {
-                           callbackUrl: "/",
-                           authorizationParams: {
-                             scope: "openid email profile https://www.googleapis.com/auth/webmasters"
-                           }
-                         });
-                       }}
-                       className="w-full btn-3d bg-green-500 border-green-600 border-b-4 hover:bg-green-450 active:border-b-0 active:translate-y-1 text-white text-xs font-black py-2.5 flex items-center justify-center gap-1.5"
-                     >
-                       Conectar Google Search Console
-                     </button>
-                   )}
-                 </div>
-               )}
-              
-              <div className="relative py-4">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-300"></span></div>
-                <div className="relative flex justify-center text-sm uppercase"><span className="bg-[#07070d] px-2 text-slate-500 font-bold">O también</span></div>
-              </div>
-
-              <div className="flex justify-center">
-                {session ? (
-                  <div className="flex items-center gap-2 text-duo-green font-bold">
-                    <span>✅ Sesión iniciada: {session.user?.name}</span>
+                {missionError && (
+                  <div className="p-4 bg-red-50 dark:bg-red-955/20 border-2 border-red-200 dark:border-red-800 text-red-500 rounded-xl font-bold text-sm text-center space-y-3 animate-in fade-in duration-300 w-full">
+                    <p>⚠️ {missionError}</p>
+                    {missionError.includes("Search Console") && (
+                      <button
+                        onClick={() => {
+                          playClick();
+                          signIn("google", {
+                            callbackUrl: "/",
+                            authorizationParams: {
+                              scope: "openid email profile https://www.googleapis.com/auth/webmasters"
+                            }
+                          });
+                        }}
+                        className="w-full btn-3d bg-green-500 border-green-600 border-b-4 hover:bg-green-450 active:border-b-0 active:translate-y-1 text-white text-xs font-black py-2.5 flex items-center justify-center gap-1.5"
+                      >
+                        Conectar Google Search Console
+                      </button>
+                    )}
                   </div>
-                ) : (
-                  <LoginButton text="CONECTAR CON GOOGLE" />
                 )}
-              </div>
+               
+               <div className="relative py-4 w-full">
+                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-gray-300"></span></div>
+                 <div className="relative flex justify-center text-sm uppercase"><span className="bg-[#07070d] px-2 text-slate-500 font-bold">O también</span></div>
+               </div>
 
-              <button onClick={() => { playClick(); prevStep(); }} className="text-slate-500 font-bold hover:text-slate-700 transition-colors">
-                VOLVER ATRÁS
-              </button>
-            </div>
+               <div className="flex justify-center w-full">
+                 {session ? (
+                   <div className="flex items-center gap-2 text-duo-green font-bold">
+                     <span>✅ Sesión iniciada: {session.user?.name}</span>
+                   </div>
+                 ) : (
+                   <LoginButton text="CONECTAR CON GOOGLE" />
+                 )}
+               </div>
+
+               <button onClick={() => { playClick(); prevStep(); }} className="text-slate-500 font-bold hover:text-slate-700 transition-colors w-full text-center">
+                 VOLVER ATRÁS
+               </button>
+             </div>
           </div>
         )}
 
         {step === 3 && (
-          <div className="w-full max-w-md mx-auto space-y-6 animate-in slide-in-from-right duration-300">
+          <div className="w-full max-w-md mx-auto px-4 flex flex-col items-center justify-center text-center space-y-6 animate-in slide-in-from-right duration-300">
             <h2 className="text-xl md:text-2xl font-black text-slate-800 text-center">
               ¿Cuál es tu objetivo?
             </h2>
-            <div className="space-y-3">
+            <div className="space-y-3 w-full flex flex-col items-center">
               {[
                 { id: 'vender', label: '💰 Vender más', color: 'btn-yellow' },
                 { id: 'visitas', label: '📈 Conseguir más visitas', color: 'btn-blue' },
@@ -615,21 +615,21 @@ export default function Home() {
                 <button 
                   key={option.id}
                   onClick={() => { playClick(); setGoal(option.id); }}
-                  className={`btn-3d w-full text-lg md:text-xl py-3 px-6 font-black ${goal === option.id ? `${option.color} text-white` : 'btn-white text-slate-650 dark:text-slate-200 dark:bg-slate-800 dark:border-slate-700'}`}
+                  className={`btn-3d w-full max-w-sm md:max-w-md text-lg md:text-xl py-3 px-6 font-black ${goal === option.id ? `${option.color} text-white` : 'btn-white text-slate-650 dark:text-slate-200 dark:bg-slate-800 dark:border-slate-700'}`}
                 >
                   {option.label}
                 </button>
               ))}
             </div>
-            <div className="grid grid-cols-1 gap-4">
+            <div className="flex flex-col gap-4 w-full max-w-sm md:max-w-md items-center">
               <button 
                 onClick={() => { playClick(); handleAnalyze(); }} 
                 disabled={!goal}
-                className={`btn-3d btn-green text-lg md:text-xl py-3.5 md:py-4 font-black tracking-wide ${!goal ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                className={`btn-3d btn-green w-full text-lg md:text-xl py-3.5 md:py-4 font-black tracking-wide ${!goal ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
               >
                 {session ? "ANALIZAR SITIO" : "CONECTAR Y ANALIZAR"}
               </button>
-              <button onClick={() => { playClick(); prevStep(); }} className="btn-3d btn-white text-base md:text-lg py-2.5 md:py-3 font-extrabold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
+              <button onClick={() => { playClick(); prevStep(); }} className="btn-3d btn-white w-full text-base md:text-lg py-2.5 md:py-3 font-extrabold text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-100">
                 VOLVER
               </button>
             </div>
@@ -757,43 +757,43 @@ export default function Home() {
                </div>
  
                {/* Navigation Menu */}
-               <nav className="flex flex-row lg:flex-col gap-3 lg:gap-4 w-full">
-                 <Link href="/buscador-de-oro" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-yellow text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-                   🔍 Fase 1: Búsqueda
+               <nav className="flex flex-wrap lg:flex-col gap-2 lg:gap-4 w-full">
+                 <Link href="/buscador-de-oro" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+                   <span className="md:hidden">🔍 F1</span><span className="hidden md:inline">🔍 Fase 1: Búsqueda</span>
                  </Link>
                  {prog?.p2?.unlocked ? (
-                   <Link href="/contenido" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-                     ✍️ Fase 2: Contenido
+                   <Link href="/contenido" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-blue-500 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+                     <span className="md:hidden">✍️ F2</span><span className="hidden md:inline">✍️ Fase 2: Contenido</span>
                    </Link>
                  ) : (
-                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
                      title="🔒 Completá el 70% de la Fase 1 para avanzar">
-                     🔒 Fase 2: Contenido
+                     <span className="md:hidden">🔒 F2</span><span className="hidden md:inline">🔒 Fase 2: Contenido</span>
                    </div>
                  )}
                  {prog?.p3?.unlocked ? (
                    <Link href="/optimizacion" onClick={playClick}
-                     className="flex-1 btn-3d text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors btn-white text-slate-655 dark:text-slate-350 hover:text-duo-green">
-                     🛠️ Fase 3: Optimización
+                     className="flex-1 btn-3d text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors btn-white text-slate-655 dark:text-slate-350 hover:text-duo-green">
+                     <span className="md:hidden">🛠️ F3</span><span className="hidden md:inline">🛠️ Fase 3: Optimización</span>
                    </Link>
                  ) : (
-                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
                      title="🔒 Completá el 70% de la Fase 2 para avanzar">
-                     🔒 Fase 3: Optimización
+                     <span className="md:hidden">🔒 F3</span><span className="hidden md:inline">🔒 Fase 3: Optimización</span>
                    </div>
                  )}
                  {prog?.p4?.unlocked ? (
-                   <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-                     🕵️‍♂️ Fase 4: Indexación
+                   <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-purple-650 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+                     <span className="md:hidden">🕵️‍♂️ F4</span><span className="hidden md:inline">🕵️‍♂️ Fase 4: Indexación</span>
                    </Link>
                  ) : (
-                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
                      title="🔒 Completá el 70% de la Fase 3 para avanzar">
-                     🔒 Fase 4: Indexación
+                     <span className="md:hidden">🔒 F4</span><span className="hidden md:inline">🔒 Fase 4: Indexación</span>
                    </div>
                  )}
-                 <Link href="/blog" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-cyan-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-                   📖 Academia SEO
+                 <Link href="/blog" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-cyan-500 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+                   <span className="md:hidden">📖 Academia</span><span className="hidden md:inline">📖 Academia SEO</span>
                  </Link>
                </nav>
                <div className="text-center pt-2 lg:hidden">
@@ -820,7 +820,7 @@ export default function Home() {
                                <div 
                                   key={mission.id}
                                   onClick={() => { playClick(); openMission(mission); }}
-                                  className="card-3d flex flex-col md:flex-row items-start gap-6 p-6 md:p-8 transition-colors group hover:bg-gray-50 dark:hover:bg-slate-750 cursor-pointer mb-4"
+                                  className="card-3d flex flex-col md:flex-row items-start gap-4 md:gap-6 p-4 md:p-8 transition-colors group hover:bg-gray-50 dark:hover:bg-slate-750 cursor-pointer mb-4 w-full overflow-hidden"
                                >
                                  <div className={`w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center border-b-4 text-3xl font-black ${
                                    mission.type === 'H1' ? 'bg-duo-green border-duo-green-shadow text-white' : 
@@ -829,19 +829,19 @@ export default function Home() {
                                  }`}>
                                    {mission.icon}
                                  </div>
-                                 <div className="flex-1 min-w-0">
+                                 <div className="flex-1 min-w-0 w-full">
                                    {(() => {
                                       const badge = getBadgeInfo(mission.page);
                                       return (
                                         <>
                                           <div className="flex items-center gap-3 flex-wrap mb-1.5">
-                                            <h3 className="text-2xl lg:text-3xl font-black transition-colors text-slate-800 dark:text-slate-100 group-hover:text-duo-green">{mission.title}</h3>
+                                            <h3 className="text-xl md:text-2xl lg:text-3xl font-black transition-colors text-slate-800 dark:text-slate-100 group-hover:text-duo-green">{mission.title}</h3>
                                             <span className={`text-sm lg:text-base font-black px-3 py-1 rounded-md ${badge.color}`}>
                                               {badge.text}
                                             </span>
                                           </div>
-                                          <div className="flex items-center gap-3 mb-1.5">
-                                            <code className="text-sm lg:text-base font-mono text-slate-500 dark:text-slate-400 truncate max-w-[300px] md:max-w-[450px]">
+                                          <div className="flex items-center gap-2 mb-1.5 w-full min-w-0">
+                                            <code className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 truncate block w-full max-w-[200px] min-[400px]:max-w-[260px] sm:max-w-[380px] md:max-w-[450px]">
                                               {mission.page}
                                             </code>
                                             <button 
@@ -864,8 +864,8 @@ export default function Home() {
                                      <span>👁️ {mission.impressions} impresiones</span>
                                      <span>📊 Pos. {mission.position?.toFixed(1)}</span>
                                    </div>
-                                   <div className="mt-4 md:mt-5">
-                                     <button className="btn-3d text-lg lg:text-xl py-3 px-6 btn-green w-full md:w-auto font-black">
+                                   <div className="mt-4 w-full">
+                                     <button className="btn-3d !text-sm sm:!text-base md:!text-lg lg:!text-xl !py-2.5 !px-4 sm:!py-3 sm:!px-6 btn-green w-full md:w-auto font-black">
                                        EMPEZAR (+{mission.xp} XP)
                                      </button>
                                    </div>

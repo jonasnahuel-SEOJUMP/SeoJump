@@ -13,19 +13,19 @@ export default function BlogIndex() {
     <div className="flex-1 flex flex-col items-center p-4 md:p-6 overflow-y-auto animate-in slide-in-from-bottom duration-500 w-full max-w-4xl mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative">
       
       {/* Navigation Header */}
-      <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 transition-colors duration-300">
-         <div className="flex items-center justify-between">
-           <Link 
-             href="/"
-             className="text-slate-500 text-base md:text-lg font-black hover:text-slate-800 dark:hover:text-white flex items-center gap-2"
-           >
-             ← VOLVER AL DASHBOARD
-           </Link>
-           <div className="flex items-center gap-2">
-             <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 dark:text-amber-400 text-xs font-black uppercase tracking-widest rounded-full px-3 py-1">
-               🦉 Academia SEO
-             </span>
-           </div>
+      <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-4 md:p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 transition-colors duration-300">
+         <div className="flex items-center justify-between gap-2">
+            <Link 
+              href="/"
+              className="text-slate-500 text-sm md:text-lg font-black hover:text-slate-800 dark:hover:text-white flex items-center gap-1.5 flex-shrink-0"
+            >
+              ← <span className="hidden sm:inline">VOLVER AL DASHBOARD</span><span className="sm:hidden">DASHBOARD</span>
+            </Link>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 dark:text-amber-400 text-xs font-black uppercase tracking-widest rounded-full px-3 py-1">
+                🦉 Academia SEO
+              </span>
+            </div>
          </div>
       </header>
 
