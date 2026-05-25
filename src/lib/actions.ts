@@ -753,12 +753,17 @@ Reglas estrictas de generación:
         break; // Éxito, salir del bucle
       } catch (geminiErr: any) {
         attempt++;
-        console.error(`Attempt ${attempt} to call Gemini API failed:`, geminiErr.message || geminiErr);
+        
+        // Log detailed error info on the server console
+        console.error(`[API Debug] Attempt ${attempt} failed.`);
+        console.error(`[API Debug] Error Message: ${geminiErr.message}`);
+        console.error(`[API Debug] Error Status: ${geminiErr.status || "N/A"}`);
+        console.error("FULL GEMINI ERROR OBJECT:", geminiErr);
         
         if (attempt >= maxRetries) {
           return { 
             success: false, 
-            error: `La Inteligencia Artificial de Google (Gemini) está experimentando una alta demanda temporal en sus servidores (Error 503). Por favor, intenta buscar de nuevo en unos segundos.`,
+            error: `Gemini API Call Failed: [Status: ${geminiErr.status || "unknown"}] - ${geminiErr.message || geminiErr}`,
             stack: geminiErr.stack
           };
         }
