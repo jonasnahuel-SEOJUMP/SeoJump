@@ -17,7 +17,12 @@ export async function GET(request) {
     const result = await getAIPredictiveSuggestions(siteUrl, q, excludedWords);
 
     if (!result.success) {
-      return NextResponse.json({ error: result.error || 'Error al buscar oportunidades con IA.' }, { status: 500 });
+      console.error("[ROUTE SUGGESTIONS ERROR] getAIPredictiveSuggestions failed:", result.error);
+      return NextResponse.json({ 
+        error: true,
+        message: result.error || 'Error al buscar oportunidades con IA.',
+        stack: result.stack 
+      }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -25,7 +30,11 @@ export async function GET(request) {
       nicho: result.nicho,
     });
   } catch (error) {
-    console.error('Error in suggestions route handler:', error);
-    return NextResponse.json({ error: error.message || 'Error interno del servidor.' }, { status: 500 });
+    console.error('[ROUTE SUGGESTIONS EXCEPTION] Error in suggestions route handler:', error);
+    return NextResponse.json({ 
+      error: true,
+      message: error.message || 'Error interno del servidor.',
+      stack: error.stack
+    }, { status: 500 });
   }
 }

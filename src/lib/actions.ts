@@ -632,18 +632,14 @@ export async function getAIPredictiveSuggestions(siteUrl: string, seedKeyword: s
     // 3. Obtener API key y depuración
     console.log("GEMINI_API_KEY exists in process.env:", !!process.env.GEMINI_API_KEY);
     
-    // Hardcode de Emergencia (Solo para debug)
-    const HARDCODED_API_KEY = "AIzaSyAC7B-z04nQk6KQgoTkTx14eIS6bIVosSI";
-    let apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GEMINI_API_KEY;
 
     if (!apiKey) {
-      console.warn("process.env.GEMINI_API_KEY is not defined. Using HARDCODED_API_KEY for debug testing.");
-      apiKey = HARDCODED_API_KEY;
-    }
-
-    if (!apiKey) {
-      console.error("API Key not found in environment or hardcode fallback.");
-      return { success: false, error: "API Key no detectada en entorno" };
+      console.error("GEMINI_API_KEY no configurada en las variables de entorno de la plataforma.");
+      return { 
+        success: false, 
+        error: "GEMINI_API_KEY no configurada. Por favor, definí la clave en el panel de configuración de la plataforma (Vercel/Render -> Environment Variables)." 
+      };
     }
 
     // Parse excluded words
@@ -709,7 +705,11 @@ Reglas estrictas de generación:
       responseText = await result.response.text();
     } catch (geminiErr: any) {
       console.error("Gemini API call failed during initialization or request execution. API Key length used:", apiKey ? apiKey.length : 0, geminiErr);
-      return { success: false, error: "El cerebro está ocupado, reintentá en 5 segundos" };
+      return { 
+        success: false, 
+        error: `Gemini API Call Failed: ${geminiErr.message}`,
+        stack: geminiErr.stack
+      };
     }
 
     // 5. Parsear y Validar JSON
@@ -722,13 +722,21 @@ Reglas estrictas de generación:
       } else {
         parsed = JSON.parse(responseText);
       }
-    } catch (parseErr) {
+    } catch (parseErr: any) {
       console.error("Error parsing Gemini JSON response:", responseText, parseErr);
-      return { success: false, error: "El cerebro está ocupado, reintentá en 5 segundos" };
+      return { 
+        success: false, 
+        error: `JSON Parse Failed: ${parseErr.message}. Response: "${responseText}"`,
+        stack: parseErr.stack
+      };
     }
 
     if (!Array.isArray(parsed)) {
-      return { success: false, error: "El cerebro está ocupado, reintentá en 5 segundos" };
+      return { 
+        success: false, 
+        error: "La IA no devolvió un listado válido (no es un array JSON).",
+        stack: new Error("Parsed response is not an array").stack
+      };
     }
 
     // 6. Sanitizar y mapear
@@ -769,6 +777,10 @@ Reglas estrictas de generación:
 
   } catch (error: any) {
     console.error("Error in getAIPredictiveSuggestions:", error);
-    return { success: false, error: "El cerebro está ocupado, reintentá en 5 segundos" };
+    return { 
+      success: false, 
+      error: `Inesperado: ${error.message}`,
+      stack: error.stack
+    };
   }
 }

@@ -192,7 +192,7 @@ export default function BuscadorDeOro() {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!query.trim()) return;
+    if (!query.trim() || loading) return;
 
     // Verificar límite diario ANTES de la búsqueda
     const currentCredits = readCredits();
@@ -225,7 +225,13 @@ export default function BuscadorDeOro() {
       
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        throw new Error(data.error || "Error al buscar oportunidades.");
+        console.error("[BUSCADOR DE ORO] Server returned error details:", data);
+        const errMsg = data.message || data.error || "Error al buscar oportunidades.";
+        const errorToThrow = new Error(errMsg);
+        if (data.stack) {
+          errorToThrow.stack = data.stack;
+        }
+        throw errorToThrow;
       }
 
       const rawSug = data.suggestions || [];
@@ -247,8 +253,9 @@ export default function BuscadorDeOro() {
       const used = consumeCredit();
       if (used >= DAILY_LIMIT) setShowPremiumModal(false); // ya se mostrará en el form
     } catch (err) {
+      console.error("[BUSCADOR DE ORO] Caught exception during search:", err);
       if (err.name === 'TimeoutError') {
-        setError("La solicitud tardó demasiado (>30 segundos). El cerebro está ocupado, reintentá de nuevo.");
+        setError("La solicitud tardó demasiado. Por favor, reintentá de nuevo.");
       } else {
         setError(err.message);
       }
@@ -500,18 +507,18 @@ export default function BuscadorDeOro() {
 
           {/* Results as Actionable Missions */}
           {loading ? (
-            <div className="text-center py-20 px-6 card-3d bg-slate-900 border-2 border-amber-500/30 rounded-3xl shadow-[0_0_40px_rgba(251,191,36,0.15)] animate-pulse relative overflow-hidden">
+            <div className="text-center py-20 px-6 card-3d bg-slate-900 border-2 border-amber-500/30 rounded-3xl shadow-[0_0_40px_rgba(251,191,36,0.15)] relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent animate-infinite duration-2000" />
-              <div className="text-7xl mb-6 animate-bounce">⛏️</div>
-              <h3 className="text-2xl md:text-3xl font-black text-amber-400 mb-2">Minando el oro con IA...</h3>
-              <p className="text-base md:text-lg font-bold text-slate-300 max-w-md mx-auto leading-relaxed">
-                Escaneando tu web y consultando con Gemini para descubrir las mejores oportunidades de SEO... ¡Preparate para la recompensa!
-              </p>
-              <div className="flex justify-center gap-2 mt-6">
-                <span className="w-3.5 h-3.5 rounded-full bg-amber-500 animate-bounce" style={{ animationDelay: '0s' }}></span>
-                <span className="w-3.5 h-3.5 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                <span className="w-3.5 h-3.5 rounded-full bg-amber-300 animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+              <div className="flex justify-center mb-6">
+                <svg className="animate-spin h-16 w-16 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
               </div>
+              <h3 className="text-2xl md:text-3xl font-black text-amber-400 mb-2">Analizando web y buscando oro...</h3>
+              <p className="text-base md:text-lg font-bold text-slate-350 max-w-md mx-auto leading-relaxed">
+                Esto puede tardar unos segundos.
+              </p>
             </div>
           ) : suggestions.length > 0 ? (
             <div className="w-full space-y-6 animate-in fade-in duration-300">
@@ -757,18 +764,27 @@ export default function BuscadorDeOro() {
                      className="w-full pl-9 pr-3 py-2.5 text-xs border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl focus:border-red-400 focus:border-solid outline-none font-bold text-slate-600 dark:text-slate-350 dark:bg-slate-900/50 placeholder:text-slate-400 transition-all"
                    />
                  </div>
-
-                 <button
-                   type="submit"
-                   disabled={loading || !query.trim()}
-                   className={`btn-3d w-full text-base py-3.5 font-black ${
-                     loading || !query.trim() 
-                       ? "btn-white text-slate-400 dark:bg-slate-900 dark:border-slate-800" 
-                       : "bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white"
-                   }`}
-                 >
-                   {loading ? "BUSCANDO..." : `BUSCAR OPORTUNIDAD`}
-                 </button>
+                  <button
+                    type="submit"
+                    disabled={loading || !query.trim()}
+                    className={`btn-3d w-full text-base py-3.5 font-black flex items-center justify-center gap-2 transition-all ${
+                      loading || !query.trim() 
+                        ? "btn-white text-slate-400 dark:bg-slate-900 dark:border-slate-800 cursor-not-allowed" 
+                        : "bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white active:scale-[0.99]"
+                    }`}
+                  >
+                    {loading ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5 text-slate-400 dark:text-slate-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span>BUSCANDO...</span>
+                      </>
+                    ) : (
+                      `BUSCAR OPORTUNIDAD`
+                    )}
+                  </button>
               </form>
             )}
           </div>
