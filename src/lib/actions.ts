@@ -630,7 +630,24 @@ export async function getAIPredictiveSuggestions(siteUrl: string, seedKeyword: s
     }
 
     // 3. Obtener API key
-    const apiKey = process.env.GEMINI_API_KEY;
+    let apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      try {
+        const fs = require('fs');
+        const path = require('path');
+        const envPath = path.join(process.cwd(), '.env.local');
+        if (fs.existsSync(envPath)) {
+          const envContent = fs.readFileSync(envPath, 'utf8');
+          const match = envContent.match(/^GEMINI_API_KEY\s*=\s*(.*)$/m);
+          if (match) {
+            apiKey = match[1].trim().replace(/['"]/g, '');
+          }
+        }
+      } catch (err) {
+        console.warn("Could not read fallback .env.local file:", err);
+      }
+    }
+
     if (!apiKey) {
       return { success: false, error: "GEMINI_API_KEY no configurada en las variables de entorno." };
     }
