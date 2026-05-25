@@ -44,7 +44,7 @@ export default function Perfil() {
 
   if (status === "loading" || !session) {
     return (
-      <div className="h-screen flex items-center justify-center font-fredoka font-bold text-slate-500 text-xl bg-[#f7f7f7] dark:bg-slate-900 transition-colors duration-300">
+      <div className="h-screen flex items-center justify-center font-fredoka font-bold text-slate-400 text-xl bg-[#07070d] transition-colors duration-300">
         Cargando...
       </div>
     );
@@ -54,7 +54,7 @@ export default function Perfil() {
   const xpInLevel = xp % 100;
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-4xl mx-auto space-y-8 bg-[#f7f7f7] dark:bg-slate-900 transition-colors duration-300 text-slate-800 dark:text-slate-100 min-h-screen relative font-fredoka">
+    <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-4xl mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka">
       
       {/* ─── HEADER ─── */}
       <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 sticky top-4 z-10 transition-colors duration-300">

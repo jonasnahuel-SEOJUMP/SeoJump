@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { getRealMissions, verifyMission } from "../../lib/actions";
+import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import NotificationBell from "../../components/NotificationBell";
 
 // Mapa de tipos de página para badges
@@ -95,6 +96,9 @@ export default function Optimizacion() {
   const [hasGoldKeyword, setHasGoldKeyword] = useState(false);
   const [goldKeyword, setGoldKeyword]   = useState("");
   const [hasMissions, setHasMissions]   = useState(false);
+  const [prog, setProg]                = useState(null);
+  const [prestigeCycles, setPrestigeCycles] = useState(0);
+  const [serverLoading, setServerLoading] = useState(true);
 
   // Mission detail states
   const [selectedMission, setSelectedMission] = useState(null);
@@ -116,68 +120,95 @@ export default function Optimizacion() {
     prevXpRef.current = xp;
   }, [xp, playLevelUp]);
 
-  // Load all state from localStorage on mount
+  // Pull state from server on mount if logged in, otherwise load from local storage
   useEffect(() => {
-    const savedXp = localStorage.getItem("seojump_xp");
-    if (savedXp) setXp(parseInt(savedXp, 10));
-
-    const savedUrl = localStorage.getItem("seojump_site_url");
-    if (savedUrl) setSiteUrl(savedUrl);
-
-    const keyword = localStorage.getItem("gold-tu-busqueda") || "";
-    setHasGoldKeyword(!!keyword);
-    setGoldKeyword(keyword);
-
-    const savedCompleted = localStorage.getItem("seojump_completed_missions");
-    if (savedCompleted) {
-      try {
-        const parsed = JSON.parse(savedCompleted);
-        if (Array.isArray(parsed)) setCompletedIds(new Set(parsed));
-      } catch (e) {}
-    }
-
-    // Load persisted missions from localStorage
-    const savedMissions = localStorage.getItem("seojump_missions");
-    if (savedMissions) {
-      try {
-        const parsed = JSON.parse(savedMissions);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setMissions(parsed);
-          setHasMissions(true);
-        } else {
-          setMissionError("No encontramos misiones guardadas. Volvé al Inicio y re-analizá tu sitio.");
+    const init = async () => {
+      setServerLoading(true);
+      if (session) {
+        const serverState = await pullStateFromServer();
+        if (serverState) {
+          setXp(serverState.xp || 0);
+          setSiteUrl(serverState.site_url || "");
+          setGoldKeyword(serverState.gold_query || "");
+          setHasGoldKeyword(!!serverState.gold_query);
+          setCompletedIds(new Set(serverState.completed_missions || []));
+          setMissions(serverState.missions || []);
+          setHasMissions((serverState.missions || []).length > 0);
+          setPrestigeCycles(serverState.ciclos_prestigio || 0);
+          
+          const completedSet = new Set(serverState.completed_missions || []);
+          const p = getPhaseProgress(completedSet, serverState.gold_suggestions, serverState.missions, serverState.gold_query, serverState.site_url);
+          setProg(p);
+          setServerLoading(false);
+          return;
         }
-      } catch (e) {
-        setMissionError("Error al cargar las misiones. Volvé al Inicio.");
       }
-    } else {
-      if (savedUrl) {
-        setMissionError(null);
-        getRealMissions(savedUrl, keyword || undefined).then(res => {
-          if (!res.success) {
-            throw new Error(res.error);
+      
+      const savedXp = localStorage.getItem("seojump_xp");
+      if (savedXp) setXp(parseInt(savedXp, 10));
+
+      const savedUrl = localStorage.getItem("seojump_site_url");
+      if (savedUrl) setSiteUrl(savedUrl);
+
+      const keyword = localStorage.getItem("gold-tu-busqueda") || "";
+      setHasGoldKeyword(!!keyword);
+      setGoldKeyword(keyword);
+
+      const prestige = parseInt(localStorage.getItem("seojump_prestigio_cycles") || "0", 10);
+      setPrestigeCycles(prestige);
+
+      const savedCompleted = localStorage.getItem("seojump_completed_missions");
+      let completedList = [];
+      if (savedCompleted) {
+        try {
+          const parsed = JSON.parse(savedCompleted);
+          if (Array.isArray(parsed)) {
+            completedList = parsed;
+            setCompletedIds(new Set(parsed));
           }
-          const realMissions = res.data;
-          if (realMissions && realMissions.length > 0) {
-            setMissions(realMissions);
+        } catch (e) {}
+      }
+      const completedSet = new Set(completedList);
+
+      const savedMissions = localStorage.getItem("seojump_missions");
+      let missionsList = [];
+      if (savedMissions) {
+        try {
+          const parsed = JSON.parse(savedMissions);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            missionsList = parsed;
+            setMissions(parsed);
             setHasMissions(true);
-            localStorage.setItem("seojump_missions", JSON.stringify(realMissions));
-          } else {
-            setMissionError("No encontramos misiones. Volvé al Inicio y re-analizá tu sitio.");
           }
-        }).catch(err => {
-          console.error("Failed to fetch missions:", err);
-          setMissionError(err.message || 'Error al obtener misiones');
-        });
-      } else {
-        setMissionError("Todavía no analizaste tu sitio. Volvé al Inicio para iniciar el análisis.");
+        } catch (e) {}
       }
-    }
-  }, []);
+
+      let suggestions = [];
+      const savedSuggestions = localStorage.getItem("gold-suggestions");
+      if (savedSuggestions) {
+        try { suggestions = JSON.parse(savedSuggestions); } catch (e) {}
+      }
+
+      const p = getPhaseProgress(completedSet, suggestions, missionsList, keyword, savedUrl);
+      setProg(p);
+      setServerLoading(false);
+    };
+    init();
+  }, [session]);
+
+  // Re-calculate progression whenever state changes
+  useEffect(() => {
+    let suggestions = [];
+    try {
+      suggestions = JSON.parse(localStorage.getItem("gold-suggestions") || "[]");
+    } catch (e) {}
+    const p = getPhaseProgress(completedIds, suggestions, missions, goldKeyword, siteUrl);
+    setProg(p);
+  }, [completedIds, missions, goldKeyword, siteUrl]);
 
   // Persist XP
   useEffect(() => {
-    if (xp > 0) localStorage.setItem("seojump_xp", xp);
+    if (xp > 0) localStorage.setItem("seojump_xp", xp.toString());
   }, [xp]);
 
   // Persist completed missions
@@ -191,6 +222,13 @@ export default function Optimizacion() {
       router.push("/");
     }
   }, [session, status, router]);
+
+  // Lock protection: redirect if Phase 3 is locked
+  useEffect(() => {
+    if (prog && !prog.p3.unlocked) {
+      router.push("/buscador-de-oro");
+    }
+  }, [prog, router]);
 
   const openMission = (mission) => {
     setSelectedMission(mission);
@@ -216,8 +254,17 @@ export default function Optimizacion() {
         setMissionStatus("success");
         setFailedAttempts(0);
         if (!completedIds.has(selectedMission.id)) {
-          setXp(prev => prev + (selectedMission.xp || 50));
-          setCompletedIds(prev => new Set([...prev, selectedMission.id]));
+          const newXp = xp + (selectedMission.xp || 50);
+          setXp(newXp);
+          localStorage.setItem("seojump_xp", newXp.toString());
+          setCompletedIds(prev => {
+            const updated = new Set([...prev, selectedMission.id]);
+            localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
+            setTimeout(() => {
+              syncStateWithServer();
+            }, 100);
+            return updated;
+          });
         }
         setShowConfetti(true);
         playSuccess();
@@ -235,14 +282,25 @@ export default function Optimizacion() {
     }
   };
 
-  if (status === "loading" || !session) {
-    return <div className="h-screen flex items-center justify-center font-fredoka font-bold text-slate-500 text-xl">Cargando...</div>;
+  if (status === "loading" || !session || serverLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#07070d]">
+        {/* Jewel Loading Spin */}
+        <div className="relative w-20 h-20">
+          <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20 animate-pulse"></div>
+          <div className="absolute inset-0 rounded-full border-4 border-t-emerald-500 border-r-emerald-500/50 animate-spin"></div>
+          <div className="absolute inset-4 rounded-full bg-emerald-500/10 blur-sm"></div>
+        </div>
+        <h3 className="mt-6 text-xl font-black text-white uppercase tracking-wider animate-pulse">Cargando tu progreso...</h3>
+        <p className="mt-2 text-sm font-bold text-slate-400">Sincronizando con el cerebro del Búho</p>
+      </div>
+    );
   }
 
-  const pendingMissions = missions.filter(m => !completedIds.has(m.id));
+  const pendingMissions = missions.filter(m => !completedIds.has(m.id)).slice(0, 10);
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-7xl mx-auto space-y-8 bg-[#f7f7f7] dark:bg-slate-900 transition-colors duration-300 text-slate-800 dark:text-slate-100 min-h-screen relative font-fredoka">
+    <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-7xl mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka">
 
       {/* Confetti Effect */}
       {showConfetti && (
@@ -284,10 +342,11 @@ export default function Optimizacion() {
               className="hover:scale-105 transition-transform focus:outline-none"
               title="Ver Perfil"
             >
-              {session?.user?.image
-                ? <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow" />
-                : <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white text-xl">👤</div>
-              }
+              {session?.user?.image ? (
+                <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow" />
+              ) : (
+                <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white text-xl">👤</div>
+              )}
             </button>
           </div>
         </div>
@@ -295,32 +354,32 @@ export default function Optimizacion() {
         {/* Navigation Tabs */}
         <nav className="flex flex-wrap md:flex-nowrap gap-3 md:gap-4 w-full mt-2">
           <Link href="/buscador-de-oro" onClick={playClick}
-            className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-duo-yellow text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-yellow text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
             🔍 Fase 1: Búsqueda
           </Link>
-          {hasMissions && hasGoldKeyword ? (
+          {prog?.p2?.unlocked ? (
             <Link href="/contenido" onClick={playClick}
-              className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+              className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-blue-500 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
               ✍️ Fase 2: Contenido
             </Link>
           ) : (
             <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
-              title={!hasMissions ? "Debes cargar misiones vinculando tu Search Console primero" : "Elegí tu palabra de oro en la Fase 1 primero"}>
+              title="🔒 Completá el 70% de la Fase 1 para avanzar">
               🔒 Fase 2: Contenido
             </div>
           )}
           <div className="flex-1 btn-3d bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 text-center py-5 px-6 text-lg lg:text-xl font-black border-b-4 border-duo-green cursor-default">
             🛠️ Fase 3: Optimización
           </div>
-          {hasMissions && xp >= 500 ? (
+          {prog?.p4?.unlocked ? (
             <Link href="/detective-de-enlaces" onClick={playClick}
-              className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-300 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+              className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
               🕵️‍♂️ Fase 4: Indexación
             </Link>
           ) : (
             <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
-              title={xp >= 500 ? "Debes cargar misiones vinculando tu Search Console primero" : "🔒 Fase 4 (Nivel 6)"}>
-              🔒 Fase 4 {xp < 500 && "(Nivel 6)"}
+              title="🔒 Completá el 70% de la Fase 3 para avanzar">
+              🔒 Fase 4
             </div>
           )}
         </nav>
@@ -395,7 +454,39 @@ export default function Optimizacion() {
             </div>
           )}
 
-          <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-slate-800 dark:text-slate-100">Fase 3: Optimización On-Page 🛠️</h1>
+          {/* Header y Tipografía Centrados Arriba */}
+          <div className="text-center space-y-3 py-4 w-full max-w-xl mx-auto">
+            <div className="text-4xl md:text-5xl">🦉</div>
+            <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
+              Fase 3: Optimización On-Page 🛠️
+            </h1>
+            {prestigeCycles > 0 && (
+              <div className="flex justify-center">
+                <span className="px-3 py-1 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 font-black text-xs rounded-full shadow-md animate-pulse">
+                  🪙 Prestigio x{prestigeCycles}
+                </span>
+              </div>
+            )}
+            {prog?.p3 && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-xs font-bold text-slate-500">
+                  <span>Progreso de Fase 3: {prog.p3.percent}%</span>
+                  <span>{prog.p3.completed} / {prog.p3.total} Misiones</span>
+                </div>
+                <div className="w-full h-3 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden border">
+                  <div 
+                    className={`h-full transition-all duration-500 ${prog.p4.unlocked ? 'bg-green-500' : 'bg-duo-green'}`} 
+                    style={{ width: `${prog.p3.percent}%` }}
+                  />
+                </div>
+                {prog.p4.unlocked ? (
+                  <p className="text-xs text-green-600 dark:text-green-400 font-bold">🎉 ¡Fase 4 habilitada! Podés avanzar a la siguiente fase.</p>
+                ) : (
+                  <p className="text-xs text-slate-400 font-bold">Completá el 70% de misiones para habilitar la Fase 4.</p>
+                )}
+              </div>
+            )}
+          </div>
 
               {missions.length > 0 ? (
                 <>

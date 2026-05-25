@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { verifyContentMission } from "../../lib/actions";
+import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Link from "next/link";
 import NotificationBell from "../../components/NotificationBell";
 
@@ -44,6 +45,9 @@ export default function ContenidoFase2() {
   const [activeKeyword, setActiveKeyword] = useState("");
   const [completedMissions, setCompletedMissions] = useState(new Set());
   const [hasMissions, setHasMissions] = useState(false);
+  const [prog, setProg] = useState(null);
+  const [prestigeCycles, setPrestigeCycles] = useState(0);
+  const [serverLoading, setServerLoading] = useState(true);
 
   // Track Level Up sound
   const prevXpRef = useRef(0);
@@ -61,43 +65,111 @@ export default function ContenidoFase2() {
   const [auditResult, setAuditResult] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // Load state from localStorage
+  // Load state from server/localStorage on mount
   useEffect(() => {
-    const savedXp = localStorage.getItem("seojump_xp");
-    const currentXp = savedXp ? parseInt(savedXp, 10) : 0;
-    setXp(currentXp);
+    const init = async () => {
+      setServerLoading(true);
+      if (session) {
+        const serverState = await pullStateFromServer();
+        if (serverState) {
+          setXp(serverState.xp || 0);
+          setSiteUrl(serverState.site_url || "");
+          setTargetUrl(serverState.site_url || "");
+          setActiveKeyword(purifyText(serverState.gold_query || ""));
+          setCompletedMissions(new Set(serverState.completed_missions || []));
+          setPrestigeCycles(serverState.ciclos_prestigio || 0);
+          setHasMissions((serverState.missions || []).length > 0);
 
-    const savedUrl = localStorage.getItem("seojump_site_url");
-    if (savedUrl) {
-      setSiteUrl(savedUrl);
-      setTargetUrl(savedUrl);
-    }
-
-    const savedKeyword = localStorage.getItem("gold-tu-busqueda");
-    if (savedKeyword) {
-      setActiveKeyword(purifyText(savedKeyword));
-    }
-
-    const savedCompleted = localStorage.getItem("seojump_completed_missions");
-    if (savedCompleted) {
-      try {
-        const parsed = JSON.parse(savedCompleted);
-        if (Array.isArray(parsed)) {
-          setCompletedMissions(new Set(parsed));
+          const completedSet = new Set(serverState.completed_missions || []);
+          const p = getPhaseProgress(
+            completedSet,
+            serverState.gold_suggestions,
+            serverState.missions,
+            serverState.gold_query,
+            serverState.site_url
+          );
+          setProg(p);
+          setServerLoading(false);
+          return;
         }
-      } catch (e) {}
-    }
+      }
 
-    const savedMissions = localStorage.getItem("seojump_missions");
-    if (savedMissions) {
-      try {
-        const parsed = JSON.parse(savedMissions);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setHasMissions(true);
-        }
-      } catch (e) {}
+      const savedXp = localStorage.getItem("seojump_xp");
+      const currentXp = savedXp ? parseInt(savedXp, 10) : 0;
+      setXp(currentXp);
+
+      const savedUrl = localStorage.getItem("seojump_site_url");
+      if (savedUrl) {
+        setSiteUrl(savedUrl);
+        setTargetUrl(savedUrl);
+      }
+
+      const savedKeyword = localStorage.getItem("gold-tu-busqueda");
+      if (savedKeyword) {
+        setActiveKeyword(purifyText(savedKeyword));
+      }
+
+      const prestige = parseInt(localStorage.getItem("seojump_prestigio_cycles") || "0", 10);
+      setPrestigeCycles(prestige);
+
+      const savedCompleted = localStorage.getItem("seojump_completed_missions");
+      let completedList = [];
+      if (savedCompleted) {
+        try {
+          const parsed = JSON.parse(savedCompleted);
+          if (Array.isArray(parsed)) {
+            completedList = parsed;
+            setCompletedMissions(new Set(parsed));
+          }
+        } catch (e) {}
+      }
+      const completedSet = new Set(completedList);
+
+      const savedMissions = localStorage.getItem("seojump_missions");
+      let missionsList = [];
+      if (savedMissions) {
+        try {
+          const parsed = JSON.parse(savedMissions);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            missionsList = parsed;
+            setHasMissions(true);
+          }
+        } catch (e) {}
+      }
+
+      let suggestions = [];
+      const savedSuggestions = localStorage.getItem("gold-suggestions");
+      if (savedSuggestions) {
+        try { suggestions = JSON.parse(savedSuggestions); } catch (e) {}
+      }
+
+      const p = getPhaseProgress(completedSet, suggestions, missionsList, savedKeyword, savedUrl);
+      setProg(p);
+      setServerLoading(false);
+    };
+    init();
+  }, [session]);
+
+  // Recalculate progress when state updates
+  useEffect(() => {
+    let suggestions = [];
+    try {
+      suggestions = JSON.parse(localStorage.getItem("gold-suggestions") || "[]");
+    } catch (e) {}
+    let missions = [];
+    try {
+      missions = JSON.parse(localStorage.getItem("seojump_missions") || "[]");
+    } catch (e) {}
+    const p = getPhaseProgress(completedMissions, suggestions, missions, activeKeyword, siteUrl);
+    setProg(p);
+  }, [completedMissions, activeKeyword, siteUrl]);
+
+  // Lock protection: redirect if Phase 2 is locked
+  useEffect(() => {
+    if (prog && !prog.p2.unlocked) {
+      router.push("/buscador-de-oro");
     }
-  }, [router]);
+  }, [prog, router]);
 
   // Auth Protection
   useEffect(() => {
@@ -121,6 +193,9 @@ export default function ContenidoFase2() {
     setCompletedMissions(prev => {
       const updated = new Set([...prev, missionId]);
       localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
+      setTimeout(() => {
+        syncStateWithServer();
+      }, 100);
       return updated;
     });
 
@@ -154,6 +229,9 @@ export default function ContenidoFase2() {
           setCompletedMissions(prev => {
             const updated = new Set([...prev, missionId]);
             localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
+            setTimeout(() => {
+              syncStateWithServer();
+            }, 100);
             return updated;
           });
           
@@ -174,12 +252,23 @@ export default function ContenidoFase2() {
     }
   };
 
-  if (status === "loading" || !session) {
-    return <div className="h-full flex items-center justify-center font-bold text-slate-500">Cargando...</div>;
+  if (status === "loading" || !session || serverLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#07070d]">
+        {/* Jewel Loading Spin */}
+        <div className="relative w-20 h-20">
+          <div className="absolute inset-0 rounded-full border-4 border-emerald-500/20 animate-pulse"></div>
+          <div className="absolute inset-0 rounded-full border-4 border-t-emerald-500 border-r-emerald-500/50 animate-spin"></div>
+          <div className="absolute inset-4 rounded-full bg-emerald-500/10 blur-sm"></div>
+        </div>
+        <h3 className="mt-6 text-xl font-black text-white uppercase tracking-wider animate-pulse">Cargando tu progreso...</h3>
+        <p className="mt-2 text-sm font-bold text-slate-400">Sincronizando con el cerebro del Búho</p>
+      </div>
+    );
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 md:p-8 overflow-y-auto animate-in slide-in-from-bottom duration-500 w-full max-w-7xl mx-auto space-y-8 bg-[#f7f7f7] dark:bg-slate-900 transition-colors duration-300 text-slate-800 dark:text-slate-100 min-h-screen relative font-fredoka">
+    <div className="flex-1 flex flex-col items-center p-4 md:p-8 overflow-y-auto animate-in slide-in-from-bottom duration-500 w-full max-w-7xl mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka">
       
       {/* Confetti Effect */}
       {showConfetti && (
@@ -214,70 +303,77 @@ export default function ContenidoFase2() {
              ← VOLVER AL DASHBOARD
            </button>
            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-1.5">
-                 <span className="text-3xl">🔥</span>
-                 <span className="font-black text-2xl text-orange-500">{Math.floor(xp / 100) + 1}</span>
-              </div>
-              <button 
-                onClick={toggleMute} 
-                className="text-3xl hover:scale-110 transition-transform"
-                title={isMuted ? "Activar sonido" : "Silenciar"}
-              >
-                {isMuted ? '🔇' : '🔊'}
-              </button>
-              <button 
-                onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} 
-                className="text-3xl hover:scale-110 transition-transform"
-                title={theme === "light" ? "Activar Modo Oscuro" : "Activar Modo Claro"}
-              >
-                {theme === "light" ? '🌙' : '☀️'}
-              </button>
-              <NotificationBell />
-              <button
-                onClick={() => {
-                  playClick();
-                  router.push("/perfil");
-                }}
-                className="hover:scale-105 transition-transform focus:outline-none"
-                title="Ver Perfil"
-              >
-                {session?.user?.image ? (
-                  <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow" />
-                ) : (
-                  <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white text-xl">
-                     👤
-                  </div>
-                )}
-              </button>
-           </div>
-         </div>
-         {/* Navigation Tabs */}
-         <nav className="flex flex-wrap md:flex-nowrap gap-3 md:gap-4 w-full mt-2">
-            <Link href="/buscador-de-oro" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-600 dark:text-slate-300 hover:text-duo-yellow text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-              🔍 Fase 1: Búsqueda
-            </Link>
-            <div className="flex-1 btn-3d bg-blue-50 text-blue-600 font-black text-center py-5 px-6 text-lg lg:text-xl border-2 border-blue-500 border-b-4 cursor-default">
-              ✍️ Fase 2: Contenido
+               <div className="flex items-center gap-1.5">
+                  <span className="text-3xl">🔥</span>
+                  <span className="font-black text-2xl text-orange-500">{Math.floor(xp / 100) + 1}</span>
+               </div>
+               {prestigeCycles > 0 && (
+                 <span className="px-2.5 py-1 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 font-black text-xs rounded-full shadow-sm animate-pulse">
+                   🪙 Prestigio x{prestigeCycles}
+                 </span>
+               )}
+               <button 
+                 onClick={toggleMute} 
+                 className="text-3xl hover:scale-110 transition-transform"
+                 title={isMuted ? "Activar sonido" : "Silenciar"}
+               >
+                 {isMuted ? '🔇' : '🔊'}
+               </button>
+               <button 
+                 onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} 
+                 className="text-3xl hover:scale-110 transition-transform"
+                 title={theme === "light" ? "Activar Modo Oscuro" : "Activar Modo Claro"}
+               >
+                 {theme === "light" ? '🌙' : '☀️'}
+               </button>
+               <NotificationBell />
+               <button
+                 onClick={() => {
+                   playClick();
+                   router.push("/perfil");
+                 }}
+                 className="hover:scale-105 transition-transform focus:outline-none"
+                 title="Ver Perfil"
+               >
+                 {session?.user?.image ? (
+                   <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow" />
+                 ) : (
+                   <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white text-xl">
+                      👤
+                   </div>
+                 )}
+               </button>
             </div>
-            {hasMissions ? (
-              <Link href="/optimizacion" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-600 dark:text-slate-300 hover:text-duo-green text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-                🛠️ Fase 3: Optimización
-              </Link>
-            ) : (
-              <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1" title="Debes cargar misiones vinculando tu Search Console primero">
-                🔒 Fase 3: Optimización
-              </div>
-            )}
-            {hasMissions && xp >= 500 ? (
-              <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-650 dark:text-slate-350 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
-                🕵️‍♂️ Fase 4: Indexación
-              </Link>
-            ) : (
-              <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1" title={xp >= 500 ? "Debes cargar misiones vinculando tu Search Console primero" : "🔒 Fase 4 (Nivel 6)"}>
-                🔒 Fase 4 {xp < 500 && "(Nivel 6)"}
-              </div>
-            )}
-         </nav>
+          </div>
+          {/* Navigation Tabs */}
+          <nav className="flex flex-wrap md:flex-nowrap gap-3 md:gap-4 w-full mt-2">
+             <Link href="/buscador-de-oro" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-yellow text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+               🔍 Fase 1: Búsqueda
+             </Link>
+             <div className="flex-1 btn-3d bg-blue-50 text-blue-600 font-black text-center py-5 px-6 text-lg lg:text-xl border-2 border-blue-500 border-b-4 cursor-default">
+               ✍️ Fase 2: Contenido
+             </div>
+             {prog?.p3?.unlocked ? (
+               <Link href="/optimizacion" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-green text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+                 🛠️ Fase 3: Optimización
+               </Link>
+             ) : (
+               <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+                 title="🔒 Completá el 70% de la Fase 2 para avanzar">
+                 🔒 Fase 3: Optimización
+               </div>
+             )}
+             {prog?.p4?.unlocked ? (
+               <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-purple-650 text-center py-5 px-6 text-lg lg:text-xl font-black transition-colors">
+                 🕵️‍♂️ Fase 4: Indexación
+               </Link>
+             ) : (
+               <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center py-5 px-6 text-lg lg:text-xl font-black flex items-center justify-center gap-1"
+                 title="🔒 Completá el 70% de la Fase 3 para avanzar">
+                 🔒 Fase 4: Indexación
+               </div>
+             )}
+          </nav>
       </header>
 
       {/* Main Content */}
