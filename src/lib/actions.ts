@@ -629,27 +629,21 @@ export async function getAIPredictiveSuggestions(siteUrl: string, seedKeyword: s
       // Falla GSC: se ignora y se usa solo Scraper+IA
     }
 
-    // 3. Obtener API key
+    // 3. Obtener API key y depuración
+    console.log("GEMINI_API_KEY exists in process.env:", !!process.env.GEMINI_API_KEY);
+    
+    // Hardcode de Emergencia (Solo para debug)
+    const HARDCODED_API_KEY = "AIzaSyAC7B-z04nQk6KQgoTkTx14eIS6bIVosSI";
     let apiKey = process.env.GEMINI_API_KEY;
+
     if (!apiKey) {
-      try {
-        const fs = require('fs');
-        const path = require('path');
-        const envPath = path.join(process.cwd(), '.env.local');
-        if (fs.existsSync(envPath)) {
-          const envContent = fs.readFileSync(envPath, 'utf8');
-          const match = envContent.match(/^GEMINI_API_KEY\s*=\s*(.*)$/m);
-          if (match) {
-            apiKey = match[1].trim().replace(/['"]/g, '');
-          }
-        }
-      } catch (err) {
-        console.warn("Could not read fallback .env.local file:", err);
-      }
+      console.warn("process.env.GEMINI_API_KEY is not defined. Using HARDCODED_API_KEY for debug testing.");
+      apiKey = HARDCODED_API_KEY;
     }
 
     if (!apiKey) {
-      return { success: false, error: "GEMINI_API_KEY no configurada en las variables de entorno." };
+      console.error("API Key not found in environment or hardcode fallback.");
+      return { success: false, error: "API Key no detectada en entorno" };
     }
 
     // Parse excluded words
@@ -695,6 +689,7 @@ Reglas estrictas de generación:
     // 4. Llamar a la API de Gemini
     let responseText = "";
     try {
+      console.log("Initializing GoogleGenerativeAI with API Key length:", apiKey ? apiKey.length : 0);
       const genAI = new GoogleGenerativeAI(apiKey);
       const model = genAI.getGenerativeModel({
         model: "gemini-flash-latest",
@@ -713,7 +708,7 @@ Reglas estrictas de generación:
       );
       responseText = await result.response.text();
     } catch (geminiErr: any) {
-      console.error("Gemini API call failed:", geminiErr);
+      console.error("Gemini API call failed during initialization or request execution. API Key length used:", apiKey ? apiKey.length : 0, geminiErr);
       return { success: false, error: "El cerebro está ocupado, reintentá en 5 segundos" };
     }
 
