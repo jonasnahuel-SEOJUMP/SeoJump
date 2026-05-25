@@ -217,11 +217,17 @@ export default function BuscadorDeOro() {
       const response = await fetch(
         `/api/suggestions?q=${encodeURIComponent(query)}&siteUrl=${encodeURIComponent(siteUrl)}${
           parsedExcluded ? `&excludedWords=${encodeURIComponent(parsedExcluded)}` : ''
-        }`
+        }`,
+        {
+          signal: AbortSignal.timeout(30000) // Timeout de 30 segundos
+        }
       );
-      if (!response.ok) throw new Error("Error al buscar oportunidades.");
+      
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(data.error || "Error al buscar oportunidades.");
+      }
 
-      const data = await response.json();
       const rawSug = data.suggestions || [];
       // Normalizar: la API ahora devuelve {text, intent}[]; garantizar compat
       const purifiedSug = rawSug.map(s =>
@@ -241,7 +247,11 @@ export default function BuscadorDeOro() {
       const used = consumeCredit();
       if (used >= DAILY_LIMIT) setShowPremiumModal(false); // ya se mostrará en el form
     } catch (err) {
-      setError(err.message);
+      if (err.name === 'TimeoutError') {
+        setError("La solicitud tardó demasiado (>30 segundos). El cerebro está ocupado, reintentá de nuevo.");
+      } else {
+        setError(err.message);
+      }
     } finally {
       setLoading(false);
     }

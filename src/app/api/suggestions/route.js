@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { getAIPredictiveSuggestions } from '../../../lib/actions';
 
+export const maxDuration = 30; // 30 seconds max execution time on Vercel
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);

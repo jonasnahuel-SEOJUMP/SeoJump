@@ -494,6 +494,9 @@ export async function requestGoogleIndexing(urlToIndex: string) {
   }
 }
 
+const metadataCache = new Map<string, { title: string; description: string; h1: string }>();
+
+
 /**
  * Intenta extraer el nicho/rubro del sitio a partir de su URL y del nombre del dominio.
  */
@@ -591,10 +594,28 @@ async function scrapeMetadata(siteUrl: string): Promise<{ title: string; descrip
  */
 export async function getAIPredictiveSuggestions(siteUrl: string, seedKeyword: string, excludedWords?: string) {
   try {
-    // 1. Scraping metadatos
-    const meta = await scrapeMetadata(siteUrl);
-    const inferredNicho = inferNichoFromUrl(siteUrl);
-    const businessNiche = [inferredNicho, meta.title, meta.description, meta.h1].filter(Boolean).join(" | ");
+    const normalizedSiteUrl = siteUrl.trim().toLowerCase().replace(/\/$/, '');
+
+    // 1. Scraping metadatos con caché y fallback a nicho genérico
+    let meta = { title: "", description: "", h1: "" };
+    let inferredNicho = "";
+    try {
+      inferredNicho = inferNichoFromUrl(siteUrl);
+      
+      let cached = metadataCache.get(normalizedSiteUrl);
+      if (!cached) {
+        cached = await scrapeMetadata(siteUrl);
+        metadataCache.set(normalizedSiteUrl, cached);
+      }
+      meta = cached;
+    } catch (scrapeErr: any) {
+      console.warn("Scraper step failed, ignoring scrape context:", scrapeErr.message);
+      // Falla el scraper: se ignora y se continúa con nicho genérico/derivable
+    }
+
+    const businessNiche = [inferredNicho, meta.title, meta.description, meta.h1]
+      .filter(Boolean)
+      .join(" | ") || "Nicho de negocio o ecommerce general";
 
     // 2. Obtener data de Search Console
     let gscRows: any[] = [];
@@ -604,7 +625,8 @@ export async function getAIPredictiveSuggestions(siteUrl: string, seedKeyword: s
         gscRows = await getSearchConsoleData(session.accessToken, siteUrl, seedKeyword);
       }
     } catch (err: any) {
-      console.warn("Could not retrieve GSC data:", err.message);
+      console.warn("GSC step failed, ignoring GSC context:", err.message);
+      // Falla GSC: se ignora y se usa solo Scraper+IA
     }
 
     // 3. Obtener API key
@@ -634,7 +656,7 @@ Actúas como un consultor SEO experto de nivel premium. Tu objetivo es generar e
 
 Contexto del negocio:
 - URL del sitio: ${siteUrl}
-- Nicho/Metadatos detectados: ${businessNiche || "No se pudo detectar el nicho."}
+- Nicho/Metadatos detectados: ${businessNiche}
 - Palabra clave semilla: "${seedKeyword}"
 ${hasGscData ? `\nDatos reales de Google Search Console para esta semilla:\n${gscContext}` : "\n[AVISO CRÍTICO] La API de Search Console no devolvió resultados para esta semilla (búsqueda vacía). Debes apoyarte FUERTEMENTE en el nicho del negocio, el contenido de los metadatos y la palabra clave semilla para inventar de manera predictiva 10 misiones espectaculares y altamente relevantes."}
 
@@ -654,16 +676,29 @@ Reglas estrictas de generación:
 `;
 
     // 4. Llamar a la API de Gemini
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-flash-latest",
-      generationConfig: {
-        responseMimeType: "application/json"
-      }
-    });
+    let responseText = "";
+    try {
+      const genAI = new GoogleGenerativeAI(apiKey);
+      const model = genAI.getGenerativeModel({
+        model: "gemini-flash-latest",
+        generationConfig: {
+          responseMimeType: "application/json"
+        }
+      });
 
-    const result = await model.generateContent(systemInstructions);
-    const responseText = await result.response.text();
+      const result = await model.generateContent(
+        {
+          contents: [{ role: 'user', parts: [{ text: systemInstructions }] }]
+        },
+        {
+          timeout: 30000 // Timeout de 30 segundos
+        }
+      );
+      responseText = await result.response.text();
+    } catch (geminiErr: any) {
+      console.error("Gemini API call failed:", geminiErr);
+      return { success: false, error: "El cerebro está ocupado, reintentá en 5 segundos" };
+    }
 
     // 5. Parsear y Validar JSON
     let parsed: any[] = [];
@@ -677,11 +712,11 @@ Reglas estrictas de generación:
       }
     } catch (parseErr) {
       console.error("Error parsing Gemini JSON response:", responseText, parseErr);
-      return { success: false, error: "La IA devolvió un formato no válido. Intentá de nuevo." };
+      return { success: false, error: "El cerebro está ocupado, reintentá en 5 segundos" };
     }
 
     if (!Array.isArray(parsed)) {
-      return { success: false, error: "La IA no devolvió una lista de sugerencias." };
+      return { success: false, error: "El cerebro está ocupado, reintentá en 5 segundos" };
     }
 
     // 6. Sanitizar y mapear
@@ -722,6 +757,6 @@ Reglas estrictas de generación:
 
   } catch (error: any) {
     console.error("Error in getAIPredictiveSuggestions:", error);
-    return { success: false, error: error.message || "Error al procesar la sugerencia con IA." };
+    return { success: false, error: "El cerebro está ocupado, reintentá en 5 segundos" };
   }
 }
