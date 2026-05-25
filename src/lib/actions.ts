@@ -732,14 +732,15 @@ Reglas estrictas de generación:
 
     while (attempt < maxRetries) {
       try {
-        const modelName = attempt === 0 ? "gemini-1.5-flash" : "gemini-1.5-flash-latest";
-        console.log(`Initializing GoogleGenerativeAI with API Key (Attempt ${attempt + 1}/${maxRetries}) using model: ${modelName}`);
+        console.log(`Initializing GoogleGenerativeAI (Attempt ${attempt + 1}/${maxRetries}) using model: gemini-1.5-flash over API version v1`);
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-          model: modelName,
+          model: "gemini-1.5-flash",
           generationConfig: {
             responseMimeType: "application/json"
           }
+        }, {
+          apiVersion: "v1"
         });
 
         const result = await model.generateContent(
