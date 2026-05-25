@@ -656,7 +656,7 @@ Reglas estrictas de generación:
     // 4. Llamar a la API de Gemini
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash",
+      model: "gemini-flash-latest",
       generationConfig: {
         responseMimeType: "application/json"
       }
