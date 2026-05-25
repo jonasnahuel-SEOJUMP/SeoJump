@@ -649,6 +649,13 @@ export default function Optimizacion() {
                   {!verifyLoading && missionStatus === "error" && "🔄 REINTENTAR"}
                   {!verifyLoading && missionStatus === "success" && `🎉 ¡+${selectedMission.xp} XP GANADOS!`}
                 </button>
+
+                <div className="p-4 bg-amber-55 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl text-sm font-bold text-amber-800 dark:text-amber-300 flex gap-3 items-start shadow-sm leading-relaxed text-left animate-in fade-in slide-in-from-bottom duration-300">
+                  <span className="text-2xl flex-shrink-0 select-none">🦉</span>
+                  <p>
+                    <strong className="font-black text-amber-950 dark:text-amber-200">¡Tip de experto!</strong> Para que el sistema detecte tus cambios, asegurate de cerrar el panel de administrador y abrir tu web como un visitante común. Google lee tu sitio tal como lo ven tus clientes, no desde el editor.
+                  </p>
+                </div>
               </div>
 
               {missionStatus === "success" && (
