@@ -171,39 +171,64 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
   }
 }
 
-/**
- * Extracts a specific SEO element from raw HTML using regex.
- */
 function extractFromHtml(html: string, type: string): string | string[] | null {
   try {
     if (type === 'H1') {
-      const match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)
-      if (match) {
-        // Strip inner HTML tags (e.g. <span>)
-        return match[1].replace(/<[^>]+>/g, '').trim()
+      const headings: string[] = [];
+      
+      // Extract H1s
+      const h1Regex = /<h1[^>]*>([\s\S]*?)<\/h1>/gi;
+      let match;
+      while ((match = h1Regex.exec(html)) !== null) {
+        const text = match[1].replace(/<[^>]+>/g, '').trim();
+        if (text) headings.push(text);
       }
+      
+      // Extract H2s (as requested for thoroughness)
+      const h2Regex = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
+      while ((match = h2Regex.exec(html)) !== null) {
+        const text = match[1].replace(/<[^>]+>/g, '').trim();
+        if (text) headings.push(text);
+      }
+      
+      return headings.length > 0 ? headings : null;
     }
 
     if (type === 'META') {
-      const match = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i)
-            || html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i)
-      return match ? match[1].trim() : null
+      const metaValues: string[] = [];
+      
+      // Meta description
+      const descMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i)
+            || html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i);
+      if (descMatch && descMatch[1].trim()) metaValues.push(descMatch[1].trim());
+      
+      // Meta keywords
+      const keywMatch = html.match(/<meta\s+name=["']keywords["']\s+content=["']([^"']+)["']/i)
+            || html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']keywords["']/i);
+      if (keywMatch && keywMatch[1].trim()) metaValues.push(keywMatch[1].trim());
+      
+      // Page title
+      const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      if (titleMatch && titleMatch[1].trim()) {
+        metaValues.push(titleMatch[1].replace(/<[^>]+>/g, '').trim());
+      }
+      
+      return metaValues.length > 0 ? metaValues : null;
     }
 
     if (type === 'ALT') {
-      // Return all alt texts found as an array
-      const alts: string[] = []
-      const regex = /<img[^>]+alt=["']([^"']+)["'][^>]*>/gi
-      let match
+      const alts: string[] = [];
+      const regex = /<img[^>]+alt=["']([^"']+)["'][^>]*>/gi;
+      let match;
       while ((match = regex.exec(html)) !== null) {
-        if (match[1].trim()) alts.push(match[1].trim())
+        if (match[1].trim()) alts.push(match[1].trim());
       }
-      return alts.length > 0 ? alts : null
+      return alts.length > 0 ? alts : null;
     }
   } catch (e) {
-    console.error('Error extracting from HTML:', e)
+    console.error('Error extracting from HTML:', e);
   }
-  return null
+  return null;
 }
 
 /**
@@ -294,15 +319,19 @@ export async function verifyMission(pageUrl: string, type: string, userInput: st
 
   let html: string
   try {
-    console.log(`[verifyMission] Fetching live page: ${pageUrl}`)
+    console.log(`[verifyMission] Fetching live page (no-cache): ${pageUrl}`)
     const finalUrl = pageUrl.includes('?') ? `${pageUrl}&nocache=${Date.now()}` : `${pageUrl}?nocache=${Date.now()}`;
     const response = await fetch(finalUrl, {
+      cache: 'no-store',
+      // @ts-ignore
+      next: { revalidate: 0 },
       headers: {
-        // Mimic a real browser to avoid bot blocks
         'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
         'Accept': 'text/html,application/xhtml+xml',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
-      // 8 second timeout
       signal: AbortSignal.timeout(8000),
     })
 
@@ -353,26 +382,27 @@ export async function verifyMission(pageUrl: string, type: string, userInput: st
   console.log(`[verifyMission] Normalized live:    "${normalize(typeof cleanLiveValue === 'string' ? cleanLiveValue : '')}"`)
 
   const normalizedInput = normalize(userInput)
+  const normalizedKeyword = goldKeyword ? normalize(goldKeyword) : ''
   let isMatch = false
   let matchedValue = ''
 
-  if (type === 'ALT') {
-    const alts = Array.isArray(cleanLiveValue) ? cleanLiveValue : [cleanLiveValue as string]
-    for (const alt of alts) {
-      if (typeof alt === 'string') {
-        const normalizedAlt = normalize(alt)
-        if (normalizedAlt === normalizedInput || normalizedAlt.includes(normalizedInput) || normalizedInput.includes(normalizedAlt)) {
-          isMatch = true
-          matchedValue = alt
-          break
-        }
+  const extractedList = Array.isArray(cleanLiveValue) ? cleanLiveValue : [cleanLiveValue as string]
+
+  for (const val of extractedList) {
+    if (typeof val === 'string') {
+      const normalizedLive = normalize(val)
+      
+      // 1. Matches user input exactly or contains/is contained by it
+      const matchesInput = normalizedLive === normalizedInput || normalizedLive.includes(normalizedInput) || normalizedInput.includes(normalizedLive);
+      
+      // 2. Contains the target keyword (direct comparison)
+      const matchesKeyword = normalizedKeyword && (normalizedLive === normalizedKeyword || normalizedLive.includes(normalizedKeyword));
+      
+      if (matchesInput || matchesKeyword) {
+        isMatch = true
+        matchedValue = val
+        break
       }
-    }
-  } else {
-    if (typeof cleanLiveValue === 'string') {
-      const normalizedLive = normalize(cleanLiveValue)
-      isMatch = normalizedLive === normalizedInput || normalizedLive.includes(normalizedInput) || normalizedInput.includes(normalizedLive)
-      matchedValue = cleanLiveValue
     }
   }
 
@@ -380,20 +410,20 @@ export async function verifyMission(pageUrl: string, type: string, userInput: st
     return {
       success: true,
       liveValue: matchedValue,
-      message: `¡Lo encontramos en tu web! El ${type} dice exactamente: "${matchedValue}"`,
+      message: `¡Lo encontramos en tu web! El contenido dice: "${matchedValue}"`,
     }
   } else {
     // Limitar los valores para no mostrar un texto gigante en caso de error
-    const displayValue = Array.isArray(liveValue) 
-      ? (liveValue.length > 3 ? liveValue.slice(0, 3).join(', ') + '...' : liveValue.join(', '))
-      : liveValue
+    const displayValue = Array.isArray(cleanLiveValue) 
+      ? (cleanLiveValue.length > 3 ? cleanLiveValue.slice(0, 3).join(', ') + '...' : cleanLiveValue.join(', '))
+      : cleanLiveValue
 
     return {
       success: false,
-      liveValue: Array.isArray(liveValue) ? liveValue[0] : liveValue,
+      liveValue: Array.isArray(cleanLiveValue) ? cleanLiveValue[0] : cleanLiveValue,
       message: type === 'ALT'
-        ? `No encontramos tu texto. Se detectaron ${Array.isArray(liveValue) ? liveValue.length : 1} imágenes (ej: ${displayValue}). ¿Ya aplicaste el cambio en tu sitio?`
-        : `Tu ${type} actual en la web dice: "${decodeHtmlEntities(Array.isArray(liveValue) ? liveValue[0] : liveValue as string)}". ¿Ya aplicaste el cambio en tu sitio?`,
+        ? `No encontramos tu texto. Se detectaron ${Array.isArray(cleanLiveValue) ? cleanLiveValue.length : 1} imágenes (ej: ${displayValue}). ¿Ya aplicaste el cambio en tu sitio?`
+        : `Tu ${type} actual detectado en la web dice: "${decodeHtmlEntities(Array.isArray(cleanLiveValue) ? cleanLiveValue[0] : cleanLiveValue as string)}". ¿Ya aplicaste el cambio en tu sitio?`,
     }
   }
 }
@@ -408,12 +438,18 @@ export async function verifyContentMission(pageUrl: string, searchPhrase: string
 
   let html: string
   try {
-    console.log(`[verifyContentMission] Fetching live page: ${pageUrl}`)
+    console.log(`[verifyContentMission] Fetching live page (no-cache): ${pageUrl}`)
     const finalUrl = pageUrl.includes('?') ? `${pageUrl}&nocache=${Date.now()}` : `${pageUrl}?nocache=${Date.now()}`;
     const response = await fetch(finalUrl, {
+      cache: 'no-store',
+      // @ts-ignore
+      next: { revalidate: 0 },
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
         'Accept': 'text/html,application/xhtml+xml',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
       signal: AbortSignal.timeout(8000),
     })
@@ -551,9 +587,15 @@ async function scrapeMetadata(siteUrl: string): Promise<{ title: string; descrip
   
   try {
     const res = await fetch(targetUrl, {
+      cache: 'no-store',
+      // @ts-ignore
+      next: { revalidate: 0 },
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
         'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
       },
       signal: AbortSignal.timeout(4000),
     });

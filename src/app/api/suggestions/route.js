@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { getAIPredictiveSuggestions } from '../../../lib/actions';
 
 export const maxDuration = 30; // 30 seconds max execution time on Vercel
+export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+export const revalidate = 0;
 
 export async function GET(request) {
   try {
@@ -22,12 +25,25 @@ export async function GET(request) {
         error: true,
         message: result.error || 'Error al buscar oportunidades con IA.',
         stack: result.stack 
-      }, { status: 500 });
+      }, { 
+        status: 500,
+        headers: {
+          'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      });
     }
 
     return NextResponse.json({
       suggestions: result.suggestions,
       nicho: result.nicho,
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
     });
   } catch (error) {
     console.error('[ROUTE SUGGESTIONS EXCEPTION] Error in suggestions route handler:', error);
@@ -35,6 +51,13 @@ export async function GET(request) {
       error: true,
       message: error.message || 'Error interno del servidor.',
       stack: error.stack
-    }, { status: 500 });
+    }, { 
+      status: 500,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      }
+    });
   }
 }
