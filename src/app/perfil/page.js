@@ -64,9 +64,9 @@ export default function Perfil() {
               playClick();
               router.push("/");
             }}
-            className="text-slate-500 text-sm md:text-lg font-black hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1.5 flex-shrink-0"
+            className="text-slate-600 dark:text-slate-350 text-sm md:text-lg font-black hover:text-slate-850 dark:hover:text-white flex items-center gap-1.5 flex-shrink-0"
           >
-            ← <span className="hidden sm:inline">VOLVER AL DASHBOARD</span><span className="sm:hidden">DASHBOARD</span>
+            ← <span className="hidden sm:inline">VOLVER AL DASHBOARD</span><span className="sm:hidden">VOLVER</span>
           </button>
           <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
             <button onClick={toggleMute} className="text-2xl md:text-3xl hover:scale-110 transition-transform flex-shrink-0" title={isMuted ? "Activar sonido" : "Silenciar"}>

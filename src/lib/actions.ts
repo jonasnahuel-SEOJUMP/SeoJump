@@ -875,6 +875,12 @@ Contexto del negocio:
 - Palabra clave semilla: "${cleanSeedKeyword}"
 ${hasGscData ? `\nDatos reales de Google Search Console para esta semilla:\n${gscContext}` : "\n[AVISO CRÍTICO] La API de Search Console no devolvió resultados para esta semilla (búsqueda vacía). Debes apoyarte FUERTEMENTE en el nicho del negocio, el contenido de los metadatos y la palabra clave semilla para inventar de manera predictiva 10 misiones espectaculares y altamente relevantes."}
 
+Regla de la Página de Inicio (CRÍTICA):
+Antes de sugerir un H1, título o palabra clave de optimización, analiza la URL. Si la URL corresponde a la página principal o portada (raíz del dominio, ej: misitio.com/), NUNCA sugieras optimizar para un producto o servicio específico (ej: una lata de atún, un desengrasante Alumax). La página de inicio debe optimizarse siempre para la Marca y la Categoría Global del negocio (ej: Supermercado, Tienda de Detailing, etc.). Solo sugiere palabras clave específicas de productos si la URL corresponde a una página interna o de blog.
+
+Nexo con la Semilla (Seed Keyword):
+Todas las sugerencias deben desprenderse lógicamente y respetar la palabra clave semilla "${cleanSeedKeyword}" que el usuario investiga en la Fase 1, para que el flujo de misiones mantenga coherencia absoluta.
+
 Reglas estrictas de generación:
 1. Genera EXACTAMENTE 10 sugerencias de palabras clave de cola larga (long-tail).
 2. Cada palabra clave debe contener de manera obligatoria la palabra clave semilla "${cleanSeedKeyword}" (o variaciones gramaticales muy cercanas).
@@ -1047,12 +1053,20 @@ Reglas estrictas de generación:
   }
 }
 
-export async function getQuickWins(siteUrl: string) {
+export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
   const urlSanit = sanitizeInput(siteUrl, 'url');
   if (!urlSanit.isValid) {
     return { success: false, error: urlSanit.error };
   }
   const cleanSiteUrl = urlSanit.sanitized;
+
+  let cleanGoldKeyword = "";
+  if (goldKeyword) {
+    const kwSanit = sanitizeInput(goldKeyword, 'keyword');
+    if (kwSanit.isValid) {
+      cleanGoldKeyword = kwSanit.sanitized;
+    }
+  }
 
   try {
     const session = await auth();
@@ -1073,7 +1087,7 @@ export async function getQuickWins(siteUrl: string) {
     let gscRows: any[] = [];
     if (session?.accessToken) {
       try {
-        gscRows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, undefined, 100);
+        gscRows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined, 100);
       } catch (err: any) {
         console.warn("Fallo al obtener datos de GSC para Quick Wins:", err.message);
       }
@@ -1108,31 +1122,32 @@ export async function getQuickWins(siteUrl: string) {
 
     if (opportunities.length < 3) {
       const niche = inferredNicho || 'general';
+      
       const fallbackTemplates: any = {
         'detailing vehicular': [
-          { path: '', keyword: 'detailing profesional', pos: 9.4, cl: 15, imp: 240 },
-          { path: '/servicios', keyword: 'limpieza de tapizados', pos: 11.2, cl: 8, imp: 180 },
-          { path: '/productos', keyword: 'cera para autos importada', pos: 13.8, cl: 3, imp: 95 }
+          { path: '', keyword: cleanGoldKeyword || 'detailing profesional', pos: 9.4, cl: 15, imp: 240 },
+          { path: '/servicios', keyword: cleanGoldKeyword ? `${cleanGoldKeyword} premium` : 'limpieza de tapizados', pos: 11.2, cl: 8, imp: 180 },
+          { path: '/productos', keyword: cleanGoldKeyword ? `comprar ${cleanGoldKeyword}` : 'cera para autos importada', pos: 13.8, cl: 3, imp: 95 }
         ],
         'calzado': [
-          { path: '', keyword: 'calzado de cuero hombre', pos: 8.7, cl: 25, imp: 310 },
-          { path: '/botas', keyword: 'botas de cuero mujer', pos: 10.5, cl: 12, imp: 190 },
-          { path: '/zapatillas', keyword: 'zapatillas urbanas comodas', pos: 14.2, cl: 4, imp: 110 }
+          { path: '', keyword: cleanGoldKeyword || 'calzado de cuero hombre', pos: 8.7, cl: 25, imp: 310 },
+          { path: '/botas', keyword: cleanGoldKeyword ? `${cleanGoldKeyword} de cuero` : 'botas de cuero mujer', pos: 10.5, cl: 12, imp: 190 },
+          { path: '/zapatillas', keyword: cleanGoldKeyword ? `${cleanGoldKeyword} urbanas` : 'zapatillas urbanas comodas', pos: 14.2, cl: 4, imp: 110 }
         ],
         'indumentaria': [
-          { path: '', keyword: 'ropa de diseño argentina', pos: 9.1, cl: 18, imp: 270 },
-          { path: '/remeras', keyword: 'remeras estampadas algodon', pos: 12.0, cl: 9, imp: 150 },
-          { path: '/camperas', keyword: 'camperas de abrigo impermeable', pos: 13.5, cl: 3, imp: 80 }
+          { path: '', keyword: cleanGoldKeyword || 'ropa de diseño argentina', pos: 9.1, cl: 18, imp: 270 },
+          { path: '/remeras', keyword: cleanGoldKeyword ? `${cleanGoldKeyword} de algodon` : 'remeras estampadas algodon', pos: 12.0, cl: 9, imp: 150 },
+          { path: '/camperas', keyword: cleanGoldKeyword ? `comprar ${cleanGoldKeyword}` : 'camperas de abrigo impermeable', pos: 13.5, cl: 3, imp: 80 }
         ],
         'gastronomía': [
-          { path: '', keyword: 'restaurant comida casera', pos: 8.9, cl: 22, imp: 290 },
-          { path: '/menu', keyword: 'platos del dia precios', pos: 10.8, cl: 11, imp: 170 },
-          { path: '/reserva', keyword: 'reservar mesa cena online', pos: 13.1, cl: 4, imp: 90 }
+          { path: '', keyword: cleanGoldKeyword || 'restaurant comida casera', pos: 8.9, cl: 22, imp: 290 },
+          { path: '/menu', keyword: cleanGoldKeyword ? `platos de ${cleanGoldKeyword}` : 'platos del dia precios', pos: 10.8, cl: 11, imp: 170 },
+          { path: '/reserva', keyword: cleanGoldKeyword ? `reservar ${cleanGoldKeyword}` : 'reservar mesa cena online', pos: 13.1, cl: 4, imp: 90 }
         ],
         'general': [
-          { path: '', keyword: 'comprar online envio gratis', pos: 9.8, cl: 14, imp: 220 },
-          { path: '/productos', keyword: 'productos con descuento', pos: 11.5, cl: 7, imp: 130 },
-          { path: '/contacto', keyword: 'atencion al cliente inmediata', pos: 14.0, cl: 2, imp: 75 }
+          { path: '', keyword: cleanGoldKeyword || 'comprar online envio gratis', pos: 9.8, cl: 14, imp: 220 },
+          { path: '/productos', keyword: cleanGoldKeyword ? `${cleanGoldKeyword} con descuento` : 'productos con descuento', pos: 11.5, cl: 7, imp: 130 },
+          { path: '/contacto', keyword: cleanGoldKeyword ? `contacto para ${cleanGoldKeyword}` : 'atencion al cliente inmediata', pos: 14.0, cl: 2, imp: 75 }
         ]
       };
 
@@ -1181,6 +1196,12 @@ Tu única misión es:
 2. Generar un "Action Plan" de 15 segundos para cada una de las 3 oportunidades:
    - "suggestedTitle": Un nuevo título comercial, atractivo y persuasivo que actúe como un "Contenido ganador" para convencer tanto a Google como a los usuarios y subir al Top 3.
    - "explanation": Breve diagnóstico de por qué Google no lo está posicionando mejor y qué lograrán con el cambio.
+
+Regla de la Página de Inicio (CRÍTICA):
+Antes de sugerir un título (suggestedTitle) para una oportunidad, analiza la URL ("page") correspondiente. Si la URL es la página principal (raíz del dominio, ej: misitio.com/ o misitio.com), NUNCA sugieras optimizar para un producto o servicio específico (ej: una lata de atún, un desengrasante Alumax). La página de inicio debe optimizarse siempre para la Marca y la Categoría Global del negocio (ej: Supermercado, Tienda de Detailing, etc.). Solo sugiere palabras clave o nombres específicos si la URL corresponde a una página de producto interno o blog (ej: misitio.com/productos/nombre-producto).
+
+Nexo con la Semilla (Seed Keyword):
+${cleanGoldKeyword ? `El usuario está investigando actualmente la palabra clave semilla: "${cleanGoldKeyword}". Todas las misiones, sugerencias de títulos y optimizaciones deben desprenderse lógicamente y alinearse con esta semilla para asegurar una coherencia absoluta en todo el flujo.` : `Asegúrate de que las optimizaciones propuestas se alinien fuertemente con el nicho y metadatos globales del sitio.`}
 
 Reglas muy estrictas de lenguaje:
 - NUNCA uses tecnicismos aburridos como "canibalización", "backlinks", "DA", "PA", "search intent", "enlazado interno", "thin content" o similares.

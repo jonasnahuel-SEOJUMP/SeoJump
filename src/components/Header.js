@@ -36,10 +36,10 @@ export default function Header({
           <Link
             href="/"
             onClick={handleLinkClick}
-            className="text-slate-500 text-sm md:text-lg font-black hover:text-slate-850 dark:hover:text-slate-200 flex items-center gap-1.5 flex-shrink-0"
+            className="text-slate-600 dark:text-slate-350 text-sm md:text-lg font-black hover:text-slate-850 dark:hover:text-white flex items-center gap-1.5 flex-shrink-0"
           >
             ← <span className="hidden sm:inline">VOLVER AL DASHBOARD</span>
-            <span className="sm:hidden">DASHBOARD</span>
+            <span className="sm:hidden">VOLVER</span>
           </Link>
         )}
 

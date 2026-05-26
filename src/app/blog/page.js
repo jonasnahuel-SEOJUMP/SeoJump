@@ -17,9 +17,9 @@ export default function BlogIndex() {
          <div className="flex items-center justify-between gap-2">
             <Link 
               href="/"
-              className="text-slate-500 text-sm md:text-lg font-black hover:text-slate-800 dark:hover:text-white flex items-center gap-1.5 flex-shrink-0"
+              className="text-slate-600 dark:text-slate-350 text-sm md:text-lg font-black hover:text-slate-850 dark:hover:text-white flex items-center gap-1.5 flex-shrink-0"
             >
-              ← <span className="hidden sm:inline">VOLVER AL DASHBOARD</span><span className="sm:hidden">DASHBOARD</span>
+              ← <span className="hidden sm:inline">VOLVER AL DASHBOARD</span><span className="sm:hidden">VOLVER</span>
             </Link>
             <div className="flex items-center gap-2 flex-shrink-0">
               <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 text-amber-500 dark:text-amber-400 text-xs font-black uppercase tracking-widest rounded-full px-3 py-1">

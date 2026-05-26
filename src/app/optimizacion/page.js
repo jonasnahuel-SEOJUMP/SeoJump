@@ -272,7 +272,7 @@ export default function Optimizacion() {
         } catch(e) {}
       }
       setQuickWinsLoading(true);
-      getQuickWins(siteUrl)
+      getQuickWins(siteUrl, goldKeyword || undefined)
         .then(res => {
           if (res.success && res.quickWins) {
             setQuickWins(res.quickWins);

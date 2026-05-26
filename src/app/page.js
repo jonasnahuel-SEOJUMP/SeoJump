@@ -256,7 +256,8 @@ export default function Home() {
         } catch (e) {}
       }
       setQuickWinsLoading(true);
-      getQuickWins(url)
+      const activeKeyword = localStorage.getItem("gold-tu-busqueda") || undefined;
+      getQuickWins(url, activeKeyword)
         .then((res) => {
           if (res.success && res.quickWins) {
             setQuickWins(res.quickWins);
@@ -305,7 +306,7 @@ export default function Home() {
           clearInterval(interval);
           const goldKeyword = localStorage.getItem("gold-tu-busqueda") || undefined;
           
-          getQuickWins(url).then(qwRes => {
+          getQuickWins(url, goldKeyword).then(qwRes => {
             if (qwRes.success && qwRes.quickWins) {
               setQuickWins(qwRes.quickWins);
               localStorage.setItem("seojump_quick_wins", JSON.stringify(qwRes.quickWins));
