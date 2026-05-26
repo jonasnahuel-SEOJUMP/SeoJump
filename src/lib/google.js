@@ -72,7 +72,7 @@ async function querySearchConsole(accessToken, siteUrl, body) {
   return response;
 }
 
-export async function getSearchConsoleData(accessToken, siteUrl, goldKeyword) {
+export async function getSearchConsoleData(accessToken, siteUrl, goldKeyword, rowLimit = 10) {
   const endDate = new Date().toISOString().split('T')[0];
   const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -84,7 +84,7 @@ export async function getSearchConsoleData(accessToken, siteUrl, goldKeyword) {
       { fieldName: 'clicks', sortOrder: 'descending' },
       { fieldName: 'impressions', sortOrder: 'descending' }
     ],
-    rowLimit: 10,
+    rowLimit: rowLimit,
   };
 
   if (goldKeyword) {

@@ -6,7 +6,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { getRealMissions, verifyMission } from "../../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import NotificationBell from "../../components/NotificationBell";
 
@@ -111,6 +111,16 @@ export default function Optimizacion() {
   const [showHelp, setShowHelp]        = useState(false);
   const [showConfetti, setShowConfetti]= useState(false);
 
+  // Quick Wins State
+  const [quickWins, setQuickWins] = useState([]);
+  const [quickWinsLoading, setQuickWinsLoading] = useState(false);
+  const [quickWinsError, setQuickWinsError] = useState(null);
+  const [verifyingQuickWinIndex, setVerifyingQuickWinIndex] = useState(null);
+  const [verifyQuickWinResult, setVerifyQuickWinResult] = useState({});
+  const [completedQuickWins, setCompletedQuickWins] = useState(new Set());
+  const [xpPopup, setXpPopup] = useState(null);
+  const [activeTab, setActiveTab] = useState("quickwins");
+
   // Level-up sound tracking
   const prevXpRef = useRef(0);
   useEffect(() => {
@@ -139,6 +149,17 @@ export default function Optimizacion() {
           const completedSet = new Set(serverState.completed_missions || []);
           const p = getPhaseProgress(completedSet, serverState.gold_suggestions, serverState.missions, serverState.gold_query, serverState.site_url);
           setProg(p);
+
+          // Load Quick Wins from local storage
+          const savedQuickWins = localStorage.getItem("seojump_quick_wins");
+          if (savedQuickWins) {
+            try { setQuickWins(JSON.parse(savedQuickWins)); } catch(e) {}
+          }
+          const savedCompletedQuickWins = localStorage.getItem("seojump_completed_quick_wins");
+          if (savedCompletedQuickWins) {
+            try { setCompletedQuickWins(new Set(JSON.parse(savedCompletedQuickWins))); } catch(e) {}
+          }
+
           setServerLoading(false);
           return;
         }
@@ -189,6 +210,16 @@ export default function Optimizacion() {
         try { suggestions = JSON.parse(savedSuggestions); } catch (e) {}
       }
 
+      // Load Quick Wins from local storage
+      const savedQuickWins = localStorage.getItem("seojump_quick_wins");
+      if (savedQuickWins) {
+        try { setQuickWins(JSON.parse(savedQuickWins)); } catch(e) {}
+      }
+      const savedCompletedQuickWins = localStorage.getItem("seojump_completed_quick_wins");
+      if (savedCompletedQuickWins) {
+        try { setCompletedQuickWins(new Set(JSON.parse(savedCompletedQuickWins))); } catch(e) {}
+      }
+
       const p = getPhaseProgress(completedSet, suggestions, missionsList, keyword, savedUrl);
       setProg(p);
       setServerLoading(false);
@@ -230,6 +261,40 @@ export default function Optimizacion() {
     }
   }, [prog, router]);
 
+  // Load Quick Wins when siteUrl is available
+  useEffect(() => {
+    if (siteUrl && quickWins.length === 0 && !quickWinsLoading) {
+      const saved = localStorage.getItem("seojump_quick_wins");
+      if (saved) {
+        try {
+          setQuickWins(JSON.parse(saved));
+          return;
+        } catch(e) {}
+      }
+      setQuickWinsLoading(true);
+      getQuickWins(siteUrl)
+        .then(res => {
+          if (res.success && res.quickWins) {
+            setQuickWins(res.quickWins);
+            localStorage.setItem("seojump_quick_wins", JSON.stringify(res.quickWins));
+          } else {
+            setQuickWinsError(res.error || "No se pudieron obtener oportunidades rápidas.");
+          }
+        })
+        .catch(err => {
+          setQuickWinsError("Error de conexión al cargar oportunidades rápidas.");
+        })
+        .finally(() => {
+          setQuickWinsLoading(false);
+        });
+    }
+  }, [siteUrl, quickWins.length, quickWinsLoading]);
+
+  // Persist completed Quick Wins
+  useEffect(() => {
+    localStorage.setItem("seojump_completed_quick_wins", JSON.stringify(Array.from(completedQuickWins)));
+  }, [completedQuickWins]);
+
   const openMission = (mission) => {
     setSelectedMission(mission);
     setH1Value("");
@@ -257,6 +322,8 @@ export default function Optimizacion() {
           const newXp = xp + (selectedMission.xp || 50);
           setXp(newXp);
           localStorage.setItem("seojump_xp", newXp.toString());
+          setXpPopup({ amount: selectedMission.xp || 50, message: "¡Crecimiento detectado!" });
+          setTimeout(() => setXpPopup(null), 4000);
           setCompletedIds(prev => {
             const updated = new Set([...prev, selectedMission.id]);
             localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
@@ -279,6 +346,47 @@ export default function Optimizacion() {
       setFailedAttempts(prev => prev + 1);
     } finally {
       setVerifyLoading(false);
+    }
+  };
+
+  const handleVerifyQuickWin = async (index, pageUrl, suggestedTitle) => {
+    setVerifyingQuickWinIndex(index);
+    setVerifyQuickWinResult(prev => ({
+      ...prev,
+      [index]: { success: false, message: "", loading: true }
+    }));
+    try {
+      const res = await verifyQuickWin(pageUrl, suggestedTitle);
+      setVerifyQuickWinResult(prev => ({
+        ...prev,
+        [index]: { success: res.success, message: res.message, loading: false }
+      }));
+      if (res.success) {
+        playSuccess();
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+
+        if (!completedQuickWins.has(pageUrl)) {
+          setXp(prev => prev + 100);
+          setCompletedQuickWins(prev => {
+            const next = new Set(prev);
+            next.add(pageUrl);
+            return next;
+          });
+          setXpPopup({ amount: 100, message: "¡Crecimiento detectado!" });
+          setTimeout(() => setXpPopup(null), 4000);
+          setTimeout(() => {
+            syncStateWithServer();
+          }, 100);
+        }
+      }
+    } catch (e) {
+      setVerifyQuickWinResult(prev => ({ 
+        ...prev, 
+        [index]: { success: false, message: "Error al conectar y verificar en vivo.", loading: false } 
+      }));
+    } finally {
+      setVerifyingQuickWinIndex(null);
     }
   };
 
@@ -354,7 +462,7 @@ export default function Optimizacion() {
         {/* Navigation Tabs */}
         <nav className="flex flex-wrap md:flex-nowrap gap-2 md:gap-4 w-full mt-2">
           <Link href="/buscador-de-oro" onClick={playClick}
-            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-duo-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
             <span className="md:hidden">🔍 F1</span><span className="hidden md:inline">🔍 Fase 1: Búsqueda</span>
           </Link>
           {prog?.p2?.unlocked ? (
@@ -398,7 +506,7 @@ export default function Optimizacion() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xl font-black text-duo-yellow">NIVEL {Math.floor(xp / 100) + 1}</span>
-              <span className="text-sm font-bold text-slate-500">{xp % 100} / 100 XP</span>
+              <span className="text-sm font-bold text-slate-555">{xp % 100} / 100 XP</span>
             </div>
             <div className="w-full h-6 bg-gray-100 dark:bg-slate-700 rounded-full border-2 border-slate-200 dark:border-slate-600 overflow-hidden">
               <div className="h-full bg-duo-yellow transition-all duration-1000" style={{ width: `${xp % 100}%` }} />
@@ -411,176 +519,292 @@ export default function Optimizacion() {
             <h3 className="text-xl font-black text-yellow-400 text-center mb-4">Panel de Boxes</h3>
             <div className="space-y-3">
               <div className="bg-slate-900 rounded-xl p-3 border-2 border-slate-700">
-                <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Oportunidades de Clics</p>
+                <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Oportunidades de Venta</p>
                 <p className="text-2xl font-black text-duo-blue">{missions.reduce((a,m) => a+(m.clicks||0), 0).toLocaleString()}+</p>
               </div>
               <div className="bg-slate-900 rounded-xl p-3 border-2 border-slate-700">
-                <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Total Impresiones</p>
+                <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Dinero sobre la mesa</p>
                 <p className="text-2xl font-black text-duo-yellow">{missions.reduce((a,m) => a+(m.impressions||0), 0).toLocaleString()}</p>
               </div>
               <div className="bg-slate-900 rounded-xl p-3 border-2 border-slate-700">
-                <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">XP Total Ganada</p>
+                <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Keywords Ganadoras</p>
                 <p className="text-2xl font-black text-orange-500">{xp} XP</p>
               </div>
             </div>
           </div>
 
           <button onClick={() => { playClick(); signOut(); }}
-            className="btn-3d btn-white w-full text-slate-500 font-black hover:text-red-500 transition-colors text-base py-4">
+            className="btn-3d btn-white w-full text-slate-550 font-black hover:text-red-500 transition-colors text-base py-4">
             CERRAR SESIÓN
           </button>
         </div>
 
         {/* ─── CENTER PANEL ─── */}
-        <div className="flex-1 w-full flex flex-col gap-6">
+        <div className="flex-1 min-w-0 flex flex-col gap-6">
 
           {/* Mission List */}
           {!selectedMission && (
             <div className="w-full space-y-6 animate-in fade-in duration-300">
-          {/* Keyword activa — banner contextual */}
-          {goldKeyword ? (
-            <div className="flex items-center gap-3 bg-amber-950/40 border border-amber-700/40 rounded-2xl px-5 py-3">
-              <span className="text-xl flex-shrink-0">🎯</span>
-              <p className="text-sm font-black text-amber-300/90 leading-snug">
-                Objetivo activo: <span className="text-amber-200">«{goldKeyword}»</span> — Cada H1, META y ALT debe incluir esta frase para rankear.
-              </p>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3 bg-slate-800/60 border border-slate-600/40 rounded-2xl px-5 py-3">
-              <span className="text-xl flex-shrink-0">💡</span>
-              <p className="text-sm font-bold text-slate-400 leading-snug">
-                Aún no elegiste una palabra clave. <Link href="/buscador-de-oro" onClick={playClick} className="text-duo-yellow underline">Ir al Buscador de Oro</Link> para activarla y potenciar estas misiones.
-              </p>
-            </div>
-          )}
-
-          {/* Header y Tipografía Centrados Arriba */}
-          <div className="text-center space-y-3 py-4 w-full max-w-xl mx-auto">
-            <div className="text-4xl md:text-5xl">🦉</div>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
-              Fase 3: Optimización On-Page 🛠️
-            </h1>
-            {prestigeCycles > 0 && (
-              <div className="flex justify-center">
-                <span className="px-3 py-1 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 font-black text-xs rounded-full shadow-md animate-pulse">
-                  🪙 Prestigio x{prestigeCycles}
-                </span>
-              </div>
-            )}
-            {prog?.p3 && (
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-xs font-bold text-slate-500">
-                  <span>Progreso de Fase 3: {prog.p3.percent}%</span>
-                  <span>{prog.p3.completed} / {prog.p3.total} Misiones</span>
-                </div>
-                <div className="w-full h-3 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden border">
-                  <div 
-                    className={`h-full transition-all duration-500 ${prog.p4.unlocked ? 'bg-green-500' : 'bg-duo-green'}`} 
-                    style={{ width: `${prog.p3.percent}%` }}
-                  />
-                </div>
-                {prog.p4.unlocked ? (
-                  <p className="text-xs text-green-600 dark:text-green-400 font-bold">🎉 ¡Fase 4 habilitada! Podés avanzar a la siguiente fase.</p>
-                ) : (
-                  <p className="text-xs text-slate-400 font-bold">Completá el 70% de misiones para habilitar la Fase 4.</p>
+              
+              {/* Header y Tipografía Centrados Arriba */}
+              <div className="text-center space-y-3 py-4 w-full max-w-xl mx-auto">
+                <div className="text-4xl md:text-5xl">🦉</div>
+                <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
+                  {activeTab === "quickwins" ? "Tu Plan de Acción 🚀" : "Fase 3: Optimización On-Page 🛠️"}
+                </h1>
+                {prestigeCycles > 0 && (
+                  <div className="flex justify-center">
+                    <span className="px-3 py-1 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 font-black text-xs rounded-full shadow-md animate-pulse">
+                      🪙 Prestigio x{prestigeCycles}
+                    </span>
+                  </div>
                 )}
+                
+                {/* Tab Selector */}
+                <div className="flex flex-wrap justify-center gap-3 mt-4">
+                  <button
+                    onClick={() => { playClick(); setActiveTab("quickwins"); }}
+                    className={`px-5 py-2.5 rounded-full font-black text-xs md:text-sm border-2 transition-all duration-300 flex items-center gap-2 ${
+                      activeTab === "quickwins"
+                        ? "bg-gradient-to-r from-amber-500 to-yellow-500 border-amber-400 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.3)] scale-105"
+                        : "bg-slate-800/40 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-white"
+                    }`}
+                  >
+                    🚀 Oportunidades de Venta (Quick Wins)
+                  </button>
+                  <button
+                    onClick={() => { playClick(); setActiveTab("missions"); }}
+                    className={`px-5 py-2.5 rounded-full font-black text-xs md:text-sm border-2 transition-all duration-300 flex items-center gap-2 ${
+                      activeTab === "missions"
+                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-400 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)] scale-105"
+                        : "bg-slate-800/40 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-white"
+                    }`}
+                  >
+                    🛠️ Misiones de Optimización
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
 
-              {missions.length > 0 ? (
-                <>
-                  {pendingMissions.length > 0 ? (
-                    pendingMissions.map((mission) => {
-                      const badge = getBadgeInfo(mission.page);
-                      const display = getMissionDisplay(mission, goldKeyword);
-                      return (
-                        <div key={mission.id}
-                          onClick={() => { playClick(); openMission(mission); }}
-                          className="card-3d flex flex-col md:flex-row items-start gap-4 md:gap-6 p-4 md:p-8 transition-colors group hover:bg-gray-50 dark:hover:bg-slate-750 cursor-pointer w-full overflow-hidden">
-                          <div className={`w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center border-b-4 text-3xl font-black ${
-                            mission.type === 'H1'  ? 'bg-duo-green border-duo-green-shadow text-white' :
-                            mission.type === 'ALT' ? 'bg-duo-blue border-duo-blue-shadow text-white' :
-                                                     'bg-duo-yellow border-duo-yellow-shadow text-white'
-                          }`}>{mission.icon}</div>
-                          <div className="flex-1 min-w-0 w-full">
-                            <div className="flex items-center gap-3 flex-wrap mb-1.5">
-                              <h3 className="text-xl md:text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100 group-hover:text-duo-green transition-colors">{display.title}</h3>
-                              <span className={`text-sm font-black px-3 py-1 rounded-md ${badge.color}`}>{badge.text}</span>
-                            </div>
-                            <div className="flex items-center gap-2 mb-1.5 w-full min-w-0">
-                              <code className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 truncate block w-full max-w-[200px] min-[400px]:max-w-[260px] sm:max-w-[380px] md:max-w-[450px]">{mission.page}</code>
-                              <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(mission.page); playClick(); }}
-                                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors text-slate-400 hover:text-slate-600 text-lg flex-shrink-0" title="Copiar URL">📋</button>
-                            </div>
-                            <p className="text-sm text-slate-400 font-bold italic mb-2">{badge.wpPath}</p>
-                            <p className="font-bold text-slate-650 dark:text-slate-350 text-base md:text-lg lg:text-xl leading-relaxed mb-2">{display.description}</p>
-                            {display.objective && (
-                               <div className="inline-flex items-center gap-2 bg-amber-950/50 border border-amber-700/40 rounded-xl px-3 py-1.5 mt-1 mb-2">
-                                 <p className="text-xs font-black text-amber-300">{display.objective}</p>
-                               </div>
+              {/* QUICK WINS TAB VIEW */}
+              {activeTab === "quickwins" ? (
+                <div className="space-y-6">
+                  {quickWinsLoading ? (
+                    <div className="text-center py-12 card-3d">
+                      <div className="relative w-16 h-16 mx-auto mb-4">
+                        <div className="absolute inset-0 rounded-full border-4 border-amber-500/20 animate-pulse"></div>
+                        <div className="absolute inset-0 rounded-full border-4 border-t-amber-500 border-r-amber-500/50 animate-spin"></div>
+                      </div>
+                      <p className="text-slate-400 font-bold uppercase tracking-wider animate-pulse">Buscando oportunidades de venta...</p>
+                    </div>
+                  ) : quickWinsError ? (
+                    <div className="text-center py-12 card-3d space-y-4">
+                      <div className="text-6xl">⚠️</div>
+                      <p className="text-red-400 font-bold text-lg">{quickWinsError}</p>
+                      <button 
+                        onClick={() => { setQuickWinsError(null); setQuickWins([]); }} 
+                        className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4"
+                      >
+                        REINTENTAR
+                      </button>
+                    </div>
+                  ) : quickWins.length > 0 ? (
+                    <div className="space-y-6">
+                      {quickWins.map((qw, index) => {
+                        const isCompleted = completedQuickWins.has(qw.page);
+                        const verifyResult = verifyQuickWinResult[index] || {};
+                        
+                        return (
+                          <div 
+                            key={index} 
+                            className={`card-3d relative overflow-hidden p-6 md:p-8 flex flex-col gap-4 transition-all duration-300 ${
+                              isCompleted ? 'border-green-500/50 opacity-85' : 'border-amber-500/30'
+                            }`}
+                          >
+                            {isCompleted && (
+                              <div className="absolute top-0 right-0 bg-green-500 text-slate-955 font-black text-xs px-4 py-1.5 rounded-bl-xl uppercase tracking-wider">
+                                ¡Completado! 🎉
+                              </div>
                             )}
-                            <div className="flex flex-wrap gap-4 mt-3 text-sm font-bold text-slate-550 dark:text-slate-400">
-                              <span>👆 {mission.clicks} clics</span>
-                              <span>👁️ {mission.impressions} impresiones</span>
-                              <span>📊 Pos. {mission.position?.toFixed(1)}</span>
-                            </div>
-                            <div className="mt-4 w-full">
-                              <button className="btn-3d !text-sm sm:!text-base md:!text-lg lg:!text-xl !py-2.5 !px-4 sm:!py-3 sm:!px-6 btn-green w-full md:w-auto font-black">
-                                EMPEZAR (+{mission.xp} XP)
-                              </button>
+                            
+                            <div className="space-y-4 text-left w-full">
+                              <h3 className="text-xl md:text-2xl font-black text-white flex items-center gap-2">
+                                🚀 Subir posición para: <span className="text-amber-400 font-black">«{qw.keyword}»</span>
+                              </h3>
+                              
+                              <div className="bg-slate-900/60 rounded-2xl p-5 border border-slate-700/50 space-y-3">
+                                <p className="text-slate-200 text-base md:text-lg leading-relaxed">
+                                  <span className="text-yellow-400 font-black">El Insight:</span> Estás en posición <strong className="text-white font-bold">{qw.position?.toFixed(0)}</strong>. {qw.explanation} Cambiá el título a <strong className="text-amber-300 font-black">«{qw.suggestedTitle}»</strong> y captarás el clic.
+                                </p>
+                                <div className="text-xs md:text-sm text-slate-400 font-bold italic flex items-center gap-2">
+                                  <span>🔗 URL:</span>
+                                  <code className="text-slate-300 font-mono truncate max-w-xs md:max-w-md block">{qw.page}</code>
+                                </div>
+                              </div>
+
+                              {verifyResult.message && (
+                                <div className={`p-4 rounded-xl border text-sm font-bold ${verifyResult.success ? 'bg-green-950/40 border-green-500/50 text-green-300' : 'bg-red-950/40 border-red-500/50 text-red-400'}`}>
+                                  {verifyResult.success ? '✅' : '⚠️'} {verifyResult.message}
+                                </div>
+                              )}
+                              
+                              {!isCompleted && (
+                                <div className="pt-2">
+                                  <button
+                                    onClick={() => handleVerifyQuickWin(index, qw.page, qw.suggestedTitle)}
+                                    disabled={verifyResult.loading}
+                                    className="btn-3d btn-yellow text-sm md:text-base font-black px-6 py-3"
+                                  >
+                                    {verifyResult.loading ? '⏳ VERIFICANDO...' : 'YA LO CAMBIÉ'}
+                                  </button>
+                                </div>
+                              )}
                             </div>
                           </div>
-                        </div>
-                      );
-                    })
+                        );
+                      })}
+                    </div>
                   ) : (
-                    <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700">
-                      <div className="text-7xl mb-4">🏆</div>
-                      <p className="text-slate-500 font-bold text-xl">¡Todas las misiones completadas! 🎉</p>
+                    <div className="text-center py-12 card-3d">
+                      <div className="text-6xl mb-4">🏆</div>
+                      <p className="text-slate-400 font-bold text-xl">No detectamos oportunidades en el rango de posiciones 8 a 15 para tu sitio aún. ¡Seguí optimizando!</p>
                     </div>
                   )}
-                </>
+                </div>
               ) : (
-                <div className="text-center py-12 space-y-4 card-3d">
-                  {missionError ? (
-                    missionError === "MISSING_SEARCH_CONSOLE_SCOPE" ? (
-                      <div className="max-w-md mx-auto p-6 md:p-8 bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-200 dark:border-slate-700 shadow-xl text-center space-y-6 animate-in zoom-in-95 duration-300">
-                        <div className="text-6xl animate-bounce">🔑</div>
-                        <div className="space-y-3">
-                          <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-tight">
-                            Vinculá tu Search Console 🏁
-                          </h3>
-                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 leading-relaxed">
-                            Para cargar las misiones SEO reales de tu sitio y permitir la indexación automática, necesitamos permiso de conexión de tus propiedades de Google Search Console. Es 100% seguro.
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => {
-                            playClick();
-                            signIn("google", {
-                              callbackUrl: "/optimizacion",
-                              authorizationParams: {
-                                scope: "openid email profile https://www.googleapis.com/auth/webmasters"
-                              }
-                            });
-                          }}
-                          className="w-full btn-3d bg-green-500 border-green-600 border-b-4 hover:bg-green-450 active:border-b-0 active:translate-y-1 text-white text-base font-black py-3.5 flex items-center justify-center gap-2 shadow-lg hover:shadow-green-500/20"
-                        >
-                          Conectar Google Search Console
-                        </button>
-                      </div>
-                    ) : (
-                      <>
-                        <div className="text-6xl">⚠️</div>
-                        <p className="text-red-400 font-bold text-lg">{missionError}</p>
-                        <Link href="/" className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4">
-                          VOLVER AL INICIO
-                        </Link>
-                      </>
-                    )
+                // OPTIMIZATION MISSIONS TAB VIEW
+                <div className="space-y-6">
+                  {/* Keyword activa — banner contextual */}
+                  {goldKeyword ? (
+                    <div className="flex items-center gap-3 bg-amber-950/40 border border-amber-700/40 rounded-2xl px-5 py-3">
+                      <span className="text-xl flex-shrink-0">🎯</span>
+                      <p className="text-sm font-black text-amber-300/90 leading-snug">
+                        Objetivo activo: <span className="text-amber-200">«{goldKeyword}»</span> — Cada H1, META y ALT debe incluir esta frase para rankear.
+                      </p>
+                    </div>
                   ) : (
-                    <p className="text-slate-500 font-bold">Cargando misiones...</p>
+                    <div className="flex items-center gap-3 bg-slate-800/60 border border-slate-600/40 rounded-2xl px-5 py-3">
+                      <span className="text-xl flex-shrink-0">💡</span>
+                      <p className="text-sm font-bold text-slate-400 leading-snug">
+                        Aún no elegiste una palabra clave. <Link href="/buscador-de-oro" onClick={playClick} className="text-duo-yellow underline">Ir al Buscador de Oro</Link> para activarla y potenciar estas misiones.
+                      </p>
+                    </div>
+                  )}
+
+                  {prog?.p3 && (
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-xs font-bold text-slate-555 dark:text-slate-400">
+                        <span>Progreso de Fase 3: {prog.p3.percent}%</span>
+                        <span>{prog.p3.completed} / {prog.p3.total} Misiones</span>
+                      </div>
+                      <div className="w-full h-3 bg-gray-200 dark:bg-slate-700 rounded-full overflow-hidden border">
+                        <div 
+                          className={`h-full transition-all duration-500 ${prog.p4.unlocked ? 'bg-green-500' : 'bg-duo-green'}`} 
+                          style={{ width: `${prog.p3.percent}%` }}
+                        />
+                      </div>
+                      {prog.p4.unlocked ? (
+                        <p className="text-xs text-green-600 dark:text-green-400 font-bold">🎉 ¡Fase 4 habilitada! Podés avanzar a la siguiente fase.</p>
+                      ) : (
+                        <p className="text-xs text-slate-400 font-bold">Completá el 70% de misiones para habilitar la Fase 4.</p>
+                      )}
+                    </div>
+                  )}
+
+                  {missions.length > 0 ? (
+                    <>
+                      {pendingMissions.length > 0 ? (
+                        pendingMissions.map((mission) => {
+                          const badge = getBadgeInfo(mission.page);
+                          const display = getMissionDisplay(mission, goldKeyword);
+                          return (
+                            <div key={mission.id}
+                              onClick={() => { playClick(); openMission(mission); }}
+                              className="card-3d flex flex-col md:flex-row items-start gap-4 md:gap-6 p-4 md:p-8 transition-colors group hover:bg-gray-50 dark:hover:bg-slate-750 cursor-pointer w-full overflow-hidden">
+                              <div className={`w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center border-b-4 text-3xl font-black ${
+                                mission.type === 'H1'  ? 'bg-duo-green border-duo-green-shadow text-white' :
+                                mission.type === 'ALT' ? 'bg-duo-blue border-duo-blue-shadow text-white' :
+                                                         'bg-duo-yellow border-duo-yellow-shadow text-white'
+                              }`}>{mission.icon}</div>
+                              <div className="flex-1 min-w-0 w-full">
+                                <div className="flex items-center gap-3 flex-wrap mb-1.5">
+                                  <h3 className="text-xl md:text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100 group-hover:text-duo-green transition-colors">{display.title}</h3>
+                                  <span className={`text-sm font-black px-3 py-1 rounded-md ${badge.color}`}>{badge.text}</span>
+                                </div>
+                                <div className="flex items-center gap-2 mb-1.5 w-full min-w-0">
+                                  <code className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 truncate block w-full max-w-[200px] min-[400px]:max-w-[260px] sm:max-w-[380px] md:max-w-[450px]">{mission.page}</code>
+                                  <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(mission.page); playClick(); }}
+                                    className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors text-slate-400 hover:text-slate-655 text-lg flex-shrink-0" title="Copiar URL">📋</button>
+                                </div>
+                                <p className="text-sm text-slate-400 font-bold italic mb-2">{badge.wpPath}</p>
+                                <p className="font-bold text-slate-655 dark:text-slate-350 text-base md:text-lg lg:text-xl leading-relaxed mb-2">{display.description}</p>
+                                {display.objective && (
+                                   <div className="inline-flex items-center gap-2 bg-amber-955/50 border border-amber-700/40 rounded-xl px-3 py-1.5 mt-1 mb-2">
+                                     <p className="text-xs font-black text-amber-300">{display.objective}</p>
+                                   </div>
+                                )}
+                                <div className="flex flex-wrap gap-4 mt-3 text-sm font-bold text-slate-550 dark:text-slate-400">
+                                  <span>👆 {mission.clicks} oportunidades de venta</span>
+                                  <span>👁️ {mission.impressions} dinero sobre la mesa</span>
+                                  <span>📊 Pos. {mission.position?.toFixed(1)}</span>
+                                </div>
+                                <div className="mt-4 w-full">
+                                  <button className="btn-3d !text-sm sm:!text-base md:!text-lg lg:!text-xl !py-2.5 !px-4 sm:!py-3 sm:!px-6 btn-green w-full md:w-auto font-black">
+                                    EMPEZAR (+{mission.xp} XP)
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700">
+                          <div className="text-7xl mb-4">🏆</div>
+                          <p className="text-slate-500 font-bold text-xl">¡Todas las misiones completadas! 🎉</p>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-12 space-y-4 card-3d">
+                      {missionError ? (
+                        missionError === "MISSING_SEARCH_CONSOLE_SCOPE" ? (
+                          <div className="max-w-md mx-auto p-6 md:p-8 bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-200 dark:border-slate-700 shadow-xl text-center space-y-6 animate-in zoom-in-95 duration-300">
+                            <div className="text-6xl animate-bounce">🔑</div>
+                            <div className="space-y-3">
+                              <h3 className="text-2xl font-black text-slate-800 dark:text-slate-100 leading-tight">
+                                Vinculá tu Search Console 🏁
+                              </h3>
+                              <p className="text-sm font-bold text-slate-555 dark:text-slate-400 leading-relaxed">
+                                Para cargar las misiones SEO reales de tu sitio y permitir la indexación automática, necesitamos permiso de conexión de tus propiedades de Google Search Console. Es 100% seguro.
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                playClick();
+                                signIn("google", {
+                                  callbackUrl: "/optimizacion",
+                                  authorizationParams: {
+                                    scope: "openid email profile https://www.googleapis.com/auth/webmasters"
+                                  }
+                                });
+                              }}
+                              className="w-full btn-3d bg-green-500 border-green-600 border-b-4 hover:bg-green-450 active:border-b-0 active:translate-y-1 text-white text-base font-black py-3.5 flex items-center justify-center gap-2 shadow-lg hover:shadow-green-500/20"
+                            >
+                              Conectar Google Search Console
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="text-6xl">⚠️</div>
+                            <p className="text-red-400 font-bold text-lg">{missionError}</p>
+                            <Link href="/" className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4">
+                              VOLVER AL INICIO
+                            </Link>
+                          </>
+                        )
+                      ) : (
+                        <p className="text-slate-500 font-bold">Cargando misiones...</p>
+                      )}
+                    </div>
                   )}
                 </div>
               )}
@@ -604,13 +828,13 @@ export default function Optimizacion() {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-4">
                 {[
-                  { label: "Clics",       value: selectedMission.clicks,              color: "text-duo-blue" },
-                  { label: "Impresiones", value: selectedMission.impressions,          color: "text-duo-yellow" },
-                  { label: "Posición",    value: `#${selectedMission.position?.toFixed(0)}`, color: "text-duo-green" },
+                  { label: "Oportunidades de Venta", value: selectedMission.clicks,              color: "text-duo-blue" },
+                  { label: "Dinero sobre la mesa",   value: selectedMission.impressions,          color: "text-duo-yellow" },
+                  { label: "Posición",               value: `#${selectedMission.position?.toFixed(0)}`, color: "text-duo-green" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm">
                     <div className={`text-2xl md:text-3xl lg:text-4xl font-black ${color}`}>{value}</div>
-                    <div className="text-xs md:text-sm font-bold text-slate-500 dark:text-slate-400">{label}</div>
+                    <div className="text-xs md:text-sm font-bold text-slate-550 dark:text-slate-400">{label}</div>
                   </div>
                 ))}
               </div>
@@ -660,7 +884,7 @@ export default function Optimizacion() {
 
               {/* Mission Input */}
               <div className="card-3d bg-white dark:bg-slate-800 space-y-6 p-6 md:p-8">
-                <p className="font-bold text-slate-650 dark:text-slate-300 text-base md:text-lg lg:text-xl">
+                <p className="font-bold text-slate-655 dark:text-slate-300 text-base md:text-lg lg:text-xl">
                   {selectedMission.type === 'H1'  && <>
                     Hacé el cambio en tu web, después escribí acá el nuevo <span className="text-duo-green">H1</span> que pusiste
                     {goldKeyword && <> (que debe incluir <span className="text-amber-400 font-black">«{goldKeyword}»</span>)</>}:
@@ -693,7 +917,7 @@ export default function Optimizacion() {
                   onChange={(e) => setH1Value(e.target.value)}
                   className="w-full p-5 text-xl md:text-2xl border-2 border-slate-200 dark:border-slate-600 rounded-xl focus:border-duo-green outline-none font-black text-slate-800 dark:text-slate-100 dark:bg-slate-700"
                 />
-                <p className="text-sm text-slate-500 font-bold">{h1Value.length} / {selectedMission.type === 'META' ? '160' : '70'} caracteres</p>
+                <p className="text-sm text-slate-555 font-bold">{h1Value.length} / {selectedMission.type === 'META' ? '160' : '70'} caracteres</p>
 
                 {verifyResult && missionStatus !== 'idle' && (
                   <div className={`p-5 rounded-2xl border-2 font-bold text-base lg:text-lg ${verifyResult.success ? 'bg-green-50 dark:bg-green-900/30 border-duo-green text-duo-green' : 'bg-red-50 dark:bg-red-900/30 border-red-200 text-red-500'}`}>
@@ -702,7 +926,7 @@ export default function Optimizacion() {
                       <p className="text-sm text-slate-600 dark:text-slate-400 mt-2 font-bold">💡 Valor actual en tu web: <span className="italic">"{verifyResult.liveValue}"</span></p>
                     )}
                     {!verifyResult.success && failedAttempts >= 2 && (
-                      <p className="text-sm text-slate-500 mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-700/50">
+                      <p className="text-sm text-slate-555 mt-4 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border border-yellow-200 dark:border-yellow-700/50">
                         💡 ¿Tu web no se actualiza? Si usás plugins de velocidad (WP Rocket, LiteSpeed, SG Optimizer), recordá borrar la caché para que el Búho pueda leer tu cambio fresco.
                       </p>
                     )}
@@ -710,7 +934,7 @@ export default function Optimizacion() {
                 )}
 
                 {missionStatus === 'error' && selectedMission?.page && (
-                  <div className="bg-slate-800 border-2 border-slate-600 rounded-2xl p-5 text-base font-bold text-slate-350 flex items-start gap-4">
+                  <div className="bg-slate-800 border-2 border-slate-600 rounded-2xl p-5 text-base font-bold text-slate-355 flex items-start gap-4">
                     <span className="text-2xl flex-shrink-0">🏎️</span>
                     <div>
                       <p className="font-black text-slate-100 mb-1.5">Pista de Boxes:</p>
@@ -732,7 +956,7 @@ export default function Optimizacion() {
                   className={`btn-3d w-full text-xl md:text-2xl py-5 ${
                     missionStatus === "success"  ? "btn-green" :
                     verifyLoading                ? "btn-white text-slate-500" :
-                    "bg-slate-800 border-slate-900 border-b-4 text-white hover:bg-slate-700 active:border-b-0 active:translate-y-1 font-black"
+                    "bg-slate-800 border-slate-900 border-b-4 text-white hover:bg-slate-750 active:border-b-0 active:translate-y-1 font-black"
                   }`}
                 >
                   {verifyLoading                               && "⏳ VERIFICANDO EN VIVO..."}
@@ -741,10 +965,10 @@ export default function Optimizacion() {
                   {!verifyLoading && missionStatus === "success" && `🎉 ¡+${selectedMission.xp} XP GANADOS!`}
                 </button>
 
-                <div className="p-4 bg-amber-55 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl text-sm font-bold text-amber-800 dark:text-amber-300 flex gap-3 items-start shadow-sm leading-relaxed text-left animate-in fade-in slide-in-from-bottom duration-300">
+                <div className="p-4 bg-amber-55 dark:bg-amber-955/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl text-sm font-bold text-amber-800 dark:text-amber-300 flex gap-3 items-start shadow-sm leading-relaxed text-left animate-in fade-in slide-in-from-bottom duration-300">
                   <span className="text-2xl flex-shrink-0 select-none">🦉</span>
                   <p>
-                    <strong className="font-black text-amber-950 dark:text-amber-200">¡Tip de experto!</strong> Para que el sistema detecte tus cambios, asegurate de cerrar el panel de administrador y abrir tu web como un visitante común. Google lee tu sitio tal como lo ven tus clientes, no desde el editor.
+                    <strong className="font-black text-amber-955 dark:text-amber-200">¡Tip de experto!</strong> Para que el sistema detecte tus cambios, asegurate de cerrar el panel de administrador y abrir tu web como un visitor común. Google lee tu sitio tal como lo ven tus clientes, no desde el editor.
                   </p>
                 </div>
               </div>
@@ -758,6 +982,18 @@ export default function Optimizacion() {
           )}
         </div>
       </div>
+
+      {/* Visual XP Popup Feedback */}
+      {xpPopup && (
+        <div className="fixed top-12 left-1/2 transform -translate-x-1/2 z-50 animate-bounce flex items-center gap-3 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 border-2 border-white text-slate-950 font-black rounded-full px-8 py-4 shadow-[0_0_40px_rgba(245,158,11,0.6)]">
+          <span className="text-3xl">✨</span>
+          <span className="text-xl md:text-2xl uppercase tracking-wider text-slate-950 font-black">
+            +{xpPopup.amount} XP - {xpPopup.message}
+          </span>
+          <span className="text-3xl">✨</span>
+        </div>
+      )}
+
     </div>
   );
 }

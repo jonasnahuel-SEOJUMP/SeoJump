@@ -858,23 +858,35 @@ Reglas estrictas de generación:
 
     while (attempt < maxRetries) {
       try {
-        console.log(`Initializing GoogleGenerativeAI (Attempt ${attempt + 1}/${maxRetries}) using model: gemini-1.5-flash over API version v1`);
+        console.log(`Initializing GoogleGenerativeAI (Attempt ${attempt + 1}/${maxRetries}) using model: models/gemini-1.5-flash`);
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
           model: "models/gemini-1.5-flash"
-        }, {
-          apiVersion: "v1"
         });
 
-        const result = await model.generateContent(
-          {
-            contents: [{ role: 'user', parts: [{ text: systemInstructions }] }]
-          },
-          {
-            timeout: 30000 // Timeout de 30 segundos
-          }
-        );
-        responseText = await result.response.text();
+        // Intercept global fetch to log SDK requests
+        const originalFetch = global.fetch;
+        // @ts-ignore
+        global.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+          console.log("[API Debug] SDK is fetching URL:", input.toString());
+          console.log("[API Debug] Fetch init options:", JSON.stringify(init || {}));
+          return originalFetch(input, init);
+        };
+
+        try {
+          const result = await model.generateContent(
+            {
+              contents: [{ role: 'user', parts: [{ text: systemInstructions }] }]
+            },
+            {
+              timeout: 30000 // Timeout de 30 segundos
+            }
+          );
+          responseText = await result.response.text();
+        } finally {
+          // Restore original fetch
+          global.fetch = originalFetch;
+        }
         break; // Éxito, salir del bucle
       } catch (geminiErr: any) {
         attempt++;
@@ -982,6 +994,297 @@ Reglas estrictas de generación:
       success: false, 
       error: `Inesperado: ${error.message}`,
       stack: error.stack
+    };
+  }
+}
+
+export async function getQuickWins(siteUrl: string) {
+  const urlSanit = sanitizeInput(siteUrl, 'url');
+  if (!urlSanit.isValid) {
+    return { success: false, error: urlSanit.error };
+  }
+  const cleanSiteUrl = urlSanit.sanitized;
+
+  try {
+    const session = await auth();
+
+    let inferredNicho = "";
+    let homeMeta = { title: "", description: "", h1: "" };
+    try {
+      inferredNicho = inferNichoFromUrl(cleanSiteUrl);
+      homeMeta = await scrapeMetadata(cleanSiteUrl);
+    } catch (e) {
+      console.warn("Error obteniendo metadatos de la home para Quick Wins:", e);
+    }
+
+    const businessNiche = [inferredNicho, homeMeta.title, homeMeta.description, homeMeta.h1]
+      .filter(Boolean)
+      .join(" | ") || "Nicho de negocio general";
+
+    let gscRows: any[] = [];
+    if (session?.accessToken) {
+      try {
+        gscRows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, undefined, 100);
+      } catch (err: any) {
+        console.warn("Fallo al obtener datos de GSC para Quick Wins:", err.message);
+      }
+    }
+
+    let candidates = gscRows.filter(row => {
+      const pos = row.position;
+      return pos >= 8 && pos <= 15;
+    });
+
+    candidates.sort((a, b) => (b.impressions || 0) - (a.impressions || 0));
+
+    const opportunities: any[] = [];
+    for (const cand of candidates.slice(0, 3)) {
+      const pageUrl = cand.keys[0];
+      const query = cand.keys[1];
+      let pageMeta = { title: "", description: "", h1: "" };
+      try {
+        pageMeta = await scrapeMetadata(pageUrl);
+      } catch (e) {}
+      opportunities.push({
+        page: pageUrl,
+        keyword: query,
+        clicks: cand.clicks || 0,
+        impressions: cand.impressions || 0,
+        position: cand.position,
+        currentTitle: pageMeta.title || "",
+        currentDescription: pageMeta.description || "",
+        currentH1: pageMeta.h1 || ""
+      });
+    }
+
+    if (opportunities.length < 3) {
+      const niche = inferredNicho || 'general';
+      const fallbackTemplates: any = {
+        'detailing vehicular': [
+          { path: '', keyword: 'detailing profesional', pos: 9.4, cl: 15, imp: 240 },
+          { path: '/servicios', keyword: 'limpieza de tapizados', pos: 11.2, cl: 8, imp: 180 },
+          { path: '/productos', keyword: 'cera para autos importada', pos: 13.8, cl: 3, imp: 95 }
+        ],
+        'calzado': [
+          { path: '', keyword: 'calzado de cuero hombre', pos: 8.7, cl: 25, imp: 310 },
+          { path: '/botas', keyword: 'botas de cuero mujer', pos: 10.5, cl: 12, imp: 190 },
+          { path: '/zapatillas', keyword: 'zapatillas urbanas comodas', pos: 14.2, cl: 4, imp: 110 }
+        ],
+        'indumentaria': [
+          { path: '', keyword: 'ropa de diseño argentina', pos: 9.1, cl: 18, imp: 270 },
+          { path: '/remeras', keyword: 'remeras estampadas algodon', pos: 12.0, cl: 9, imp: 150 },
+          { path: '/camperas', keyword: 'camperas de abrigo impermeable', pos: 13.5, cl: 3, imp: 80 }
+        ],
+        'gastronomía': [
+          { path: '', keyword: 'restaurant comida casera', pos: 8.9, cl: 22, imp: 290 },
+          { path: '/menu', keyword: 'platos del dia precios', pos: 10.8, cl: 11, imp: 170 },
+          { path: '/reserva', keyword: 'reservar mesa cena online', pos: 13.1, cl: 4, imp: 90 }
+        ],
+        'general': [
+          { path: '', keyword: 'comprar online envio gratis', pos: 9.8, cl: 14, imp: 220 },
+          { path: '/productos', keyword: 'productos con descuento', pos: 11.5, cl: 7, imp: 130 },
+          { path: '/contacto', keyword: 'atencion al cliente inmediata', pos: 14.0, cl: 2, imp: 75 }
+        ]
+      };
+
+      const templates = fallbackTemplates[niche] || fallbackTemplates['general'];
+      let idx = 0;
+      while (opportunities.length < 3 && idx < templates.length) {
+        const t = templates[idx];
+        const pageUrl = cleanSiteUrl.replace(/\/$/, '') + t.path;
+        
+        if (!opportunities.some(o => o.page === pageUrl)) {
+          let pageMeta = { title: "", description: "", h1: "" };
+          if (t.path === '') {
+            pageMeta = homeMeta;
+          } else {
+            try {
+              pageMeta = await scrapeMetadata(pageUrl);
+            } catch (e) {}
+          }
+          opportunities.push({
+            page: pageUrl,
+            keyword: t.keyword,
+            clicks: t.cl,
+            impressions: t.imp,
+            position: t.pos,
+            currentTitle: pageMeta.title || "",
+            currentDescription: pageMeta.description || "",
+            currentH1: pageMeta.h1 || ""
+          });
+        }
+        idx++;
+      }
+    }
+
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error("GEMINI_API_KEY no configurada.");
+      return { success: false, error: "GEMINI_API_KEY no configurada en las variables de entorno." };
+    }
+
+    const systemInstructions = `
+Actúas como un socio de negocios y consultor de ventas entusiasmado y experto en optimización web (SEO). Tu tono debe ser profesional pero entusiasmado, como un socio de negocios que acaba de encontrar una excelente noticia para el usuario.
+Analizarás un conjunto de 3 oportunidades de páginas web que están cerca del éxito, posicionando en Google en el rango de posiciones 8 a 15 (cerca del Top 3).
+
+Tu única misión es:
+1. Evaluar si la intención de búsqueda de la palabra clave ("keyword") coincide con el título o contenido actual de la página.
+2. Generar un "Action Plan" de 15 segundos para cada una de las 3 oportunidades:
+   - "suggestedTitle": Un nuevo título comercial, atractivo y persuasivo que actúe como un "Contenido ganador" para convencer tanto a Google como a los usuarios y subir al Top 3.
+   - "explanation": Breve diagnóstico de por qué Google no lo está posicionando mejor y qué lograrán con el cambio.
+
+Reglas muy estrictas de lenguaje:
+- NUNCA uses tecnicismos aburridos como "canibalización", "backlinks", "DA", "PA", "search intent", "enlazado interno", "thin content" o similares.
+- Usa lenguaje comercial de vendedor persuasivo enfocado en resultados de negocio inmediatos.
+- Utiliza expresiones como: "Más clics", "Salto de posición", "Contenido ganador", "Atraer más clientes", "Google está listo para mostrarte más", "Oro puro", "Tráfico valioso".
+
+Devuelve la respuesta ESTRICTAMENTE en formato JSON con el siguiente esquema de array, sin bloques de código markdown (\`\`\`json ...) ni explicaciones adicionales:
+[
+  {
+    "page": "URL exacta de la página",
+    "keyword": "palabra clave",
+    "position": número de posición actual,
+    "clicks": número de clics actuales,
+    "impressions": número de impresiones actuales,
+    "intentMatches": true o false (si la intención de la palabra clave coincide razonablemente con el título/contenido),
+    "suggestedTitle": "Título sugerido para subir al Top 3 (Contenido ganador)",
+    "explanation": "Explicación entusiasta y comercial de por qué no está en el Top 3 y cómo este título ganará clics"
+  }
+]
+`;
+
+    const userPrompt = `
+Aquí están las 3 oportunidades para el sitio web con nicho/contexto: "${businessNiche}"
+
+Oportunidades a analizar:
+${JSON.stringify(opportunities, null, 2)}
+`;
+
+    console.log("[API Debug QuickWins] Initializing GoogleGenerativeAI using model: models/gemini-1.5-flash");
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "models/gemini-1.5-flash"
+    });
+
+    const originalFetch = global.fetch;
+    // @ts-ignore
+    global.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+      console.log("[API Debug QuickWins] SDK is fetching URL:", input.toString());
+      console.log("[API Debug QuickWins] Fetch init options:", JSON.stringify(init || {}));
+      return originalFetch(input, init);
+    };
+
+    let responseText = "";
+    try {
+      const result = await model.generateContent(
+        {
+          contents: [
+            { role: 'user', parts: [{ text: systemInstructions + "\n\n" + userPrompt }] }
+          ]
+        },
+        {
+          timeout: 30000
+        }
+      );
+      responseText = await result.response.text();
+    } finally {
+      global.fetch = originalFetch;
+    }
+
+    let parsed: any[] = [];
+    try {
+      const jsonStart = responseText.indexOf('[');
+      const jsonEnd = responseText.lastIndexOf(']');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        parsed = JSON.parse(responseText.substring(jsonStart, jsonEnd + 1));
+      } else {
+        parsed = JSON.parse(responseText);
+      }
+    } catch (parseErr: any) {
+      console.error("Error parseando JSON de Gemini para Quick Wins:", responseText, parseErr);
+      return { success: false, error: "Error al interpretar la respuesta de la IA." };
+    }
+
+    return {
+      success: true,
+      quickWins: parsed
+    };
+
+  } catch (error: any) {
+    console.error("Error en getQuickWins:", error);
+    return {
+      success: false,
+      error: `Error inesperado: ${error.message}`
+    };
+  }
+}
+
+export async function verifyQuickWin(pageUrl: string, suggestedTitle: string) {
+  if (!pageUrl || !suggestedTitle?.trim()) {
+    return { success: false, message: 'Faltan datos para verificar.' };
+  }
+
+  let html: string;
+  try {
+    console.log(`[verifyQuickWin] Fetching page (no-cache): ${pageUrl}`);
+    const finalUrl = pageUrl.includes('?') ? `${pageUrl}&nocache=${Date.now()}` : `${pageUrl}?nocache=${Date.now()}`;
+    const response = await fetch(finalUrl, {
+      cache: 'no-store',
+      // @ts-ignore
+      next: { revalidate: 0 },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: `No pude acceder a la página (Error ${response.status}). Verificá que la URL sea pública.`,
+      };
+    }
+    html = await response.text();
+  } catch (err: any) {
+    return { success: false, message: `Error al acceder a la página: ${err?.message}` };
+  }
+
+  const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  if (!titleMatch) {
+    return { success: false, message: 'No encontramos ninguna etiqueta <title> en tu página. ¡Eso es un problema SEO!' };
+  }
+
+  const liveTitle = titleMatch[1].replace(/<[^>]+>/g, '').trim();
+  const decodedLiveTitle = decodeHtmlEntities(liveTitle);
+
+  const normLive = normalize(decodedLiveTitle);
+  const normSuggested = normalize(suggestedTitle);
+
+  const isMatch = normLive === normSuggested || normLive.includes(normSuggested) || normSuggested.includes(normLive);
+
+  let isOverlap = false;
+  if (!isMatch) {
+    const suggestedWords = normSuggested.split(' ').filter(w => w.length > 2);
+    if (suggestedWords.length > 0 && suggestedWords.every(w => normLive.includes(w))) {
+      isOverlap = true;
+    }
+  }
+
+  if (isMatch || isOverlap) {
+    return {
+      success: true,
+      liveTitle: decodedLiveTitle,
+      message: `¡Contenido ganador detectado! Tu título en vivo ahora dice: "${decodedLiveTitle}". ¡Salto de posición garantizado!`,
+    };
+  } else {
+    return {
+      success: false,
+      liveTitle: decodedLiveTitle,
+      message: `El título actual en tu web es: "${decodedLiveTitle}". ¿Ya aplicaste el cambio y borraste la caché?`,
     };
   }
 }

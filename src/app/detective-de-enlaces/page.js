@@ -378,7 +378,7 @@ export default function DetectiveDeEnlaces() {
         </div>
 
         {/* CENTER: Guided process */}
-        <div className="flex-1 w-full flex flex-col gap-8">
+        <div className="flex-1 min-w-0 flex flex-col gap-8">
 
           {prog?.cycleCompleted ? (
             <div className="w-full bg-gradient-to-br from-amber-600 to-yellow-500 border-4 border-yellow-400 rounded-3xl p-8 md:p-12 text-center space-y-6 shadow-2xl animate-in zoom-in-95 duration-500 text-slate-900">

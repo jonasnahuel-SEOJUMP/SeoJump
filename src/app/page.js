@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import LoginButton from "../components/LoginButton";
 import NotificationBell from "../components/NotificationBell";
-import { getRealMissions, verifyMission } from "../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin } from "../lib/actions";
 import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
@@ -44,6 +44,39 @@ const getBadgeInfo = (url) => {
   return staticResponse;
 };
 
+// Componente destacado de Quick Wins (El Gancho)
+function QuickWinsHighlight({ quickWins, completedQuickWins, playClick, router }) {
+  if (!quickWins || quickWins.length === 0) return null;
+  const pendingWins = quickWins.filter(qw => !completedQuickWins.has(qw.page));
+  if (pendingWins.length === 0) return null;
+
+  return (
+    <div className="w-full mb-8 relative rounded-3xl overflow-hidden border-2 border-amber-500/40 bg-gradient-to-r from-violet-950/80 via-purple-900/80 to-slate-900/90 p-6 md:p-8 shadow-[0_0_40px_rgba(139,92,246,0.3)] animate-pulse-glow hover:scale-[1.01] transition-transform duration-300">
+      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 opacity-50"></div>
+      <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div className="text-left space-y-2">
+          <h2 className="text-2xl md:text-3xl font-black text-white flex items-center gap-2">
+            🚀 Oportunidades de Crecimiento: {pendingWins.length} detectadas
+          </h2>
+          <p className="text-slate-200 text-sm md:text-base font-bold">
+            Detectamos palabras clave donde podés subir posiciones hoy mismo.
+          </p>
+        </div>
+        
+        <button
+          onClick={() => {
+            playClick();
+            router.push("/optimizacion");
+          }}
+          className="btn-3d btn-yellow !text-sm md:!text-base font-black px-6 py-3.5 whitespace-nowrap animate-bounce flex-shrink-0"
+        >
+          VER OPORTUNIDADES
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const { data: session, status } = useSession();
   const { isMuted, toggleMute, playClick, playThemeToggle, playSuccess, playLevelUp } = useAudio();
@@ -71,6 +104,15 @@ export default function Home() {
   const [showIntroModal, setShowIntroModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+
+  // Quick Wins State
+  const [quickWins, setQuickWins] = useState([]);
+  const [quickWinsLoading, setQuickWinsLoading] = useState(false);
+  const [quickWinsError, setQuickWinsError] = useState(null);
+  const [verifyingQuickWinIndex, setVerifyingQuickWinIndex] = useState(null);
+  const [verifyQuickWinResult, setVerifyQuickWinResult] = useState({});
+  const [completedQuickWins, setCompletedQuickWins] = useState(new Set());
+  const [xpPopup, setXpPopup] = useState(null);
 
   const router = useRouter();
   const [hasGoldKeyword, setHasGoldKeyword] = useState(false);
@@ -157,6 +199,15 @@ export default function Home() {
         try { suggestions = JSON.parse(savedSuggestions); } catch (e) {}
       }
 
+      const savedQuickWins = localStorage.getItem("seojump_quick_wins");
+      if (savedQuickWins) {
+        try { setQuickWins(JSON.parse(savedQuickWins)); } catch (e) {}
+      }
+      const savedCompletedQuickWins = localStorage.getItem("seojump_completed_quick_wins");
+      if (savedCompletedQuickWins) {
+        try { setCompletedQuickWins(new Set(JSON.parse(savedCompletedQuickWins))); } catch (e) {}
+      }
+
       const p = getPhaseProgress(completedSet, suggestions, missionsList, activeKeyword, savedUrl);
       setProg(p);
       setServerLoading(false);
@@ -191,6 +242,38 @@ export default function Home() {
     localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(completedIds)));
   }, [completedIds]);
 
+  useEffect(() => {
+    localStorage.setItem("seojump_completed_quick_wins", JSON.stringify(Array.from(completedQuickWins)));
+  }, [completedQuickWins]);
+
+  useEffect(() => {
+    if (step >= 6 && url && quickWins.length === 0 && !quickWinsLoading) {
+      const saved = localStorage.getItem("seojump_quick_wins");
+      if (saved) {
+        try {
+          setQuickWins(JSON.parse(saved));
+          return;
+        } catch (e) {}
+      }
+      setQuickWinsLoading(true);
+      getQuickWins(url)
+        .then((res) => {
+          if (res.success && res.quickWins) {
+            setQuickWins(res.quickWins);
+            localStorage.setItem("seojump_quick_wins", JSON.stringify(res.quickWins));
+          } else {
+            setQuickWinsError(res.error || "No se pudieron obtener oportunidades rápidas.");
+          }
+        })
+        .catch((err) => {
+          setQuickWinsError("Error de conexión al cargar oportunidades rápidas.");
+        })
+        .finally(() => {
+          setQuickWinsLoading(false);
+        });
+    }
+  }, [step, url, quickWins.length, quickWinsLoading]);
+
   // Protection: Reset to step 1 if session is lost in protected steps
   useEffect(() => {
     if (step >= 4 && !session && status !== "loading") {
@@ -220,8 +303,15 @@ export default function Home() {
 
         if (progress >= 100) {
           clearInterval(interval);
-          // Fetch real missions before proceeding
           const goldKeyword = localStorage.getItem("gold-tu-busqueda") || undefined;
+          
+          getQuickWins(url).then(qwRes => {
+            if (qwRes.success && qwRes.quickWins) {
+              setQuickWins(qwRes.quickWins);
+              localStorage.setItem("seojump_quick_wins", JSON.stringify(qwRes.quickWins));
+            }
+          }).catch(err => console.error("Fallo al precargar quick wins:", err));
+
           getRealMissions(url, goldKeyword).then(res => {
             if (!res.success) {
               throw new Error(res.error);
@@ -232,7 +322,6 @@ export default function Home() {
             }
             setMissions(realMissions);
             setMissionError(null);
-            // Persist missions so they survive navigation away and back
             try {
               localStorage.setItem("seojump_missions", JSON.stringify(realMissions));
             } catch (e) {}
@@ -288,6 +377,41 @@ export default function Home() {
       setFailedAttempts(prev => prev + 1);
     } finally {
       setVerifyLoading(false);
+    }
+  };
+
+  const handleVerifyQuickWin = async (index, pageUrl, suggestedTitle) => {
+    setVerifyQuickWinResult(prev => ({
+      ...prev,
+      [index]: { success: false, message: "", loading: true }
+    }));
+    try {
+      const res = await verifyQuickWin(pageUrl, suggestedTitle);
+      setVerifyQuickWinResult(prev => ({
+        ...prev,
+        [index]: { success: res.success, message: res.message, loading: false }
+      }));
+      if (res.success) {
+        playSuccess();
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+
+        if (!completedQuickWins.has(pageUrl)) {
+          setXp(prev => prev + 100);
+          setCompletedQuickWins(prev => {
+            const next = new Set(prev);
+            next.add(pageUrl);
+            return next;
+          });
+          setXpPopup({ amount: 100, message: "¡Crecimiento detectado!" });
+          setTimeout(() => setXpPopup(null), 4000);
+        }
+      }
+    } catch (e) {
+      setVerifyQuickWinResult(prev => ({ 
+        ...prev, 
+        [index]: { success: false, message: "Error al conectar y verificar en vivo.", loading: false } 
+      }));
     }
   };
 
@@ -796,21 +920,24 @@ export default function Home() {
                    <span className="md:hidden">📖 Academia</span><span className="hidden md:inline">📖 Academia SEO</span>
                  </Link>
                </nav>
-               <div className="text-center pt-2 lg:hidden">
-                 <button onClick={() => { playClick(); signOut(); }} className="text-slate-500 text-xs font-bold hover:text-red-500 transition-colors">
-                   CERRAR SESIÓN
-                 </button>
-               </div>
-             </div>
+              </div>
 
-             {/* PANEL CENTRAL (Misiones o Detalle) */}
-             <div className="flex-1 w-full max-w-5xl mx-auto flex flex-col gap-8">
-               
-              {step === 6 && (
-                <div className="w-full space-y-6 animate-in fade-in duration-300">
-                  <h2 className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100">Fase 3: Optimización On-Page 🛠️</h2>
-                  
-                  <div className="space-y-4">
+              {/* PANEL CENTRAL (Misiones o Detalle) */}
+              <div className="flex-1 min-w-0 max-w-5xl mx-auto flex flex-col gap-8">
+                
+                {step === 6 && (
+                  <div className="w-full space-y-6 animate-in fade-in duration-300">
+                    <h2 className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100">Fase 3: Optimización On-Page 🛠️</h2>
+
+                    {/* --- QUICK WINS HIGHLIGHT (EL GANCHO) --- */}
+                    <QuickWinsHighlight 
+                      quickWins={quickWins} 
+                      completedQuickWins={completedQuickWins} 
+                      playClick={playClick} 
+                      router={router} 
+                    />
+
+                    <div className="space-y-4">
                     {missions.length > 0 ? (
                        <>
                          {/* Pendientes */}
@@ -860,8 +987,8 @@ export default function Home() {
                                     })()}
                                    <p className="font-bold text-slate-650 dark:text-slate-350 text-base lg:text-lg mb-2">{mission.description}</p>
                                    <div className="flex flex-wrap gap-4 mt-3 text-sm lg:text-base font-bold text-slate-550 dark:text-slate-400">
-                                     <span>👆 {mission.clicks} clics</span>
-                                     <span>👁️ {mission.impressions} impresiones</span>
+                                     <span>👆 {mission.clicks} oportunidades de venta</span>
+                                     <span>👁️ {mission.impressions} dinero sobre la mesa</span>
                                      <span>📊 Pos. {mission.position?.toFixed(1)}</span>
                                    </div>
                                    <div className="mt-4 w-full">
@@ -945,11 +1072,11 @@ export default function Home() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm">
                       <div className="text-2xl md:text-3xl lg:text-4xl font-black text-duo-blue">{selectedMission.clicks}</div>
-                      <div className="text-xs md:text-sm lg:text-base font-bold text-slate-500 dark:text-slate-400">Clics</div>
+                      <div className="text-xs md:text-sm lg:text-base font-bold text-slate-555 dark:text-slate-400">Oportunidades de Venta</div>
                     </div>
                     <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm">
                       <div className="text-2xl md:text-3xl lg:text-4xl font-black text-duo-yellow">{selectedMission.impressions}</div>
-                      <div className="text-xs md:text-sm lg:text-base font-bold text-slate-500 dark:text-slate-400">Impresiones</div>
+                      <div className="text-xs md:text-sm lg:text-base font-bold text-slate-555 dark:text-slate-400">Dinero sobre la mesa</div>
                     </div>
                     <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm">
                       <div className="text-2xl md:text-3xl lg:text-4xl font-black text-duo-green">#{selectedMission.position?.toFixed(0)}</div>
@@ -1113,15 +1240,15 @@ export default function Home() {
                  
                  <div className="space-y-4">
                    <div className="bg-slate-900 rounded-xl p-4 border-2 border-slate-700 shadow-inner">
-                     <p className="text-xs md:text-sm text-slate-400 uppercase font-black tracking-wider mb-1">Oportunidades de Clics</p>
+                     <p className="text-xs md:text-sm text-slate-400 uppercase font-black tracking-wider mb-1">Oportunidades de Venta</p>
                      <p className="text-3xl lg:text-4xl font-black text-duo-blue">{missions.reduce((acc, m) => acc + (m.clicks||0), 0).toLocaleString()}+</p>
                    </div>
                    <div className="bg-slate-900 rounded-xl p-4 border-2 border-slate-700 shadow-inner">
-                     <p className="text-xs md:text-sm text-slate-400 uppercase font-black tracking-wider mb-1">Total de Impresiones</p>
+                     <p className="text-xs md:text-sm text-slate-400 uppercase font-black tracking-wider mb-1">Dinero sobre la mesa</p>
                      <p className="text-3xl lg:text-4xl font-black text-duo-yellow">{missions.reduce((acc, m) => acc + (m.impressions||0), 0).toLocaleString()}</p>
                    </div>
                    <div className="bg-slate-900 rounded-xl p-4 border-2 border-slate-700 shadow-inner">
-                     <p className="text-xs md:text-sm text-slate-400 uppercase font-black tracking-wider mb-1">XP Total Ganada</p>
+                     <p className="text-xs md:text-sm text-slate-400 uppercase font-black tracking-wider mb-1">Keywords Ganadoras</p>
                      <p className="text-3xl lg:text-4xl font-black text-orange-500">{xp} XP</p>
                    </div>
                  </div>
@@ -1189,6 +1316,17 @@ export default function Home() {
               CERRAR
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Visual XP Popup Feedback */}
+      {xpPopup && (
+        <div className="fixed top-12 left-1/2 transform -translate-x-1/2 z-50 animate-bounce flex items-center gap-3 bg-gradient-to-r from-yellow-500 via-amber-500 to-yellow-600 border-2 border-white text-slate-950 font-black rounded-full px-8 py-4 shadow-[0_0_40px_rgba(245,158,11,0.6)]">
+          <span className="text-3xl">✨</span>
+          <span className="text-xl md:text-2xl uppercase tracking-wider text-slate-950 font-black">
+            +{xpPopup.amount} XP - {xpPopup.message}
+          </span>
+          <span className="text-3xl">✨</span>
         </div>
       )}
 
