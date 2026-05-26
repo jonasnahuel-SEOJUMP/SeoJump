@@ -821,7 +821,7 @@ export default function Home() {
         )}
 
         {step >= 6 && (
-          <div className="w-full max-w-[95%] lg:max-w-[1600px] mx-auto flex flex-col lg:flex-row gap-8 animate-in slide-in-from-bottom duration-500 items-start">
+          <div className="w-full max-w-7xl mx-auto flex flex-wrap lg:flex-nowrap gap-8 animate-in slide-in-from-bottom duration-500 items-start px-4">
              {/* PANEL IZQUIERDO (Lateral de Control) */}
              <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col gap-6 sticky top-4">
                {/* Dashboard Header */}
@@ -923,7 +923,7 @@ export default function Home() {
               </div>
 
               {/* PANEL CENTRAL (Misiones o Detalle) */}
-              <div className="flex-1 min-w-0 max-w-5xl mx-auto flex flex-col gap-8">
+              <div className="w-full lg:flex-1 min-w-0 max-w-5xl mx-auto flex flex-col gap-8">
                 
                 {step === 6 && (
                   <div className="w-full space-y-6 animate-in fade-in duration-300">

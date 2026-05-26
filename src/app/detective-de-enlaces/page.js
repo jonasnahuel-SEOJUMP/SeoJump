@@ -8,7 +8,7 @@ import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { requestGoogleIndexing } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
-import NotificationBell from "../../components/NotificationBell";
+import Header from "../../components/Header";
 
 export default function DetectiveDeEnlaces() {
   const { data: session, status } = useSession();
@@ -240,87 +240,24 @@ export default function DetectiveDeEnlaces() {
   }
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-7xl mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka">
+    <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-screen-lg mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka px-4">
 
       {/* ─── HEADER ─── */}
-      <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 sticky top-4 z-10 transition-colors duration-300">
-        <div className="flex items-center justify-between gap-2">
-          <Link
-            href="/buscador-de-oro"
-            onClick={playClick}
-            className="text-slate-500 text-sm md:text-lg font-black hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1.5 flex-shrink-0"
-          >
-            ← <span className="hidden sm:inline">VOLVER AL DASHBOARD</span><span className="sm:hidden">DASHBOARD</span>
-          </Link>
-          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
-            <div className="flex items-center gap-1">
-              <span className="text-2xl md:text-3xl">🔥</span>
-              <span className="font-black text-lg md:text-2xl text-orange-500">{Math.floor(xp / 100) + 1}</span>
-            </div>
-            {prestigeCycles > 0 && (
-              <span className="px-2.5 py-1 bg-gradient-to-r from-yellow-500 to-amber-600 text-slate-900 font-black text-xs rounded-full shadow-sm animate-pulse">
-                🪙 Prestigio x{prestigeCycles}
-              </span>
-            )}
-            <button onClick={toggleMute} className="text-2xl md:text-3xl hover:scale-110 transition-transform flex-shrink-0" title={isMuted ? "Activar sonido" : "Silenciar"}>
-              {isMuted ? "🔇" : "🔊"}
-            </button>
-            <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-2xl md:text-3xl hover:scale-110 transition-transform flex-shrink-0">
-              {theme === "light" ? "🌙" : "☀️"}
-            </button>
-            <NotificationBell />
-            <button
-              onClick={() => {
-                playClick();
-                router.push("/perfil");
-              }}
-              className="hover:scale-105 transition-transform focus:outline-none flex-shrink-0"
-              title="Ver Perfil"
-            >
-              {session?.user?.image
-                ? <img src={session.user.image} alt="Avatar" className="w-8 h-8 md:w-12 md:h-12 rounded-full border-2 border-duo-green-shadow" />
-                : <div className="w-8 h-8 md:w-12 md:h-12 bg-duo-green rounded-full flex items-center justify-center border-b-2 md:border-b-4 border-duo-green-shadow text-white text-sm md:text-xl">👤</div>
-              }
-            </button>
-          </div>
-        </div>
-
-        {/* Nav Tabs */}
-        <nav className="flex flex-wrap md:flex-nowrap gap-2 md:gap-4 w-full mt-2">
-          <Link href="/buscador-de-oro" onClick={playClick}
-            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
-            <span className="md:hidden">🔍 F1</span><span className="hidden md:inline">🔍 Fase 1: Búsqueda</span>
-          </Link>
-          {prog?.p2?.unlocked ? (
-            <Link href="/contenido" onClick={playClick}
-              className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-blue-500 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
-              <span className="md:hidden">✍️ F2</span><span className="hidden md:inline">✍️ Fase 2: Contenido</span>
-            </Link>
-          ) : (
-            <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
-              title="🔒 Completá el 70% de la Fase 1 para avanzar">
-              <span className="md:hidden">🔒 F2</span><span className="hidden md:inline">🔒 Fase 2: Contenido</span>
-            </div>
-          )}
-          {prog?.p3?.unlocked ? (
-            <Link href="/optimizacion" onClick={playClick}
-              className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-green text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
-              <span className="md:hidden">🛠️ F3</span><span className="hidden md:inline">🛠️ Fase 3: Optimización</span>
-            </Link>
-          ) : (
-            <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
-              title="🔒 Completá el 70% de la Fase 2 para avanzar">
-              <span className="md:hidden">🔒 F3</span><span className="hidden md:inline">🔒 Fase 3: Optimización</span>
-            </div>
-          )}
-          <div className="flex-1 btn-3d bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black border-2 border-purple-400 border-b-4 cursor-default">
-            <span className="md:hidden">🕵️‍♂️ F4</span><span className="hidden md:inline">🕵️‍♂️ Fase 4: Indexación</span>
-          </div>
-        </nav>
-      </header>
+      <Header
+        xp={xp}
+        prestigeCycles={prestigeCycles}
+        isMuted={isMuted}
+        toggleMute={toggleMute}
+        theme={theme}
+        toggleTheme={toggleTheme}
+        playThemeToggle={playThemeToggle}
+        playClick={playClick}
+        prog={prog}
+        activePhase={4}
+      />
 
       {/* ─── MAIN CONTENT ─── */}
-      <div className="w-full flex flex-col lg:flex-row gap-8 items-start">
+      <div className="w-full flex flex-wrap lg:flex-nowrap gap-8 items-start">
 
         {/* LEFT: Owl panel */}
         <div className="w-full lg:w-[320px] flex-shrink-0 flex flex-col gap-6 lg:sticky lg:top-44">
@@ -329,7 +266,7 @@ export default function DetectiveDeEnlaces() {
           <div className="card-3d bg-white dark:bg-slate-800 p-5 space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xl font-black text-duo-yellow">NIVEL {Math.floor(xp / 100) + 1}</span>
-              <span className="text-sm font-bold text-slate-500">{xp % 100} / 100 XP</span>
+              <span className="text-sm font-bold text-slate-555">{xp % 100} / 100 XP</span>
             </div>
             <div className="w-full h-6 bg-gray-100 dark:bg-slate-700 rounded-full border-2 border-slate-200 dark:border-slate-600 overflow-hidden">
               <div className="h-full bg-duo-yellow transition-all duration-1000" style={{ width: `${xp % 100}%` }} />
@@ -378,7 +315,7 @@ export default function DetectiveDeEnlaces() {
         </div>
 
         {/* CENTER: Guided process */}
-        <div className="flex-1 min-w-0 flex flex-col gap-8">
+        <div className="w-full lg:flex-1 min-w-0 flex flex-col gap-8">
 
           {prog?.cycleCompleted ? (
             <div className="w-full bg-gradient-to-br from-amber-600 to-yellow-500 border-4 border-yellow-400 rounded-3xl p-8 md:p-12 text-center space-y-6 shadow-2xl animate-in zoom-in-95 duration-500 text-slate-900">

@@ -104,6 +104,46 @@ function logErrorToFile(actionName: string, input: any, status: string | number,
 }
 
 /**
+ * Realiza una llamada directa a la API REST de Google Gemini, omitiendo el SDK.
+ */
+async function callGeminiREST(apiKey: string, promptText: string): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  console.log(`[API REST Debug] Llamando directamente a Gemini REST API...`);
+  
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: "user",
+          parts: [{ text: promptText }]
+        }
+      ],
+      generationConfig: {
+        responseMimeType: "application/json"
+      }
+    }),
+    signal: AbortSignal.timeout(30000)
+  });
+
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`Google REST API returned status ${response.status}: ${errText}`);
+  }
+
+  const data = await response.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  if (!text) {
+    throw new Error("La API de Google devolvió una respuesta vacía.");
+  }
+  return text;
+}
+
+
+/**
  * Mission type definitions.
  * We rotate through types to give the user variety.
  */
@@ -889,6 +929,15 @@ Reglas estrictas de generación:
         }
         break; // Éxito, salir del bucle
       } catch (geminiErr: any) {
+        console.warn("[API Debug] SDK call failed. Trying direct REST API fallback...", geminiErr.message || geminiErr);
+        try {
+          responseText = await callGeminiREST(apiKey, systemInstructions);
+          console.log("[API Debug] Direct REST API fallback succeeded!");
+          break; // Éxito, salir del bucle
+        } catch (restErr: any) {
+          console.error("[API Debug] REST fallback failed as well:", restErr.message || restErr);
+        }
+
         attempt++;
         
         // Log detailed error info on the server console
@@ -1166,29 +1215,40 @@ ${JSON.stringify(opportunities, null, 2)}
       model: "models/gemini-1.5-flash"
     });
 
-    const originalFetch = global.fetch;
-    // @ts-ignore
-    global.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
-      console.log("[API Debug QuickWins] SDK is fetching URL:", input.toString());
-      console.log("[API Debug QuickWins] Fetch init options:", JSON.stringify(init || {}));
-      return originalFetch(input, init);
-    };
-
     let responseText = "";
     try {
-      const result = await model.generateContent(
-        {
-          contents: [
-            { role: 'user', parts: [{ text: systemInstructions + "\n\n" + userPrompt }] }
-          ]
-        },
-        {
-          timeout: 30000
-        }
-      );
-      responseText = await result.response.text();
-    } finally {
-      global.fetch = originalFetch;
+      const originalFetch = global.fetch;
+      // @ts-ignore
+      global.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+        console.log("[API Debug QuickWins] SDK is fetching URL:", input.toString());
+        console.log("[API Debug QuickWins] Fetch init options:", JSON.stringify(init || {}));
+        return originalFetch(input, init);
+      };
+
+      try {
+        const result = await model.generateContent(
+          {
+            contents: [
+              { role: 'user', parts: [{ text: systemInstructions + "\n\n" + userPrompt }] }
+            ]
+          },
+          {
+            timeout: 30000
+          }
+        );
+        responseText = await result.response.text();
+      } finally {
+        global.fetch = originalFetch;
+      }
+    } catch (geminiErr: any) {
+      console.warn("[API Debug QuickWins] SDK call failed. Trying direct REST API fallback...", geminiErr.message || geminiErr);
+      try {
+        responseText = await callGeminiREST(apiKey, systemInstructions + "\n\n" + userPrompt);
+        console.log("[API Debug QuickWins] Direct REST API fallback succeeded!");
+      } catch (restErr: any) {
+        console.error("[API Debug QuickWins] REST fallback failed as well:", restErr.message || restErr);
+        throw geminiErr; // Throw original error if fallback also fails
+      }
     }
 
     let parsed: any[] = [];

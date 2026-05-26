@@ -8,7 +8,7 @@ import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
-import NotificationBell from "../../components/NotificationBell";
+import Header from "../../components/Header";
 
 // Mapa de tipos de página para badges
 const getBadgeInfo = (url) => {
@@ -408,7 +408,7 @@ export default function Optimizacion() {
   const pendingMissions = missions.filter(m => !completedIds.has(m.id)).slice(0, 10);
 
   return (
-    <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-7xl mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka">
+    <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-screen-lg mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka px-4">
 
       {/* Confetti Effect */}
       {showConfetti && (
@@ -424,77 +424,21 @@ export default function Optimizacion() {
       )}
 
       {/* Navigation Header */}
-      <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 sticky top-4 z-10 transition-colors duration-300">
-        <div className="flex items-center justify-between gap-2">
-          <Link href="/buscador-de-oro" onClick={playClick}
-            className="text-slate-500 text-sm md:text-lg font-black hover:text-slate-800 dark:hover:text-slate-200 flex items-center gap-1.5 flex-shrink-0">
-            ← <span className="hidden sm:inline">VOLVER AL DASHBOARD</span><span className="sm:hidden">DASHBOARD</span>
-          </Link>
-          <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
-            <div className="flex items-center gap-1">
-              <span className="text-2xl md:text-3xl">🔥</span>
-              <span className="font-black text-lg md:text-2xl text-orange-500">{Math.floor(xp / 100) + 1}</span>
-            </div>
-            <button onClick={toggleMute} className="text-2xl md:text-3xl hover:scale-110 transition-transform flex-shrink-0" title={isMuted ? "Activar sonido" : "Silenciar"}>
-              {isMuted ? '🔇' : '🔊'}
-            </button>
-            <button onClick={() => { toggleTheme(); playThemeToggle(theme === "light"); }} className="text-2xl md:text-3xl hover:scale-110 transition-transform flex-shrink-0">
-              {theme === "light" ? '🌙' : '☀️'}
-            </button>
-            <NotificationBell />
-            <button
-              onClick={() => {
-                playClick();
-                router.push("/perfil");
-              }}
-              className="hover:scale-105 transition-transform focus:outline-none flex-shrink-0"
-              title="Ver Perfil"
-            >
-              {session?.user?.image ? (
-                <img src={session.user.image} alt="Avatar" className="w-8 h-8 md:w-12 md:h-12 rounded-full border-2 border-duo-green-shadow" />
-              ) : (
-                <div className="w-8 h-8 md:w-12 md:h-12 bg-duo-green rounded-full flex items-center justify-center border-b-2 md:border-b-4 border-duo-green-shadow text-white text-sm md:text-xl">👤</div>
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Navigation Tabs */}
-        <nav className="flex flex-wrap md:flex-nowrap gap-2 md:gap-4 w-full mt-2">
-          <Link href="/buscador-de-oro" onClick={playClick}
-            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-duo-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
-            <span className="md:hidden">🔍 F1</span><span className="hidden md:inline">🔍 Fase 1: Búsqueda</span>
-          </Link>
-          {prog?.p2?.unlocked ? (
-            <Link href="/contenido" onClick={playClick}
-              className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-blue-500 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
-              <span className="md:hidden">✍️ F2</span><span className="hidden md:inline">✍️ Fase 2: Contenido</span>
-            </Link>
-          ) : (
-            <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
-              title="🔒 Completá el 70% de la Fase 1 para avanzar">
-              <span className="md:hidden">🔒 F2</span><span className="hidden md:inline">🔒 Fase 2: Contenido</span>
-            </div>
-          )}
-          <div className="flex-1 btn-3d bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black border-b-4 border-duo-green cursor-default">
-            <span className="md:hidden">🛠️ F3</span><span className="hidden md:inline">🛠️ Fase 3: Optimización</span>
-          </div>
-          {prog?.p4?.unlocked ? (
-            <Link href="/detective-de-enlaces" onClick={playClick}
-              className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-purple-650 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
-              <span className="md:hidden">🕵️‍♂️ F4</span><span className="hidden md:inline">🕵️‍♂️ Fase 4: Indexación</span>
-            </Link>
-          ) : (
-            <div className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
-              title="🔒 Completá el 70% de la Fase 3 para avanzar">
-              <span className="md:hidden">🔒 F4</span><span className="hidden md:inline">🔒 Fase 4</span>
-            </div>
-          )}
-        </nav>
-      </header>
+      <Header
+        xp={xp}
+        prestigeCycles={prestigeCycles}
+        isMuted={isMuted}
+        toggleMute={toggleMute}
+        theme={theme}
+        toggleTheme={toggleTheme}
+        playThemeToggle={playThemeToggle}
+        playClick={playClick}
+        prog={prog}
+        activePhase={3}
+      />
 
       {/* Main Layout: 3 columns on desktop */}
-      <div className="w-full flex flex-col lg:flex-row gap-8 items-start">
+      <div className="w-full flex flex-wrap lg:flex-nowrap gap-8 items-start">
 
         {/* ─── LEFT SIDEBAR ─── */}
         <div className="w-full lg:w-[300px] flex-shrink-0 flex flex-col gap-6 lg:sticky lg:top-44">
@@ -540,7 +484,7 @@ export default function Optimizacion() {
         </div>
 
         {/* ─── CENTER PANEL ─── */}
-        <div className="flex-1 min-w-0 flex flex-col gap-6">
+        <div className="w-full lg:flex-1 min-w-0 flex flex-col gap-6">
 
           {/* Mission List */}
           {!selectedMission && (
