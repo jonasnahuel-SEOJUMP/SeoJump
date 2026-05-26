@@ -305,11 +305,19 @@ export default function ContenidoFase2() {
       />
 
       {/* Main Content */}
-      <div className="w-full text-center space-y-4 max-w-3xl mx-auto">
+      <div className="w-full text-center space-y-4 max-w-3xl mx-auto mt-16">
         <h1 className="text-4xl lg:text-5xl font-black text-blue-600 dark:text-blue-400">Fase 2: Estrategia de Contenido ✍️</h1>
-        <p className="text-xl lg:text-2xl font-bold text-slate-650 dark:text-slate-400">
+        <p className="text-xl lg:text-2xl font-bold text-slate-655 dark:text-slate-400">
           Decidí el mejor camino para conquistar Google utilizando tu palabra clave de oro.
         </p>
+        <div className="pt-2">
+          <button
+            onClick={() => { if (playClick) playClick(); router.push('/'); }}
+            className="inline-flex items-center gap-1.5 btn-3d btn-white !py-2 !px-4 text-xs font-black text-slate-500 hover:text-red-500 transition-colors uppercase tracking-wider"
+          >
+            ✖ Cancelar y Volver al Dashboard
+          </button>
+        </div>
       </div>
 
       {activeKeyword ? (

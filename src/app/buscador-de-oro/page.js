@@ -466,7 +466,7 @@ export default function BuscadorDeOro() {
       />
 
       {/* Header y Tipografía Centrados Arriba */}
-      <div className="text-center space-y-2 py-4">
+      <div className="text-center space-y-2 py-4 mt-16">
         <div className="text-4xl md:text-5xl">🦉</div>
         <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
           ¡Atención, Jugador!
@@ -474,10 +474,18 @@ export default function BuscadorDeOro() {
         <p className="text-base md:text-lg font-bold text-slate-600 dark:text-slate-400">
           Fase 1: Buscador de Oro 👑
         </p>
+        <div className="pt-2">
+          <button
+            onClick={() => { if (playClick) playClick(); router.push('/'); }}
+            className="inline-flex items-center gap-1.5 btn-3d btn-white !py-2 !px-4 text-xs font-black text-slate-500 hover:text-red-500 transition-colors uppercase tracking-wider"
+          >
+            ✖ Cancelar y Volver al Dashboard
+          </button>
+        </div>
       </div>
 
       {/* Main Content: Layout de Dos Columnas con Grid Responsivo */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-0">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-0 mt-16">
         
         {/* Columna Izquierda (Resultados y Consejos) - lg:col-span-8 */}
         <div className="lg:col-span-8 w-full flex flex-col gap-6">

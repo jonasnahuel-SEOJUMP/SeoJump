@@ -427,10 +427,24 @@ export default function Home() {
     setStep(7);
   };
 
+   const clearAnalysisCache = () => {
+    localStorage.removeItem("seojump_quick_wins");
+    localStorage.removeItem("seojump_missions");
+    localStorage.removeItem("gold-suggestions");
+    localStorage.removeItem("seojump_completed_quick_wins");
+    localStorage.removeItem("seojump_completed_missions");
+    
+    setQuickWins([]);
+    setMissions([]);
+    setCompletedIds(new Set());
+    setCompletedQuickWins(new Set());
+  };
+
   const nextStep = () => setStep(step + 1);
   const prevStep = () => setStep(step - 1);
 
   const handleAnalyze = () => {
+    clearAnalysisCache();
     if (!session) {
       signIn("google");
     } else {
@@ -673,6 +687,7 @@ export default function Home() {
                 <button 
                   onClick={() => { 
                     playClick(); 
+                    clearAnalysisCache();
                     localStorage.setItem("seojump_site_url", url);
                     nextStep(); 
                   }} 
@@ -826,13 +841,15 @@ export default function Home() {
              {/* PANEL IZQUIERDO (Lateral de Control) */}
              <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col gap-6 sticky top-4">
                {/* Dashboard Header */}
-               <header className="w-full flex flex-col md:flex-row lg:flex-col items-stretch md:items-center lg:items-start justify-between bg-white dark:bg-slate-800 p-4 md:p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 transition-colors duration-300 gap-4">
-                 <div className="flex items-center gap-4 w-full md:w-auto">
-                   <div className="w-12 h-12 bg-duo-blue rounded-lg flex items-center justify-center text-white text-2xl flex-shrink-0">🌐</div>
-                   <span className="text-xl lg:text-2xl font-black text-slate-800 dark:text-slate-100 truncate">{url}</span>
+               <header className="w-full flex flex-col gap-6 items-stretch justify-between bg-white dark:bg-slate-800 p-4 md:p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 transition-colors duration-300">
+                 <div className="flex items-center gap-4 w-full justify-between">
+                   <div className="flex items-center gap-4 min-w-0">
+                     <div className="w-12 h-12 bg-duo-blue rounded-lg flex items-center justify-center text-white text-2xl flex-shrink-0">🌐</div>
+                     <span className="text-xl lg:text-2xl font-black text-slate-800 dark:text-slate-100 truncate min-w-0">{url}</span>
+                   </div>
                  </div>
                  
-                 <div className="flex items-center justify-between md:justify-end lg:justify-between w-full md:w-auto gap-4 lg:w-full border-t md:border-t-0 lg:border-t border-slate-100 dark:border-slate-700/50 pt-3 md:pt-0 lg:pt-3">
+                 <div className="flex items-center justify-between w-full gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-3">
                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       <span className="text-3xl">🔥</span>
                       <span className="text-2xl lg:text-3xl font-black text-orange-500">{Math.floor(xp / 100) + 1}</span>
@@ -928,7 +945,7 @@ export default function Home() {
                 
                 {step === 6 && (
                   <div className="w-full space-y-6 animate-in fade-in duration-300">
-                    <h2 className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100">Fase 3: Optimización On-Page 🛠️</h2>
+                    <h2 className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100 lg:mt-16">Fase 3: Optimización On-Page 🛠️</h2>
 
                     {/* --- QUICK WINS HIGHLIGHT (EL GANCHO) --- */}
                     <QuickWinsHighlight 

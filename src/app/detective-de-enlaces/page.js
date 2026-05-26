@@ -257,7 +257,7 @@ export default function DetectiveDeEnlaces() {
       />
 
       {/* ─── MAIN CONTENT ─── */}
-      <div className="w-full flex flex-wrap lg:flex-nowrap gap-8 items-start">
+      <div className="w-full flex flex-wrap lg:flex-nowrap gap-8 items-start mt-16">
 
         {/* LEFT: Owl panel */}
         <div className="w-full lg:w-[320px] flex-shrink-0 flex flex-col gap-6 lg:sticky lg:top-44">
@@ -356,10 +356,20 @@ export default function DetectiveDeEnlaces() {
               <div className="relative z-10 flex flex-col gap-6 w-full text-left">
                 {/* Header Title */}
                 <div className="flex flex-col md:flex-row items-center gap-4 border-b border-slate-800 pb-6 justify-between">
-                  <h1 className="text-3xl md:text-4xl font-black text-white flex items-center gap-3">
-                    Autorización de Lanzamiento 🚀
-                  </h1>
-                  <div className="bg-purple-900/50 border border-purple-600/50 rounded-full px-4 py-1.5 text-xs font-black text-purple-300 uppercase tracking-wider">
+                  <div>
+                    <h1 className="text-3xl md:text-4xl font-black text-white flex items-center gap-3">
+                      Autorización de Lanzamiento 🚀
+                    </h1>
+                    <div className="pt-2">
+                      <button
+                        onClick={() => { if (playClick) playClick(); router.push('/'); }}
+                        className="inline-flex items-center gap-1.5 btn-3d btn-white !py-1.5 !px-3 text-xs font-black text-slate-400 hover:text-red-500 transition-colors uppercase tracking-wider"
+                      >
+                        ✖ Cancelar y Volver al Dashboard
+                      </button>
+                    </div>
+                  </div>
+                  <div className="bg-purple-900/50 border border-purple-600/50 rounded-full px-4 py-1.5 text-xs font-black text-purple-300 uppercase tracking-wider flex-shrink-0">
                     Fase 4: Indexación
                   </div>
                 </div>
