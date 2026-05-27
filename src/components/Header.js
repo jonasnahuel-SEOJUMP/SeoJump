@@ -169,7 +169,7 @@ export default function Header({
         {activePhase === 4 ? (
           <div className="flex-1 btn-3d bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black border-2 border-purple-400 border-b-4 cursor-default">
             <span className="md:hidden">🕵️‍♂️ F4</span>
-            <span className="hidden md:inline">🕵️‍♂️ Fase 4: Indexación</span>
+            <span className="hidden md:inline">🕵️‍♂️ Fase 4: Detective</span>
           </div>
         ) : prog?.p4?.unlocked ? (
           <Link
@@ -178,7 +178,7 @@ export default function Header({
             className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-purple-650 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors"
           >
             <span className="md:hidden">🕵️‍♂️ F4</span>
-            <span className="hidden md:inline">🕵️‍♂️ Fase 4: Indexación</span>
+            <span className="hidden md:inline">🕵️‍♂️ Fase 4: Detective</span>
           </Link>
         ) : (
           <div
@@ -186,7 +186,7 @@ export default function Header({
             title="🔒 Completá el 70% de la Fase 3 para avanzar"
           >
             <span className="md:hidden">🔒 F4</span>
-            <span className="hidden md:inline">🔒 Fase 4: Indexación</span>
+            <span className="hidden md:inline">🔒 Fase 4: Detective</span>
           </div>
         )}
       </nav>

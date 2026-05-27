@@ -1389,3 +1389,381 @@ export async function verifyQuickWin(pageUrl: string, suggestedTitle: string) {
     };
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// DETECTIVE DE ENLACES — Phase 4: Link Auditing
+// ═══════════════════════════════════════════════════════════════════════════
+
+const GENERIC_ANCHOR_PATTERNS = [
+  /^click\s?aqu[ií]$/i, /^hac[eé]\s?clic$/i, /^clic\s?aqu[ií]$/i,
+  /^ver\s?m[aá]s$/i, /^leer\s?m[aá]s$/i, /^ac[aá]$/i, /^aqu[ií]$/i,
+  /^click\s?here$/i, /^read\s?more$/i, /^learn\s?more$/i,
+  /^more$/i, /^m[aá]s$/i, /^ir$/i, /^link$/i, /^enlace$/i,
+];
+
+function isGenericAnchor(text: string): boolean {
+  const clean = text.trim();
+  if (clean.length < 3) return true;
+  if (clean === "") return true;
+  return GENERIC_ANCHOR_PATTERNS.some(p => p.test(clean));
+}
+
+function extractLinksFromHtml(html: string, baseUrl: string): Array<{ href: string; anchorText: string; isInternal: boolean }> {
+  const links: Array<{ href: string; anchorText: string; isInternal: boolean }> = [];
+  const regex = /<a[^>]+href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  let match;
+  const baseHost = new URL(baseUrl).hostname.replace(/^www\./, '');
+
+  while ((match = regex.exec(html)) !== null) {
+    try {
+      const rawHref = match[1].trim();
+      if (rawHref.startsWith("mailto:") || rawHref.startsWith("tel:") || rawHref.startsWith("javascript:")) continue;
+
+      const resolved = new URL(rawHref, baseUrl).href;
+      const anchorText = match[2].replace(/<[^>]+>/g, '').trim();
+      const linkHost = new URL(resolved).hostname.replace(/^www\./, '');
+      const isInternal = linkHost === baseHost;
+
+      links.push({ href: resolved, anchorText, isInternal });
+    } catch (e) {
+      // skip malformed URLs
+    }
+  }
+  return links;
+}
+
+function extractTitleFromHtml(html: string): string {
+  const match = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  return match ? match[1].replace(/<[^>]+>/g, '').trim() : "";
+}
+
+async function fetchPage(url: string): Promise<{ html: string; ok: boolean; status: number }> {
+  try {
+    const finalUrl = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
+    const response = await fetch(finalUrl, {
+      cache: 'no-store',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Cache-Control': 'no-cache',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (!response.ok) return { html: '', ok: false, status: response.status };
+    const html = await response.text();
+    return { html, ok: true, status: response.status };
+  } catch (e) {
+    return { html: '', ok: false, status: 0 };
+  }
+}
+
+async function checkLinkStatus(url: string): Promise<number> {
+  try {
+    const response = await fetch(url, {
+      method: 'HEAD',
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)' },
+      signal: AbortSignal.timeout(4000),
+      redirect: 'follow',
+    });
+    return response.status;
+  } catch (e) {
+    return 0;
+  }
+}
+
+async function crawlSiteLinks(siteUrl: string) {
+  const cleanUrl = siteUrl.replace(/\/$/, '');
+  const visited = new Set<string>();
+  const pages: Array<{ url: string; title: string; links: Array<{ href: string; anchorText: string; isInternal: boolean; statusCode: number }> }> = [];
+  const queue: Array<{ url: string; depth: number }> = [{ url: cleanUrl, depth: 0 }];
+  const allDestinations = new Map<string, number>(); // url -> status code (lazy check)
+  const MAX_PAGES = 10;
+  const MAX_DEPTH = 2;
+
+  // BFS crawl
+  while (queue.length > 0 && pages.length < MAX_PAGES) {
+    const { url, depth } = queue.shift()!;
+    const normalizedUrl = url.replace(/\/$/, '');
+    if (visited.has(normalizedUrl)) continue;
+    visited.add(normalizedUrl);
+
+    const result = await fetchPage(url);
+    if (!result.ok) continue;
+
+    const links = extractLinksFromHtml(result.html, url);
+    const title = extractTitleFromHtml(result.html);
+
+    pages.push({
+      url: normalizedUrl,
+      title,
+      links: links.map(l => ({ ...l, statusCode: -1 })), // status checked later
+    });
+
+    // Enqueue internal links for next level
+    if (depth < MAX_DEPTH) {
+      for (const link of links) {
+        if (link.isInternal) {
+          const normalized = link.href.replace(/\/$/, '');
+          if (!visited.has(normalized) && !queue.some(q => q.url.replace(/\/$/, '') === normalized)) {
+            queue.push({ url: link.href, depth: depth + 1 });
+          }
+        }
+      }
+    }
+
+    // Collect all destinations for status check
+    for (const link of links) {
+      if (!allDestinations.has(link.href)) {
+        allDestinations.set(link.href, -1);
+      }
+    }
+  }
+
+  // Check status codes for all unique destinations (parallel, batched)
+  const destinationUrls = Array.from(allDestinations.keys());
+  const BATCH_SIZE = 5;
+  for (let i = 0; i < destinationUrls.length; i += BATCH_SIZE) {
+    const batch = destinationUrls.slice(i, i + BATCH_SIZE);
+    const results = await Promise.all(batch.map(url => checkLinkStatus(url)));
+    batch.forEach((url, idx) => {
+      allDestinations.set(url, results[idx]);
+    });
+  }
+
+  // Update page links with status codes
+  for (const page of pages) {
+    for (const link of page.links) {
+      link.statusCode = allDestinations.get(link.href) ?? 0;
+    }
+  }
+
+  // Collect all internal URLs found anywhere
+  const allInternalUrls = new Set<string>();
+  for (const page of pages) {
+    allInternalUrls.add(page.url);
+    for (const link of page.links) {
+      if (link.isInternal) {
+        allInternalUrls.add(link.href.replace(/\/$/, ''));
+      }
+    }
+  }
+
+  // Find broken links
+  const brokenLinks: Array<{ page: string; href: string; anchorText: string; statusCode: number }> = [];
+  for (const page of pages) {
+    for (const link of page.links) {
+      if (link.statusCode >= 400 || link.statusCode === 0) {
+        brokenLinks.push({
+          page: page.url,
+          href: link.href,
+          anchorText: link.anchorText,
+          statusCode: link.statusCode,
+        });
+      }
+    }
+  }
+
+  // Find generic anchors (internal links only)
+  const genericAnchors: Array<{ page: string; href: string; anchorText: string }> = [];
+  for (const page of pages) {
+    for (const link of page.links) {
+      if (link.isInternal && isGenericAnchor(link.anchorText)) {
+        genericAnchors.push({
+          page: page.url,
+          href: link.href,
+          anchorText: link.anchorText,
+        });
+      }
+    }
+  }
+
+  // Find orphan pages (internal pages with 0 incoming links from crawled pages)
+  const incomingCount = new Map<string, number>();
+  for (const url of allInternalUrls) {
+    incomingCount.set(url, 0);
+  }
+  for (const page of pages) {
+    for (const link of page.links) {
+      if (link.isInternal) {
+        const normalized = link.href.replace(/\/$/, '');
+        incomingCount.set(normalized, (incomingCount.get(normalized) || 0) + 1);
+      }
+    }
+  }
+  // The home page always has incoming (it's the entry point)
+  incomingCount.set(cleanUrl, 999);
+  const orphanPages = Array.from(incomingCount.entries())
+    .filter(([_, count]) => count === 0)
+    .map(([url]) => url);
+
+  return {
+    pages,
+    allInternalUrls: Array.from(allInternalUrls),
+    brokenLinks,
+    genericAnchors,
+    orphanPages,
+  };
+}
+
+export async function auditSiteLinks(siteUrl: string, goldKeyword?: string) {
+  const urlSanit = sanitizeInput(siteUrl, 'url');
+  if (!urlSanit.isValid) {
+    return { success: false, error: urlSanit.error };
+  }
+  const cleanSiteUrl = urlSanit.sanitized;
+
+  try {
+    // 1. Crawl
+    const crawlData = await crawlSiteLinks(cleanSiteUrl);
+
+    const stats = {
+      totalPages: crawlData.pages.length,
+      totalLinks: crawlData.pages.reduce((sum, p) => sum + p.links.length, 0),
+      brokenCount: crawlData.brokenLinks.length,
+      genericAnchors: crawlData.genericAnchors.length,
+      orphanPages: crawlData.orphanPages.length,
+    };
+
+    // 2. If no issues found at all, return clean result
+    if (stats.brokenCount === 0 && stats.genericAnchors === 0 && stats.orphanPages === 0) {
+      return {
+        success: true,
+        audit: { internalLinking: [], brokenLinks: [], anchorText: [] },
+        stats,
+      };
+    }
+
+    // 3. Build prompt for Gemini
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      return { success: false, error: "GEMINI_API_KEY no configurada." };
+    }
+
+    const pagesSummary = crawlData.pages.map(p => `- ${p.url} (título: "${p.title}", ${p.links.length} enlaces)`).join('\n');
+    const brokenSummary = crawlData.brokenLinks.slice(0, 10).map(b =>
+      `- En "${b.page}" → enlace roto: "${b.href}" (texto: "${b.anchorText}", error: ${b.statusCode})`
+    ).join('\n');
+    const genericSummary = crawlData.genericAnchors.slice(0, 10).map(g =>
+      `- En "${g.page}" → enlace a "${g.href}" con texto genérico: "${g.anchorText}"`
+    ).join('\n');
+    const orphanSummary = crawlData.orphanPages.slice(0, 5).map(o => `- ${o}`).join('\n');
+
+    const promptText = `
+Actuás como un Consultor de Ventas y Estratega Digital entusiasmado que acaba de descubrir oportunidades enormes de mejora en el sitio web de un cliente. Tu tono es profesional pero entusiasmado, como un socio que encontró dinero sobre la mesa.
+
+${goldKeyword ? `El negocio está enfocado en la palabra clave: "${goldKeyword}". Todas las sugerencias deben alinearse con este tema.` : ''}
+
+Analizá estos datos del sitio web "${cleanSiteUrl}":
+
+PÁGINAS ESCANEADAS:
+${pagesSummary}
+
+${brokenSummary ? `ENLACES ROTOS (fugas de clientes):
+${brokenSummary}` : ''}
+
+${genericSummary ? `TEXTOS DE ENLACE GENÉRICOS (oportunidades desperdiciadas):
+${genericSummary}` : ''}
+
+${orphanSummary ? `PÁGINAS PERDIDAS (sin conexión con el resto del sitio):
+${orphanSummary}` : ''}
+
+Tu misión es generar recomendaciones accionables en 3 categorías. Devolvé ESTRICTAMENTE un JSON sin bloques markdown:
+
+{
+  "internalLinking": [
+    {
+      "fromPage": "URL de la página fuerte que debe agregar el enlace",
+      "toPage": "URL de la página débil/perdida que necesita recibir el enlace",
+      "suggestedAnchor": "Texto sugerido para el enlace (con palabras clave naturales, max 6 palabras)",
+      "reason": "Explicación entusiasta de por qué este puente de tráfico va a traer más ventas (2-3 oraciones, sin tecnicismos)"
+    }
+  ],
+  "brokenLinks": [
+    {
+      "page": "URL donde está el enlace roto",
+      "brokenUrl": "URL del enlace roto",
+      "anchorText": "Texto actual del enlace",
+      "statusCode": número,
+      "suggestion": "Explicación clara de qué hacer: eliminar el enlace, cambiarlo por otro, o corregir la URL (2-3 oraciones comerciales)"
+    }
+  ],
+  "anchorText": [
+    {
+      "page": "URL de la página donde está el texto genérico",
+      "currentAnchor": "Texto actual del enlace (ej: 'hacé clic acá')",
+      "linkTo": "URL a la que apunta el enlace",
+      "suggestedAnchor": "Nuevo texto sugerido con palabras clave naturales (max 6 palabras)",
+      "reason": "Explicación de por qué este cambio va a atraer más clics y confianza (2-3 oraciones)"
+    }
+  ]
+}
+
+REGLAS ESTRICTAS:
+- NUNCA uses palabras técnicas como "canibalización", "backlinks", "DA", "PA", "search intent", "enlazado interno", "thin content", "anchor text"
+- Usá expresiones comerciales: "puente de tráfico", "conexión entre páginas", "traspaso de fuerza", "fuga de clientes", "página perdida", "empujar al Top"
+- Máximo 5 recomendaciones por categoría
+- Si una categoría no tiene problemas, devolvé un array vacío []
+- El JSON debe ser válido, sin comentarios ni texto extra
+`;
+
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: promptText }] }],
+        generationConfig: { responseMimeType: "application/json" }
+      }),
+      signal: AbortSignal.timeout(45000),
+    });
+
+    if (!response.ok) {
+      const errData = await response.json().catch(() => ({}));
+      console.error("Gemini API error in auditSiteLinks:", errData);
+      if (response.status === 429) {
+        return { success: false, error: "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo." };
+      }
+      return { success: false, error: "Error temporal al conectar con la IA. Intentá de nuevo." };
+    }
+
+    const data = await response.json();
+    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+    let parsed;
+    try {
+      parsed = JSON.parse(rawText);
+    } catch (e) {
+      // Try to find JSON in the text
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try { parsed = JSON.parse(jsonMatch[0]); } catch (e2) {
+          console.error("Failed to parse Gemini response for audit:", rawText.substring(0, 500));
+          return { success: false, error: "Error al interpretar la respuesta de la IA. Intentá de nuevo." };
+        }
+      } else {
+        return { success: false, error: "Error al interpretar la respuesta de la IA. Intentá de nuevo." };
+      }
+    }
+
+    return {
+      success: true,
+      audit: {
+        internalLinking: Array.isArray(parsed.internalLinking) ? parsed.internalLinking.slice(0, 5) : [],
+        brokenLinks: Array.isArray(parsed.brokenLinks) ? parsed.brokenLinks.slice(0, 5) : [],
+        anchorText: Array.isArray(parsed.anchorText) ? parsed.anchorText.slice(0, 5) : [],
+      },
+      stats,
+    };
+
+  } catch (error: any) {
+    console.error("Error en auditSiteLinks:", error);
+    const errMsg = String(error.message || error).toLowerCase();
+    let userMessage = "";
+    if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
+      userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
+    } else {
+      userMessage = "Error al escanear el sitio. Verificá que la URL sea correcta e intentá de nuevo.";
+    }
+    return { success: false, error: userMessage };
+  }
+}

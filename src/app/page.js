@@ -469,7 +469,7 @@ export default function Home() {
 
   // Compute current phase info for dynamic title
   const currentPhaseInfo = (() => {
-    if (prog?.p4?.unlocked) return { title: "Fase 4: Indexación", emoji: "🕵️‍♂️" };
+    if (prog?.p4?.unlocked) return { title: "Fase 4: Detective", emoji: "🕵️‍♂️" };
     if (prog?.p3?.unlocked) return { title: "Fase 3: Optimización On-Page", emoji: "🛠️" };
     if (prog?.p2?.unlocked) return { title: "Fase 2: Contenido", emoji: "✍️" };
     return { title: "Fase 1: Búsqueda", emoji: "🔍" };
@@ -934,12 +934,12 @@ export default function Home() {
                  )}
                  {prog?.p4?.unlocked ? (
                    <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-purple-650 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
-                     <span className="md:hidden">🕵️‍♂️ F4</span><span className="hidden md:inline">🕵️‍♂️ Fase 4: Indexación</span>
+                     <span className="md:hidden">🕵️‍♂️ F4</span><span className="hidden md:inline">🕵️‍♂️ Fase 4: Detective</span>
                    </Link>
                  ) : (
                    <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
                      title="🔒 Completá el 70% de la Fase 3 para avanzar">
-                     <span className="md:hidden">🔒 F4</span><span className="hidden md:inline">🔒 Fase 4: Indexación</span>
+                     <span className="md:hidden">🔒 F4</span><span className="hidden md:inline">🔒 Fase 4: Detective</span>
                    </div>
                  )}
                  <Link href="/blog" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-cyan-500 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
