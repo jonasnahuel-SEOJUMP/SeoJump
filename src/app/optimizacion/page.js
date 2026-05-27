@@ -438,7 +438,7 @@ export default function Optimizacion() {
       />
 
       {/* Main Layout: 3 columns on desktop */}
-      <div className="w-full flex flex-wrap lg:flex-nowrap gap-8 items-start mt-16">
+      <div className="w-full flex flex-wrap lg:flex-nowrap gap-8 items-start mt-4">
 
         {/* ─── LEFT SIDEBAR ─── */}
         <div className="w-full lg:w-[300px] flex-shrink-0 flex flex-col gap-6 lg:sticky lg:top-44">
@@ -491,7 +491,7 @@ export default function Optimizacion() {
             <div className="w-full space-y-6 animate-in fade-in duration-300">
               
               {/* Header y Tipografía Centrados Arriba */}
-              <div className="text-center space-y-3 py-4 w-full max-w-xl mx-auto mt-16">
+              <div className="text-center space-y-3 py-4 w-full max-w-xl mx-auto mt-4">
                 <div className="text-4xl md:text-5xl">🦉</div>
                 <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
                   {activeTab === "quickwins" ? "Tu Plan de Acción 🚀" : "Fase 3: Optimización On-Page 🛠️"}

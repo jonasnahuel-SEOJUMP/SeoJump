@@ -468,7 +468,7 @@ export default function Home() {
   }
 
   return (
-    <div className={`min-h-screen bg-transparent flex flex-col items-center justify-center px-4 py-8 md:p-8 w-full font-fredoka relative overflow-hidden transition-colors duration-300 text-slate-100 ${step < 6 ? 'max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto border-x dark:border-slate-800 shadow-2xl' : ''}`}>
+    <div className={`min-h-screen bg-transparent flex flex-col items-center ${step < 6 ? 'justify-center' : 'justify-start'} px-4 py-8 md:p-8 w-full font-fredoka relative transition-colors duration-300 text-slate-100 ${step < 6 ? 'max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto border-x dark:border-slate-800 shadow-2xl' : ''}`}>
       
       {/* Global Top Navbar for Landing Page */}
       {step === 1 && (
@@ -839,7 +839,7 @@ export default function Home() {
         {step >= 6 && (
           <div className="w-full max-w-7xl mx-auto flex flex-wrap lg:flex-nowrap gap-8 animate-in slide-in-from-bottom duration-500 items-start px-4">
              {/* PANEL IZQUIERDO (Lateral de Control) */}
-             <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col gap-6 sticky top-4">
+             <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col gap-6 lg:sticky lg:top-8 z-10">
                {/* Dashboard Header */}
                <header className="w-full flex flex-col gap-6 items-stretch justify-between bg-white dark:bg-slate-800 p-4 md:p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 transition-colors duration-300">
                  <div className="flex items-center gap-4 w-full justify-between">
@@ -945,7 +945,7 @@ export default function Home() {
                 
                 {step === 6 && (
                   <div className="w-full space-y-6 animate-in fade-in duration-300">
-                    <h2 className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100 lg:mt-16">Fase 3: Optimización On-Page 🛠️</h2>
+                    <h2 className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100">Fase 3: Optimización On-Page 🛠️</h2>
 
                     {/* --- QUICK WINS HIGHLIGHT (EL GANCHO) --- */}
                     <QuickWinsHighlight 
@@ -1248,7 +1248,7 @@ export default function Home() {
             </div>
 
             {/* PANEL DERECHO (Panel de Boxes / Stats) */}
-            <div className="hidden lg:flex w-[340px] flex-shrink-0 flex-col gap-6 sticky top-4">
+            <div className="hidden lg:flex w-[340px] flex-shrink-0 flex-col gap-6 lg:sticky lg:top-8 z-10">
                <div className="card-3d bg-slate-800 text-white border-slate-700 shadow-xl relative overflow-hidden p-8">
                  <div className="text-7xl mb-3 text-center animate-bounce">🦉</div>
                  <h3 className="text-2xl lg:text-3xl font-black text-yellow-400 text-center mb-4 leading-tight">Panel de<br/>Boxes</h3>

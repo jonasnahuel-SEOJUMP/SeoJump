@@ -305,7 +305,7 @@ export default function ContenidoFase2() {
       />
 
       {/* Main Content */}
-      <div className="w-full text-center space-y-4 max-w-3xl mx-auto mt-16">
+      <div className="w-full text-center space-y-4 max-w-3xl mx-auto mt-4">
         <h1 className="text-4xl lg:text-5xl font-black text-blue-600 dark:text-blue-400">Fase 2: Estrategia de Contenido ✍️</h1>
         <p className="text-xl lg:text-2xl font-bold text-slate-655 dark:text-slate-400">
           Decidí el mejor camino para conquistar Google utilizando tu palabra clave de oro.

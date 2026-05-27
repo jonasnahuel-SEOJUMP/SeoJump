@@ -76,30 +76,34 @@ export async function getSearchConsoleData(accessToken, siteUrl, goldKeyword, ro
   const endDate = new Date().toISOString().split('T')[0];
   const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-  const body = {
-    startDate,
-    endDate,
-    dimensions: ['page', 'query'],
-    orderBy: [
-      { fieldName: 'clicks', sortOrder: 'descending' },
-      { fieldName: 'impressions', sortOrder: 'descending' }
-    ],
-    rowLimit: rowLimit,
-  };
+  const buildBody = (filterKeyword, limit) => {
+    const body = {
+      startDate,
+      endDate,
+      dimensions: ['page', 'query'],
+      orderBy: [
+        { fieldName: 'clicks', sortOrder: 'descending' },
+        { fieldName: 'impressions', sortOrder: 'descending' }
+      ],
+      rowLimit: limit,
+    };
 
-  if (goldKeyword) {
-    body.dimensionFilterGroups = [
-      {
-        filters: [
-          {
-            dimension: 'query',
-            operator: 'contains',
-            expression: goldKeyword
-          }
-        ]
-      }
-    ];
-  }
+    if (filterKeyword) {
+      body.dimensionFilterGroups = [
+        {
+          filters: [
+            {
+              dimension: 'query',
+              operator: 'contains',
+              expression: filterKeyword
+            }
+          ]
+        }
+      ];
+    }
+
+    return body;
+  };
 
   console.log('--- DEBUG SEARCH CONSOLE ---');
   console.log('Input URL:', siteUrl);
@@ -115,8 +119,58 @@ export async function getSearchConsoleData(accessToken, siteUrl, goldKeyword, ro
     }
 
     console.log(`✅ Success finding matching GSC property: "${verifiedProperty}"`);
-    const response = await querySearchConsole(accessToken, verifiedProperty, body);
 
+    // ── Tier 1: Exact keyword filter ──
+    if (goldKeyword) {
+      const response = await querySearchConsole(accessToken, verifiedProperty, buildBody(goldKeyword, rowLimit));
+      if (response.ok) {
+        const data = await response.json();
+        const rows = data.rows || [];
+        if (rows.length > 0) {
+          console.log(`✅ Tier 1 (exact keyword "${goldKeyword}"): ${rows.length} rows found`);
+          return rows;
+        }
+        console.log(`⚠️ Tier 1 returned 0 rows for "${goldKeyword}". Trying broader search...`);
+      }
+
+      // ── Tier 2: First word only (broader match) ──
+      const firstWord = goldKeyword.trim().split(/\s+/)[0];
+      if (firstWord && firstWord !== goldKeyword.trim()) {
+        console.log(`🔄 Tier 2: Trying with first word "${firstWord}"...`);
+        const response2 = await querySearchConsole(accessToken, verifiedProperty, buildBody(firstWord, Math.max(rowLimit, 25)));
+        if (response2.ok) {
+          const data2 = await response2.json();
+          const rows2 = data2.rows || [];
+          if (rows2.length > 0) {
+            console.log(`✅ Tier 2 (first word "${firstWord}"): ${rows2.length} rows found`);
+            return rows2;
+          }
+          console.log(`⚠️ Tier 2 also returned 0 rows.`);
+        }
+      }
+
+      // ── Tier 3: No keyword filter at all — get site's top queries ──
+      console.log(`🔄 Tier 3: Fetching top queries without any keyword filter (limit ${Math.max(rowLimit, 50)})...`);
+      const response3 = await querySearchConsole(accessToken, verifiedProperty, buildBody(null, Math.max(rowLimit, 50)));
+      if (response3.ok) {
+        const data3 = await response3.json();
+        const rows3 = data3.rows || [];
+        console.log(`${rows3.length > 0 ? '✅' : '⚠️'} Tier 3 (no filter): ${rows3.length} rows found`);
+        return rows3;
+      }
+
+      // If tier 3 also failed (non-ok response), return empty
+      const errorData3 = await response3.json().catch(() => ({}));
+      const code3 = errorData3?.error?.code;
+      if (code3 === 403) {
+        throw new Error('MISSING_SEARCH_CONSOLE_SCOPE');
+      }
+      console.log(`❌ All tiers failed for "${goldKeyword}"`);
+      return [];
+    }
+
+    // No goldKeyword provided — single query without filter
+    const response = await querySearchConsole(accessToken, verifiedProperty, buildBody(null, rowLimit));
     if (response.ok) {
       const data = await response.json();
       return data.rows || [];

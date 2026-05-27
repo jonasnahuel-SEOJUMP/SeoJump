@@ -321,7 +321,7 @@ export default function BuscadorDeOro() {
           : { text: purifyText(s.text || ''), intent: s.intent === 'atraccion' ? 'atraccion' : 'venta' }
       );
       if (!purifiedSug || purifiedSug.length === 0) {
-        throw new Error("🏜️ No encontramos palabras clave con volumen de búsqueda para este término. Intentá con otro tema para no perder tu ficha.");
+        throw new Error("La IA no pudo generar sugerencias para este término. Probá con una palabra más general (ej: en vez de 'shampoo automotriz premium', probá 'shampoo auto').");
       }
 
       setSuggestions(purifiedSug);
@@ -466,7 +466,7 @@ export default function BuscadorDeOro() {
       />
 
       {/* Header y Tipografía Centrados Arriba */}
-      <div className="text-center space-y-2 py-4 mt-16">
+      <div className="text-center space-y-2 py-4 mt-2">
         <div className="text-4xl md:text-5xl">🦉</div>
         <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
           ¡Atención, Jugador!
@@ -485,7 +485,7 @@ export default function BuscadorDeOro() {
       </div>
 
       {/* Main Content: Layout de Dos Columnas con Grid Responsivo */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-0 mt-16">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start relative z-0 mt-4">
         
         {/* Columna Izquierda (Resultados y Consejos) - lg:col-span-8 */}
         <div className="lg:col-span-8 w-full flex flex-col gap-6">
@@ -673,7 +673,21 @@ export default function BuscadorDeOro() {
           ) : (
              /* Empty State after search or initial state */
              <div className="text-center py-16 px-6 card-3d bg-white/50 dark:bg-slate-800/50 border-dashed border-2 border-slate-200 dark:border-slate-700 shadow-none rounded-2xl">
-               {query && !error ? (
+               {error ? (
+                 <div className="space-y-5">
+                   <div className="text-7xl opacity-70 mb-2">⚠️</div>
+                   <p className="text-amber-400 font-black text-xl md:text-2xl leading-snug max-w-md mx-auto">{error}</p>
+                   <p className="text-slate-400 font-bold text-base max-w-sm mx-auto">
+                     Podés reintentar con una palabra clave más amplia o esperar unos segundos y volver a buscar.
+                   </p>
+                   <button
+                     onClick={() => { playClick(); setError(null); }}
+                     className="btn-3d btn-white !py-3 !px-6 text-sm font-black mt-2"
+                   >
+                     ✖ Cerrar error
+                   </button>
+                 </div>
+               ) : query && !loading ? (
                  <div className="space-y-4">
                    <div className="text-7xl opacity-50 mb-2">🌵</div>
                    <p className="text-slate-550 dark:text-slate-400 font-black text-2xl">No encontramos oro para esta búsqueda.</p>
@@ -691,7 +705,7 @@ export default function BuscadorDeOro() {
         </div>
 
         {/* Columna Derecha / Sidebar (Estadísticas y Surtidor de Búsquedas) - lg:col-span-4 */}
-        <div className="lg:col-span-4 w-full flex flex-col gap-6 lg:sticky lg:top-48">
+        <div className="lg:col-span-4 w-full flex flex-col gap-6 lg:sticky lg:top-8">
           
           {/* Panel Estadísticas del Jugador */}
           <div className="card-3d bg-white dark:bg-slate-800 p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 shadow-sm flex flex-col gap-4">

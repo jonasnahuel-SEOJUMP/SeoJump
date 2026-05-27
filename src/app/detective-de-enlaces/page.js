@@ -257,7 +257,7 @@ export default function DetectiveDeEnlaces() {
       />
 
       {/* ─── MAIN CONTENT ─── */}
-      <div className="w-full flex flex-wrap lg:flex-nowrap gap-8 items-start mt-16">
+      <div className="w-full flex flex-wrap lg:flex-nowrap gap-8 items-start mt-4">
 
         {/* LEFT: Owl panel */}
         <div className="w-full lg:w-[320px] flex-shrink-0 flex flex-col gap-6 lg:sticky lg:top-44">

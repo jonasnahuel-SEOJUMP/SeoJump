@@ -26,7 +26,7 @@ export default function Header({
   };
 
   return (
-    <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 sticky top-4 z-10 transition-colors duration-300 shadow-sm max-w-7xl mx-auto">
+    <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 relative z-10 transition-colors duration-300 shadow-sm max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-2">
         {isDashboard ? (
           <span className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
