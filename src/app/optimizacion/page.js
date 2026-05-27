@@ -118,6 +118,7 @@ export default function Optimizacion() {
   const [verifyingQuickWinIndex, setVerifyingQuickWinIndex] = useState(null);
   const [verifyQuickWinResult, setVerifyQuickWinResult] = useState({});
   const [completedQuickWins, setCompletedQuickWins] = useState(new Set());
+  const [isQuickWinsMock, setIsQuickWinsMock] = useState(false);
   const [xpPopup, setXpPopup] = useState(null);
   const [activeTab, setActiveTab] = useState("quickwins");
 
@@ -272,6 +273,7 @@ export default function Optimizacion() {
         .then(res => {
           if (res.success && res.quickWins) {
             setQuickWins(res.quickWins);
+            setIsQuickWinsMock(!!res.isMockData);
             localStorage.setItem("seojump_quick_wins", JSON.stringify(res.quickWins));
           } else {
             setQuickWinsError(res.error || "No se pudieron obtener oportunidades rápidas.");
@@ -567,6 +569,29 @@ export default function Optimizacion() {
                     </div>
                   ) : quickWins.length > 0 ? (
                     <div className="space-y-6">
+                      {isQuickWinsMock && (
+                        <div className="card-3d bg-amber-950/40 border-2 border-amber-500/50 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                          <div className="text-left flex-1 space-y-2">
+                            <h3 className="text-xl font-black text-amber-400">¡Modo Simulación! ⚠️</h3>
+                            <p className="text-slate-300 font-bold text-sm">Estas oportunidades son de prueba. Para ver tus datos reales de posiciones, clics e impresiones, conectá tu cuenta de Search Console.</p>
+                          </div>
+                          <button
+                            onClick={() => {
+                              playClick();
+                              signIn("google", {
+                                callbackUrl: "/optimizacion",
+                                authorizationParams: {
+                                  scope: "openid email profile https://www.googleapis.com/auth/webmasters"
+                                }
+                              });
+                            }}
+                            className="btn-3d btn-green whitespace-nowrap !py-3 font-black text-sm md:text-base flex-shrink-0"
+                          >
+                            CONECTAR SEARCH CONSOLE
+                          </button>
+                        </div>
+                      )}
+                      
                       {quickWins.map((qw, index) => {
                         const isCompleted = completedQuickWins.has(qw.page);
                         const verifyResult = verifyQuickWinResult[index] || {};

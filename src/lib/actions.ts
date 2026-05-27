@@ -1093,13 +1093,17 @@ export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
       .filter(Boolean)
       .join(" | ") || "Nicho de negocio general";
 
+    let isMockData = false;
     let gscRows: any[] = [];
     if (session?.accessToken) {
       try {
         gscRows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined, 100);
       } catch (err: any) {
         console.warn("Fallo al obtener datos de GSC para Quick Wins:", err.message);
+        isMockData = true;
       }
+    } else {
+      isMockData = true;
     }
 
     let candidates = gscRows.filter(row => {
@@ -1295,11 +1299,7 @@ ${JSON.stringify(opportunities, null, 2)}
       return { success: false, error: "Error al interpretar la respuesta de la IA." };
     }
 
-    return {
-      success: true,
-      quickWins: parsed
-    };
-
+    return { success: true, quickWins: parsed, isMockData };
   } catch (error: any) {
     console.error("Error en getQuickWins:", error);
     // Build user-friendly error message
@@ -1314,7 +1314,8 @@ ${JSON.stringify(opportunities, null, 2)}
     }
     return {
       success: false,
-      error: userMessage
+      error: userMessage,
+      stack: error.stack
     };
   }
 }
