@@ -107,7 +107,7 @@ function logErrorToFile(actionName: string, input: any, status: string | number,
  * Realiza una llamada directa a la API REST de Google Gemini, omitiendo el SDK.
  */
 async function callGeminiREST(apiKey: string, promptText: string): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
   console.log(`[API REST Debug] Llamando directamente a Gemini REST API...`);
   
   const response = await fetch(url, {
@@ -904,10 +904,10 @@ Reglas estrictas de generación:
 
     while (attempt < maxRetries) {
       try {
-        console.log(`Initializing GoogleGenerativeAI (Attempt ${attempt + 1}/${maxRetries}) using model: models/gemini-1.5-flash`);
+        console.log(`Initializing GoogleGenerativeAI (Attempt ${attempt + 1}/${maxRetries}) using model: models/gemini-2.0-flash`);
         const genAI = new GoogleGenerativeAI(apiKey);
         const model = genAI.getGenerativeModel({
-          model: "models/gemini-1.5-flash"
+          model: "models/gemini-2.0-flash"
         });
 
         // Intercept global fetch to log SDK requests
@@ -1230,10 +1230,10 @@ Oportunidades a analizar:
 ${JSON.stringify(opportunities, null, 2)}
 `;
 
-    console.log("[API Debug QuickWins] Initializing GoogleGenerativeAI using model: models/gemini-1.5-flash");
+    console.log("[API Debug QuickWins] Initializing GoogleGenerativeAI using model: models/gemini-2.0-flash");
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({
-      model: "models/gemini-1.5-flash"
+      model: "models/gemini-2.0-flash"
     });
 
     let responseText = "";
