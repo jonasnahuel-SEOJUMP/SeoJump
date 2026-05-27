@@ -961,10 +961,19 @@ Reglas estrictas de generación:
         );
         
         if (attempt >= maxRetries) {
+          // Build user-friendly error message instead of raw API JSON
+          let userMessage = "";
+          const errMsg = String(geminiErr.message || geminiErr).toLowerCase();
+          if (geminiErr.status === 429 || errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
+            userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
+          } else if (geminiErr.status === 404 || errMsg.includes("404") || errMsg.includes("not found")) {
+            userMessage = "El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.";
+          } else {
+            userMessage = "Error temporal al conectar con la IA. Intentá de nuevo en unos segundos.";
+          }
           return { 
             success: false, 
-            error: `Gemini API Call Failed: [Status: ${geminiErr.status || "unknown"}] - ${geminiErr.message || geminiErr}`,
-            stack: geminiErr.stack
+            error: userMessage
           };
         }
         
@@ -1293,9 +1302,19 @@ ${JSON.stringify(opportunities, null, 2)}
 
   } catch (error: any) {
     console.error("Error en getQuickWins:", error);
+    // Build user-friendly error message
+    const errMsg = String(error.message || error).toLowerCase();
+    let userMessage = "";
+    if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
+      userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
+    } else if (errMsg.includes("404") || errMsg.includes("not found")) {
+      userMessage = "El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.";
+    } else {
+      userMessage = "Error temporal al conectar con la IA. Intentá de nuevo en unos segundos.";
+    }
     return {
       success: false,
-      error: `Error inesperado: ${error.message}`
+      error: userMessage
     };
   }
 }
