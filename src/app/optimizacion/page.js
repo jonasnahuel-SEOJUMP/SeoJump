@@ -254,12 +254,8 @@ export default function Optimizacion() {
     }
   }, [session, status, router]);
 
-  // Lock protection: redirect if Phase 3 is locked
-  useEffect(() => {
-    if (prog && !prog.p3.unlocked) {
-      router.push("/buscador-de-oro");
-    }
-  }, [prog, router]);
+  // Eliminamos la protección global para permitir el acceso a Quick Wins (Gancho inicial)
+  // Las misiones de Fase 3 seguirán bloqueadas visualmente en la pestaña correspondiente.
 
   // Load Quick Wins when siteUrl is available
   useEffect(() => {
@@ -524,16 +520,26 @@ export default function Optimizacion() {
                   >
                     🚀 Oportunidades de Venta (Quick Wins)
                   </button>
-                  <button
-                    onClick={() => { playClick(); setActiveTab("missions"); }}
-                    className={`px-5 py-2.5 rounded-full font-black text-xs md:text-sm border-2 transition-all duration-300 flex items-center gap-2 ${
-                      activeTab === "missions"
-                        ? "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-400 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)] scale-105"
-                        : "bg-slate-800/40 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-white"
-                    }`}
-                  >
-                    🛠️ Misiones de Optimización
-                  </button>
+                  {prog?.p3?.unlocked ? (
+                    <button
+                      onClick={() => { playClick(); setActiveTab("missions"); }}
+                      className={`px-5 py-2.5 rounded-full font-black text-xs md:text-sm border-2 transition-all duration-300 flex items-center gap-2 ${
+                        activeTab === "missions"
+                          ? "bg-gradient-to-r from-emerald-500 to-teal-500 border-emerald-400 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.3)] scale-105"
+                          : "bg-slate-800/40 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-white"
+                      }`}
+                    >
+                      🛠️ Misiones de Optimización
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="px-5 py-2.5 rounded-full font-black text-xs md:text-sm border-2 bg-slate-800/40 border-slate-700 text-slate-500 cursor-not-allowed flex items-center gap-2"
+                      title="Completá las fases anteriores para desbloquear las misiones"
+                    >
+                      🔒 Misiones (Bloqueado)
+                    </button>
+                  )}
                 </div>
               </div>
 
