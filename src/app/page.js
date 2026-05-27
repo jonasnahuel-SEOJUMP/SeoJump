@@ -467,6 +467,14 @@ export default function Home() {
     );
   }
 
+  // Compute current phase info for dynamic title
+  const currentPhaseInfo = (() => {
+    if (prog?.p4?.unlocked) return { title: "Fase 4: Indexación", emoji: "🕵️‍♂️" };
+    if (prog?.p3?.unlocked) return { title: "Fase 3: Optimización On-Page", emoji: "🛠️" };
+    if (prog?.p2?.unlocked) return { title: "Fase 2: Contenido", emoji: "✍️" };
+    return { title: "Fase 1: Búsqueda", emoji: "🔍" };
+  })();
+
   return (
     <div className={`min-h-screen bg-transparent flex flex-col items-center ${step < 6 ? 'justify-center' : 'justify-start'} px-4 py-8 md:p-8 w-full font-fredoka relative transition-colors duration-300 text-slate-100 ${step < 6 ? 'max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto border-x dark:border-slate-800 shadow-2xl' : ''}`}>
       
@@ -849,12 +857,12 @@ export default function Home() {
                    </div>
                  </div>
                  
-                 <div className="flex items-center justify-between w-full gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-3">
+                 <div className="flex items-center justify-between w-full gap-4 border-t border-slate-100 dark:border-slate-700/50 pt-3 flex-wrap">
                    <div className="flex items-center gap-1.5 flex-shrink-0">
                       <span className="text-3xl">🔥</span>
                       <span className="text-2xl lg:text-3xl font-black text-orange-500">{Math.floor(xp / 100) + 1}</span>
                    </div>
-                   <div className="flex items-center gap-3">
+                   <div className="flex items-center gap-2 md:gap-3 flex-wrap">
                      <Link
                        href="/blog"
                        onClick={playClick}
@@ -945,7 +953,8 @@ export default function Home() {
                 
                 {step === 6 && (
                   <div className="w-full space-y-6 animate-in fade-in duration-300">
-                    <h2 className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100">Fase 3: Optimización On-Page 🛠️</h2>
+                    <h2 className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100">Tus Misiones SEO 🎯</h2>
+                    <p className="text-base lg:text-lg font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2">{currentPhaseInfo.emoji} Progreso actual: {currentPhaseInfo.title}</p>
 
                     {/* --- QUICK WINS HIGHLIGHT (EL GANCHO) --- */}
                     <QuickWinsHighlight 
