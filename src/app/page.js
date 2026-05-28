@@ -538,7 +538,7 @@ export default function Home() {
               <div className="space-y-5">
                 <div className="text-6xl">🏆</div>
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.1]">
-                  Dejá de tirar plata en agencias.{" "}
+                  Convertí tu web en una máquina de atraer clientes.{" "}
                   <span className="text-duo-green">Tomá el control</span> de tu SEO{" "}
                   <span className="text-duo-yellow">jugando.</span>
                 </h1>
