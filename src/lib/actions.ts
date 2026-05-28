@@ -146,6 +146,15 @@ async function callGeminiREST(apiKey: string, promptText: string): Promise<strin
 /**
  * Mission type definitions.
  * We rotate through types to give the user variety.
+ *
+ * pistas structure (bifurcated, fail-safe):
+ * {
+ *   classic: string[]    — Steps for classic WordPress editor
+ *   visual:  string[]    — Steps for Elementor / UX Builder / Divi
+ *   cacheWarning: boolean — Whether to show the cache purge reminder
+ *   videoUrl?: string    — Future: link to Loom/GIF demo (inject when ready)
+ *   gifUrl?:  string     — Future: inline GIF demo
+ * }
  */
 const buildMissionTypes = (goldKeyword?: string) => [
   {
@@ -158,18 +167,28 @@ const buildMissionTypes = (goldKeyword?: string) => [
     xp: 50,
     icon: 'H1',
     color: 'green',
-    pistas: goldKeyword
-      ? [
-          `1. Entrar al UX Builder desde la página a editar.`,
-          `2. Ubicar el elemento de título principal y cambiar su etiqueta a H1.`,
-          `3. Asegurate de que el H1 contenga la frase «${goldKeyword}» de forma natural.`,
-          `4. Aplicar el cambio (Apply) y Guardar (Update).`,
-        ]
-      : [
-          "1. Entrar al UX Builder desde la página a editar.",
-          "2. Ubicar el elemento de texto o título y abrir sus opciones.",
-          "3. Cambiar la etiqueta a H1, aplicar el cambio (Apply) y Guardar (Update).",
-        ],
+    pistas: {
+      classic: [
+        `Andá a tu panel de WordPress → Páginas (o Entradas) → hacé clic en Editar en la página que aparece arriba.`,
+        `Buscá el título grande que está arriba del contenido (es el H1 por defecto en la mayoría de los temas).`,
+        goldKeyword
+          ? `Reemplazalo por un texto que incluya «${goldKeyword}» de forma natural. Ejemplo: «${goldKeyword} – [Tu marca]».`
+          : `Reemplazalo por un texto claro y descriptivo que le diga a Google de qué trata la página.`,
+        `Hacé clic en el botón azul Actualizar (arriba a la derecha) para guardar.`,
+      ],
+      visual: [
+        `Abrí la página con tu constructor visual (Elementor, UX Builder o Divi) → hacé clic en Editar con [tu constructor].`,
+        `Hacé clic en el elemento de texto que es el título principal de la página.`,
+        `En el panel de la derecha (o en la barra de opciones del elemento), buscá la opción Etiqueta HTML y asegurate de que diga H1.`,
+        goldKeyword
+          ? `Cambiá el texto por uno que incluya «${goldKeyword}». Luego hacé clic en Aplicar (Apply).`
+          : `Cambiá el texto por uno claro y descriptivo. Luego hacé clic en Aplicar (Apply).`,
+        `Hacé clic en Guardar / Publicar (botón verde o azul) para que el cambio quede en vivo.`,
+      ],
+      cacheWarning: true,
+      videoUrl: undefined, // TODO: agregar link de Loom cuando esté listo
+      gifUrl: undefined,   // TODO: agregar GIF demostrativo cuando esté listo
+    },
   },
   {
     type: 'META',
@@ -181,18 +200,28 @@ const buildMissionTypes = (goldKeyword?: string) => [
     xp: 60,
     icon: '📝',
     color: 'yellow',
-    pistas: goldKeyword
-      ? [
-          `1. Entrar a editar la página en WordPress (Editor normal).`,
-          `2. Bajar hasta la sección del plugin SEO y buscar 'Meta descripción'.`,
-          `3. Escribir un texto de hasta 160 caracteres que incluya «${goldKeyword}» y un llamado a la acción.`,
-          `4. Hacer clic en Guardar o Actualizar.`,
-        ]
-      : [
-          "1. Entrar a editar la página en WordPress (Editor normal).",
-          "2. Bajar hasta la sección del plugin SEO y buscar 'Meta descripción'.",
-          "3. Escribir el nuevo texto y hacer clic en Guardar o Actualizar.",
-        ],
+    pistas: {
+      classic: [
+        `Editá la página desde WordPress → Páginas → Editar.`,
+        `Bajá hasta la sección de tu plugin SEO (Yoast SEO, Rank Math o similar). Buscá la caja que dice Meta Descripción o Snippet.`,
+        goldKeyword
+          ? `Escribí un texto de hasta 160 caracteres que incluya «${goldKeyword}» y un llamado a la acción. Ej: «Encontrá los mejores productos de ${goldKeyword}. Envío a todo el país. ¡Comprá hoy!».`
+          : `Escribí un texto de hasta 160 caracteres, atractivo y con un llamado a la acción claro.`,
+        `Hacé clic en Actualizar para guardar el cambio.`,
+      ],
+      visual: [
+        `Abrí tu constructor visual y editá la página.`,
+        `Buscá la sección de Configuración de la página (generalmente un ícono de engranaje ⚙️ o en el menú del constructor).`,
+        `Dentro de esa sección vas a encontrar la pestaña SEO o Meta. Hacé clic en ella.`,
+        goldKeyword
+          ? `Pegá tu texto de Meta Descripción con «${goldKeyword}» en la caja correspondiente.`
+          : `Pegá tu nuevo texto de Meta Descripción en la caja correspondiente.`,
+        `Guardá y publicá los cambios.`,
+      ],
+      cacheWarning: true,
+      videoUrl: undefined,
+      gifUrl: undefined,
+    },
   },
   {
     type: 'ALT',
@@ -204,18 +233,30 @@ const buildMissionTypes = (goldKeyword?: string) => [
     xp: 40,
     icon: '🖼️',
     color: 'blue',
-    pistas: goldKeyword
-      ? [
-          `1. Entrar al UX Builder desde la página a editar.`,
-          `2. Ubicar la imagen, hacer doble clic y buscar 'Texto Alternativo' (Alt Text).`,
-          `3. Escribir una descripción que incluya «${goldKeyword}» (ej: «${goldKeyword} en uso»).`,
-          `4. Presionar Apply y luego Guardar (Update).`,
-        ]
-      : [
-          "1. Entrar al UX Builder desde la página a editar.",
-          "2. Ubicar la imagen, hacer doble clic y buscar 'Texto Alternativo' (Alt Text).",
-          "3. Escribir la descripción de la imagen, presionar Apply y luego Guardar (Update).",
-        ],
+    pistas: {
+      classic: [
+        `Editá la página desde WordPress → Páginas (o Entradas) → Editar.`,
+        `Hacé clic en la imagen que querés editar.`,
+        `En el menú que aparece a la derecha, buscá la caja que dice Texto Alternativo.`,
+        goldKeyword
+          ? `Pegá tu palabra clave: ej. «${goldKeyword} siendo aplicado en auto».`
+          : `Escribí una descripción breve de lo que muestra la imagen.`,
+        `Hacé clic en Actualizar para guardar.`,
+      ],
+      visual: [
+        `Abrí tu constructor visual y editá la página.`,
+        `Hacé clic en la imagen (o en el banner de fondo si es una imagen de fondo).`,
+        `Buscá el botón Cambiar Medio (Change Media) o el ícono de engranaje ⚙️ del elemento.`,
+        `Una vez que se abra la biblioteca de fotos, pegá el texto en la caja Texto Alternativo que aparece a la derecha.`,
+        goldKeyword
+          ? `Escribí algo como: «${goldKeyword} siendo aplicado en auto rojo».`
+          : `Escribí una descripción breve de lo que muestra la imagen.`,
+        `Hacé clic en Aplicar (Apply) y luego Guardar / Publicar.`,
+      ],
+      cacheWarning: true,
+      videoUrl: undefined,
+      gifUrl: undefined,
+    },
   },
 ]
 

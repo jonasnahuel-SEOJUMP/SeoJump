@@ -82,6 +82,95 @@ const getMissionDisplay = (mission, goldKeyword) => {
   };
 };
 
+// ─── PistaDeBoxes ─────────────────────────────────────────────────────────────
+// Bifurcated step-by-step component. Prepared for future video/GIF injection.
+function PistaDeBoxes({ pistas, playClick }) {
+  const [activeTab, setActiveTab] = useState('classic'); // 'classic' | 'visual'
+  const [open, setOpen] = useState(false);
+
+  if (!pistas) return null;
+
+  const tabs = [
+    { key: 'classic', label: '🖥️ Editor Clásico', steps: pistas.classic },
+    { key: 'visual',  label: '🎨 Constructor Visual', steps: pistas.visual },
+  ];
+
+  return (
+    <div className="w-full">
+      {/* Toggle button */}
+      <button
+        onClick={() => { if (playClick) playClick(); setOpen(!open); }}
+        className="text-base lg:text-lg text-slate-500 font-black hover:text-duo-blue transition-colors inline-flex items-center gap-1.5 w-full text-right justify-end"
+      >
+        💡 ¿Cómo lo soluciono?
+        <span className="text-sm">{open ? '▲' : '▼'}</span>
+      </button>
+
+      {/* Panel */}
+      <div className={`overflow-hidden transition-all duration-300 ease-in-out text-left mt-2 ${open ? 'max-h-[600px] opacity-100' : 'max-h-0 opacity-0'}`}>
+        <div className="bg-slate-800 rounded-2xl border-2 border-slate-700 shadow-inner overflow-hidden">
+
+          {/* Future video/GIF slot — uncomment when ready */}
+          {/* pistas.videoUrl && (
+            <div className="border-b border-slate-700 p-4">
+              <a href={pistas.videoUrl} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 text-cyan-400 font-black hover:underline">
+                ▶️ Ver demo en video (2 min)
+              </a>
+            </div>
+          ) */}
+
+          {/* Tab Selector */}
+          <div className="flex border-b border-slate-700">
+            {tabs.map(tab => (
+              <button
+                key={tab.key}
+                onClick={() => { if (playClick) playClick(); setActiveTab(tab.key); }}
+                className={`flex-1 py-3 px-4 text-sm font-black transition-colors ${
+                  activeTab === tab.key
+                    ? 'bg-slate-700 text-white border-b-2 border-duo-blue'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-750'
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Steps */}
+          <div className="p-5 space-y-3">
+            <h4 className="text-duo-yellow font-black text-sm uppercase tracking-wider mb-3">
+              Paso a paso:
+            </h4>
+            <ol className="space-y-3">
+              {(tabs.find(t => t.key === activeTab)?.steps || []).map((step, idx) => (
+                <li key={idx} className="flex gap-3 items-start">
+                  <span className="flex-shrink-0 w-6 h-6 rounded-full bg-duo-blue text-white text-xs font-black flex items-center justify-center mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <span className="text-slate-200 text-sm lg:text-base font-bold leading-snug">{step}</span>
+                </li>
+              ))}
+            </ol>
+
+            {/* Cache Warning */}
+            {pistas.cacheWarning && (
+              <div className="mt-4 p-4 bg-amber-900/30 border border-amber-600/50 rounded-xl flex gap-3 items-start">
+                <span className="text-xl flex-shrink-0">⚠️</span>
+                <p className="text-amber-300 text-sm font-bold leading-snug">
+                  <strong className="font-black">Paso Final Obligatorio:</strong>{' '}
+                  Si usás un plugin de caché (WP Rocket, LiteSpeed, SG Optimizer), hacé clic en{' '}
+                  <strong>"Borrar Caché"</strong> en la barra superior antes de validar la misión acá.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Optimizacion() {
   const { data: session, status } = useSession();
   const { isMuted, toggleMute, playClick, playThemeToggle, playSuccess, playLevelUp } = useAudio();
@@ -844,26 +933,10 @@ export default function Optimizacion() {
                 </div>
               </div>
 
-              {/* Help Hints */}
-              <div className="w-full text-right">
-                <button onClick={() => { playClick(); setShowHelp(!showHelp); }}
-                  className="text-base lg:text-lg text-slate-500 font-black hover:text-duo-blue transition-colors inline-flex items-center gap-1.5">
-                  💡 ¿Cómo lo soluciono?
-                </button>
-                <div className={`overflow-hidden transition-all duration-300 ease-in-out text-left mt-2 ${showHelp ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'}`}>
-                  <div className="bg-slate-800 p-6 rounded-2xl border-2 border-slate-700 shadow-inner">
-                    <h4 className="text-duo-yellow font-black mb-3 text-base lg:text-lg uppercase tracking-wide">Pasos sugeridos:</h4>
-                    <ul className="space-y-3">
-                      {selectedMission.pistas?.map((pista, idx) => (
-                        <li key={idx} className="text-slate-300 text-base lg:text-lg font-bold flex gap-2">
-                          <span className="text-duo-blue flex-shrink-0">{pista.charAt(0)}</span>
-                          <span>{pista.substring(2)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </div>
-              </div>
+              {/* Help Hints — Pista de Boxes Bifurcada */}
+              {selectedMission?.pistas && typeof selectedMission.pistas === 'object' && !Array.isArray(selectedMission.pistas) && (
+                <PistaDeBoxes pistas={selectedMission.pistas} playClick={playClick} />
+              )}
 
               {/* Mission Input */}
               <div className="card-3d bg-white dark:bg-slate-800 space-y-6 p-6 md:p-8">
@@ -920,18 +993,19 @@ export default function Optimizacion() {
                   <div className="bg-slate-800 border-2 border-slate-600 rounded-2xl p-5 text-base font-bold text-slate-355 flex items-start gap-4">
                     <span className="text-2xl flex-shrink-0">🏎️</span>
                     <div>
-                      <p className="font-black text-slate-100 mb-1.5">Pista de Boxes:</p>
+                      <p className="font-black text-slate-100 mb-1.5">¿Dónde lo edito en mi WordPress?</p>
                       {selectedMission.page.includes('/producto/') || selectedMission.page.includes('/product/')
-                        ? <p>Este contenido está en un <span className="text-duo-yellow font-black">PRODUCTO de WooCommerce</span>. Editalo desde <strong>Productos → Todos los productos</strong>.</p>
+                        ? <p>Este contenido está en un <span className="text-duo-yellow font-black">PRODUCTO de WooCommerce</span>. Andá a <strong>Productos → Todos los productos</strong> y hacé clic en Editar.</p>
                         : selectedMission.page.includes('/blog/') || selectedMission.page.includes('/entrada/')
-                        ? <p>Este contenido es una <span className="text-duo-blue font-black">ENTRADA de Blog</span>. Editala desde <strong>Entradas → Todas las entradas</strong>.</p>
+                        ? <p>Este contenido es una <span className="text-duo-blue font-black">ENTRADA de Blog</span>. Andá a <strong>Entradas → Todas las entradas</strong> y hacé clic en Editar.</p>
                         : selectedMission.page.includes('/categoria-producto/') || selectedMission.page.includes('/categoria/')
-                        ? <p>Este contenido es una <span className="text-purple-400 font-black">CATEGORÍA de Tienda</span>. Editala desde <strong>Productos → Categorías</strong>.</p>
-                        : <p>Este contenido es una <span className="text-green-400 font-black">PÁGINA Estática</span>. Editala desde <strong>Páginas → Todas las páginas</strong>.</p>
+                        ? <p>Este contenido es una <span className="text-purple-400 font-black">CATEGORÍA de Tienda</span>. Andá a <strong>Productos → Categorías</strong> y editá la categoría correspondiente.</p>
+                        : <p>Este contenido es una <span className="text-green-400 font-black">PÁGINA Estática</span>. Andá a <strong>Páginas → Todas las páginas</strong> y hacé clic en Editar.</p>
                       }
                     </div>
                   </div>
                 )}
+
 
                 <button
                   onClick={() => { playClick(); checkMission(); }}
