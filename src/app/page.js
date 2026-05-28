@@ -51,10 +51,10 @@ function QuickWinsHighlight({ quickWins, completedQuickWins, playClick, router }
   if (pendingWins.length === 0) return null;
 
   return (
-    <div className="w-full mb-8 relative rounded-3xl overflow-hidden border-2 border-amber-500/40 bg-gradient-to-r from-violet-950/80 via-purple-900/80 to-slate-900/90 p-6 md:p-8 shadow-[0_0_40px_rgba(139,92,246,0.3)] animate-pulse-glow hover:scale-[1.01] transition-transform duration-300">
-      <div className="absolute inset-0 bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 opacity-50"></div>
+    <div className="w-full mb-8 relative rounded-3xl border-2 border-amber-500/40 bg-gradient-to-r from-violet-950/80 via-purple-900/80 to-slate-900/90 p-6 md:p-8 shadow-[0_0_40px_rgba(139,92,246,0.3)] animate-pulse-glow hover:scale-[1.01] transition-transform duration-300">
+      <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 opacity-50"></div>
       <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
-        <div className="text-left space-y-2 flex-1">
+        <div className="text-left space-y-2 flex-1 min-w-0">
           <h2 className="text-xl md:text-2xl lg:text-3xl font-black text-white flex items-center gap-2">
             🚀 Oportunidades: {pendingWins.length} detectadas
           </h2>
@@ -68,7 +68,7 @@ function QuickWinsHighlight({ quickWins, completedQuickWins, playClick, router }
             playClick();
             router.push("/optimizacion");
           }}
-          className="btn-3d btn-yellow w-full lg:w-auto !text-sm md:!text-base font-black px-6 py-3.5 whitespace-nowrap animate-bounce flex-shrink-0 mt-2 lg:mt-0"
+          className="btn-3d btn-yellow w-full lg:w-auto !text-sm md:!text-base font-black px-6 py-3.5 whitespace-nowrap flex-shrink-0 mt-2 lg:mt-0"
         >
           VER OPORTUNIDADES
         </button>
