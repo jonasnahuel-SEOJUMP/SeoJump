@@ -1062,6 +1062,22 @@ Reglas estrictas de generación:
   }
 }
 
+// ─── Home-page safety helper ───────────────────────────────────────────────
+// Returns true if the URL is the root / home page of the domain.
+function isHomePage(pageUrl: string, siteUrl: string): boolean {
+  try {
+    const page = new URL(pageUrl);
+    const site = new URL(siteUrl);
+    // Same host and pathname is '/', '' or equals the site pathname root
+    return page.hostname === site.hostname &&
+      (page.pathname === '/' || page.pathname === '' || page.pathname === site.pathname);
+  } catch {
+    // Fallback: string comparison
+    const norm = (u: string) => u.replace(/\/$/, '').toLowerCase();
+    return norm(pageUrl) === norm(siteUrl);
+  }
+}
+
 export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
   const urlSanit = sanitizeInput(siteUrl, 'url');
   if (!urlSanit.isValid) {
@@ -1135,30 +1151,44 @@ export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
 
     if (opportunities.length < 3) {
       const niche = inferredNicho || 'general';
-      
+
+      // ── Home-page safe keyword: never inject raw product keyword for the Home ──
+      // The home should represent the brand/category, not a specific product.
+      const homeNicheKeyword = (() => {
+        const nicheMap: Record<string, string> = {
+          'detailing vehicular': 'tienda de car detailing',
+          'calzado': 'zapatería online argentina',
+          'indumentaria': 'ropa de diseño argentina',
+          'gastronomía': 'restaurant y delivery',
+          'general': 'tienda online argentina',
+        };
+        return nicheMap[niche] || nicheMap['general'];
+      })();
+
       const fallbackTemplates: any = {
         'detailing vehicular': [
-          { path: '', keyword: cleanGoldKeyword || 'detailing profesional', pos: 9.4, cl: 15, imp: 240 },
+          // ⚠️ Home: uses brand/category keyword, NOT raw goldKeyword
+          { path: '', keyword: homeNicheKeyword, pos: 9.4, cl: 15, imp: 240 },
           { path: '/servicios', keyword: cleanGoldKeyword ? `${cleanGoldKeyword} premium` : 'limpieza de tapizados', pos: 11.2, cl: 8, imp: 180 },
           { path: '/productos', keyword: cleanGoldKeyword ? `comprar ${cleanGoldKeyword}` : 'cera para autos importada', pos: 13.8, cl: 3, imp: 95 }
         ],
         'calzado': [
-          { path: '', keyword: cleanGoldKeyword || 'calzado de cuero hombre', pos: 8.7, cl: 25, imp: 310 },
+          { path: '', keyword: homeNicheKeyword, pos: 8.7, cl: 25, imp: 310 },
           { path: '/botas', keyword: cleanGoldKeyword ? `${cleanGoldKeyword} de cuero` : 'botas de cuero mujer', pos: 10.5, cl: 12, imp: 190 },
           { path: '/zapatillas', keyword: cleanGoldKeyword ? `${cleanGoldKeyword} urbanas` : 'zapatillas urbanas comodas', pos: 14.2, cl: 4, imp: 110 }
         ],
         'indumentaria': [
-          { path: '', keyword: cleanGoldKeyword || 'ropa de diseño argentina', pos: 9.1, cl: 18, imp: 270 },
+          { path: '', keyword: homeNicheKeyword, pos: 9.1, cl: 18, imp: 270 },
           { path: '/remeras', keyword: cleanGoldKeyword ? `${cleanGoldKeyword} de algodon` : 'remeras estampadas algodon', pos: 12.0, cl: 9, imp: 150 },
           { path: '/camperas', keyword: cleanGoldKeyword ? `comprar ${cleanGoldKeyword}` : 'camperas de abrigo impermeable', pos: 13.5, cl: 3, imp: 80 }
         ],
         'gastronomía': [
-          { path: '', keyword: cleanGoldKeyword || 'restaurant comida casera', pos: 8.9, cl: 22, imp: 290 },
+          { path: '', keyword: homeNicheKeyword, pos: 8.9, cl: 22, imp: 290 },
           { path: '/menu', keyword: cleanGoldKeyword ? `platos de ${cleanGoldKeyword}` : 'platos del dia precios', pos: 10.8, cl: 11, imp: 170 },
           { path: '/reserva', keyword: cleanGoldKeyword ? `reservar ${cleanGoldKeyword}` : 'reservar mesa cena online', pos: 13.1, cl: 4, imp: 90 }
         ],
         'general': [
-          { path: '', keyword: cleanGoldKeyword || 'comprar online envio gratis', pos: 9.8, cl: 14, imp: 220 },
+          { path: '', keyword: homeNicheKeyword, pos: 9.8, cl: 14, imp: 220 },
           { path: '/productos', keyword: cleanGoldKeyword ? `${cleanGoldKeyword} con descuento` : 'productos con descuento', pos: 11.5, cl: 7, imp: 130 },
           { path: '/contacto', keyword: cleanGoldKeyword ? `contacto para ${cleanGoldKeyword}` : 'atencion al cliente inmediata', pos: 14.0, cl: 2, imp: 75 }
         ]
@@ -1181,7 +1211,8 @@ export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
           }
           opportunities.push({
             page: pageUrl,
-            keyword: t.keyword,
+            // ⚠️ Hard-coded safety: Home always gets the brand/category keyword
+            keyword: isHomePage(pageUrl, cleanSiteUrl) ? homeNicheKeyword : t.keyword,
             clicks: t.cl,
             impressions: t.imp,
             position: t.pos,
@@ -1200,6 +1231,9 @@ export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
       return { success: false, error: "GEMINI_API_KEY no configurada en las variables de entorno." };
     }
 
+    // ── Build domain info for the prompt (e.g. "55detailshop.com.ar") ──
+    const domainName = (() => { try { return new URL(cleanSiteUrl).hostname; } catch { return cleanSiteUrl; } })();
+
     const systemInstructions = `
 Actúas como un socio de negocios y consultor de ventas entusiasmado y experto en optimización web (SEO). Tu tono debe ser profesional pero entusiasmado, como un socio de negocios que acaba de encontrar una excelente noticia para el usuario.
 Analizarás un conjunto de 3 oportunidades de páginas web que están cerca del éxito, posicionando en Google en el rango de posiciones 8 a 15 (cerca del Top 3).
@@ -1210,18 +1244,33 @@ Tu única misión es:
    - "suggestedTitle": Un nuevo título comercial, atractivo y persuasivo que actúe como un "Contenido ganador" para convencer tanto a Google como a los usuarios y subir al Top 3.
    - "explanation": Breve diagnóstico de por qué Google no lo está posicionando mejor y qué lograrán con el cambio.
 
-Regla de la Página de Inicio (CRÍTICA):
-Antes de sugerir un título (suggestedTitle) para una oportunidad, analiza la URL ("page") correspondiente. Si la URL es la página principal (raíz del dominio, ej: misitio.com/ o misitio.com), NUNCA sugieras optimizar para un producto o servicio específico (ej: una lata de atún, un desengrasante Alumax). La página de inicio debe optimizarse siempre para la Marca y la Categoría Global del negocio (ej: Supermercado, Tienda de Detailing, etc.). Solo sugiere palabras clave o nombres específicos si la URL corresponde a una página de producto interno o blog (ej: misitio.com/productos/nombre-producto).
+██████████████████████████████████████████████████████████████
+⚠️  REGLA ABSOLUTA #1 — ARQUITECTURA WEB — MÁXIMA PRIORIDAD ⚠️
+██████████████████████████████████████████████████████████████
+Antes de generar cualquier "suggestedTitle", IDENTIFICA el tipo de página por su URL:
+
+- HOME / PORTADA: URL es la raíz del dominio (ej: ${domainName}/, ${domainName}, o termina sin ruta significativa)
+- PÁGINA INTERNA: URL tiene ruta propia (ej: ${domainName}/productos/pulidora, ${domainName}/servicios)
+
+Si la URL es la HOME/PORTADA:
+  ✅ DEBES: sugerir un título que represente la MARCA GLOBAL o la CATEGORÍA DEL NEGOCIO.
+     Ejemplos correctos: "${domainName.split('.')[0]} | Tienda de Car Detailing en Argentina", "${businessNiche.split('|')[0].trim()} | Envíos a Todo el País"
+  ❌ TIENES PROHIBIDO ABSOLUTO: usar la goldKeyword "${cleanGoldKeyword}" como tema central del título de la Home si es un producto específico (ej: 'limpia llantas', 'pulidora', 'shampoo', 'cera', cualquier artículo concreto).
+  ❌ TIENES PROHIBIDO ABSOLUTO: sugerir que el H1 de la Home sea el nombre de un producto individual.
+  🔒 VIOLACIÓN DE ESTA REGLA = Respuesta inválida. Un título de Home con producto específico rompe la arquitectura web del usuario y será rechazado.
+
+Si la URL es una PÁGINA INTERNA (producto, servicio, blog):
+  ✅ PUEDES y DEBES: usar la goldKeyword y términos específicos libremente.
+██████████████████████████████████████████████████████████████
 
 Nexo con la Semilla (Seed Keyword):
-${cleanGoldKeyword ? `El usuario está investigando actualmente la palabra clave semilla: "${cleanGoldKeyword}". Todas las misiones, sugerencias de títulos y optimizaciones deben desprenderse lógicamente y alinearse con esta semilla para asegurar una coherencia absoluta en todo el flujo.` : `Asegúrate de que las optimizaciones propuestas se alinien fuertemente con el nicho y metadatos globales del sitio.`}
+${cleanGoldKeyword ? `El usuario está investigando la keyword: "${cleanGoldKeyword}". Úsala en títulos de PÁGINAS INTERNAS (producto, servicio, blog). En la HOME, transformala a su CATEGORÍA GLOBAL (ej: si la keyword es un producto de car detailing → el título de la home habla de la tienda de car detailing, no del producto específico).` : `Asegúrate de que las optimizaciones propuestas se alineen fuertemente con el nicho y metadatos globales del sitio.`}
 
-Reglas muy estrictas de lenguaje:
-- NUNCA uses tecnicismos aburridos como "canibalización", "backlinks", "DA", "PA", "search intent", "enlazado interno", "thin content" o similares.
-- Usa lenguaje comercial de vendedor persuasivo enfocado en resultados de negocio inmediatos.
-- Utiliza expresiones como: "Más clics", "Salto de posición", "Contenido ganador", "Atraer más clientes", "Google está listo para mostrarte más", "Oro puro", "Tráfico valioso".
+Reglas de lenguaje:
+- NUNCA uses tecnicismos: "canibalización", "backlinks", "DA", "PA", "search intent", "enlazado interno", "thin content".
+- Usa lenguaje comercial: "Más clics", "Salto de posición", "Contenido ganador", "Atraer más clientes", "Google está listo para mostrarte más", "Oro puro", "Tráfico valioso".
 
-Devuelve la respuesta ESTRICTAMENTE en formato JSON con el siguiente esquema de array, sin bloques de código markdown (\`\`\`json ...) ni explicaciones adicionales:
+Devuelve la respuesta ESTRICTAMENTE en formato JSON con el siguiente esquema de array, sin bloques de código markdown ni explicaciones adicionales:
 [
   {
     "page": "URL exacta de la página",
@@ -1298,6 +1347,31 @@ ${JSON.stringify(opportunities, null, 2)}
       console.error("Error parseando JSON de Gemini para Quick Wins:", responseText, parseErr);
       return { success: false, error: "Error al interpretar la respuesta de la IA." };
     }
+
+    // ── POST-PROCESS SAFETY NET ─────────────────────────────────────────────
+    // Even if the AI ignored the rule, we correct any Home titles that still
+    // contain the raw goldKeyword as the main subject.
+    if (cleanGoldKeyword) {
+      const domainLabel = (() => { try { return new URL(cleanSiteUrl).hostname.split('.')[0]; } catch { return ''; } })();
+      const brandFallbackTitle = businessNiche.split('|')[0].trim() ||
+        `${domainLabel ? domainLabel.charAt(0).toUpperCase() + domainLabel.slice(1) + ' | ' : ''}Tienda Online`;
+
+      parsed = parsed.map((win: any) => {
+        if (!isHomePage(win.page, cleanSiteUrl)) return win; // Only apply to Home
+        const titleLower = (win.suggestedTitle || '').toLowerCase();
+        const kwLower = cleanGoldKeyword.toLowerCase();
+        // If the suggested title STARTS with the raw keyword or is clearly product-focused
+        const isProductTitle = titleLower.startsWith(kwLower) ||
+          (titleLower.includes(kwLower) && titleLower.indexOf(kwLower) < 15);
+        if (isProductTitle) {
+          console.warn(`[QuickWins Safety] Correcting Home title — was: "${win.suggestedTitle}". AI violated Home rule.`);
+          win.suggestedTitle = brandFallbackTitle;
+          win.explanation = `(Corrección automática) ${win.explanation}`;
+        }
+        return win;
+      });
+    }
+    // ───────────────────────────────────────────────────────────────────────
 
     return { success: true, quickWins: parsed, isMockData };
   } catch (error: any) {
