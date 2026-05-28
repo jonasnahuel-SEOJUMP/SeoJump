@@ -538,37 +538,41 @@ export default function Home() {
               <div className="space-y-5">
                 <div className="text-6xl">🏆</div>
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.1]">
-                  Convertí tu web en una máquina de atraer clientes.{" "}
-                  <span className="text-duo-green">Tomá el control</span> de tu SEO{" "}
-                  <span className="text-duo-yellow">jugando.</span>
+                  Convertí tu web en una <span className="text-duo-green">máquina</span> de <span className="text-duo-yellow">atraer clientes.</span>
                 </h1>
                 <p className="text-slate-300 font-semibold text-lg md:text-xl leading-relaxed">
-                  El primer simulador de estrategia SEO que audita tu web en tiempo real, te da misiones diarias y posiciona tu negocio en Google{" "}
-                  <span className="text-white font-black">sin tecnicismos aburridos</span> ni pagar fortunas todos los meses.
+                  SEO Jump analiza tu página con Inteligencia Artificial, detecta oportunidades reales en Google y te guía paso a paso para mejorar tu posicionamiento sin complicarte con SEO técnico.
                 </p>
               </div>
 
               {/* Puntos clave */}
               <div className="space-y-7 pt-2">
                 <div className="flex items-start gap-5">
-                  <div className="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-orange-500/30">🏎️</div>
+                  <div className="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-orange-500/30">🎯</div>
                   <div>
-                    <h3 className="text-lg md:text-xl font-black text-orange-400">Optimizá tu web en tus ratos libres</h3>
-                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Ingresá el enlace de tu página y nuestra Inteligencia Artificial escaneará toda tu estructura al instante para encontrar las palabras exactas que buscan tus clientes.</p>
+                    <h3 className="text-lg md:text-xl font-black text-orange-400">Encontrá oportunidades que hoy estás perdiendo</h3>
+                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Nuestra IA detecta palabras clave, páginas desaprovechadas y mejoras simples que pueden ayudarte a conseguir más visitas y más clientes desde Google.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-5">
-                  <div className="w-14 h-14 bg-yellow-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-yellow-500/30">💰</div>
+                  <div className="w-14 h-14 bg-cyan-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-cyan-500/30">✨</div>
                   <div>
-                    <h3 className="text-lg md:text-xl font-black text-yellow-400">Tomá el Control de tu Página Web</h3>
-                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Ahorrate cientos de miles de pesos al mes en agencias. Automatizá las mejoras de tu sitio y optimizá tu web paso a paso usando nuestra app un ratito cada día.</p>
+                    <h3 className="text-lg md:text-xl font-black text-cyan-400">SEO simple, claro y accionable</h3>
+                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Olvidate de dashboards confusos y métricas imposibles de entender. SEO Jump transforma datos complejos en acciones concretas y fáciles de aplicar.</p>
                   </div>
                 </div>
                 <div className="flex items-start gap-5">
-                  <div className="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-green-500/30">📈</div>
+                  <div className="w-14 h-14 bg-yellow-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-yellow-500/30">🏎️</div>
                   <div>
-                    <h3 className="text-lg md:text-xl font-black text-green-400">Resultados en Tiempo Real</h3>
-                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">No esperes semanas a que Google descubra tus mejoras. Usá nuestro botón de indexación directa para avisarle al buscador al instante y superar a tu competencia.</p>
+                    <h3 className="text-lg md:text-xl font-black text-yellow-400">Mejorá tu web en pequeños pasos diarios</h3>
+                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Recibí misiones inteligentes y prioridades claras para optimizar tu posicionamiento sin dedicar horas ni contratar una agencia enorme.</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-5">
+                  <div className="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-green-500/30">🤖</div>
+                  <div>
+                    <h3 className="text-lg md:text-xl font-black text-green-400">Resultados reales impulsados por IA</h3>
+                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Tu web cambia, Google cambia y tu competencia también. SEO Jump analiza constantemente nuevas oportunidades para ayudarte a crecer más rápido.</p>
                   </div>
                 </div>
               </div>
