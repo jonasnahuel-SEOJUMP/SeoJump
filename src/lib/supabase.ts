@@ -178,15 +178,17 @@ export async function completeMission(
     return null;
   }
 
-  // Obtener profile id
-  const { data: profile, error: profileErr } = await supabaseAdmin
-    .from('profiles')
-    .select('id')
-    .eq('email', email)
-    .single();
+  // Auto-crear o actualizar perfil (upsert) para que la primera misión
+  // completada no falle por falta de registro en la tabla profiles.
+  const { data: profileRow, error: rpcErr } = await supabaseAdmin.rpc('upsert_profile', {
+    p_email: email,
+    p_website_url: null,
+    p_business_name: null,
+  });
 
-  if (profileErr || !profile) {
-    console.error('[Supabase] No se encontró perfil para:', email);
+  const profile = rpcErr ? null : profileRow;
+  if (!profile) {
+    console.error('[Supabase] No se pudo crear/obtener perfil para:', email, rpcErr?.message);
     return null;
   }
 

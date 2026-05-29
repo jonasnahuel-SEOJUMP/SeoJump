@@ -1,0 +1,92 @@
+[
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "para que sirve el apc"
+    },
+    "timestamp": "2026-05-29T19:07:44.786Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "para que sirve el apc"
+    },
+    "timestamp": "2026-05-29T19:07:46.861Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "para que sirve el apc"
+    },
+    "timestamp": "2026-05-29T19:07:49.935Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "APC"
+    },
+    "timestamp": "2026-05-29T19:08:32.393Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "APC"
+    },
+    "timestamp": "2026-05-29T19:08:34.489Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "APC"
+    },
+    "timestamp": "2026-05-29T19:08:37.587Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "APC"
+    },
+    "timestamp": "2026-05-29T19:08:49.019Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "APC"
+    },
+    "timestamp": "2026-05-29T19:08:51.138Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "APC"
+    },
+    "timestamp": "2026-05-29T19:08:54.221Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  }
+]

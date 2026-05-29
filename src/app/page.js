@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import LoginButton from "../components/LoginButton";
 import NotificationBell from "../components/NotificationBell";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin } from "../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions } from "../lib/actions";
 import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
@@ -123,6 +123,10 @@ export default function Home() {
   // Pull state from server on mount if logged in, otherwise load from local storage
   useEffect(() => {
     const init = async () => {
+      // Filtrar misiones de la página de inicio del caché — la home es de marca, no de producto
+      const filterHomeMissions = (list) =>
+        (list || []).filter(m => m.pagePath !== '/' && m.pagePath !== '');
+
       setServerLoading(true);
       if (session) {
         const serverState = await pullStateFromServer();
@@ -132,21 +136,35 @@ export default function Home() {
           setHasGoldKeyword(!!serverState.gold_query);
           setCompletedIds(new Set(serverState.completed_missions || []));
           setPrestigeCycles(serverState.ciclos_prestigio || 0);
-          setMissions(serverState.missions_list || []);
+          const filteredMissions = filterHomeMissions(serverState.missions_list);
+          setMissions(filteredMissions);
 
           const completedSet = new Set(serverState.completed_missions || []);
           const p = getPhaseProgress(
             completedSet,
             serverState.gold_suggestions,
-            serverState.missions_list,
+            filteredMissions,
             serverState.gold_query,
             serverState.site_url
           );
           setProg(p);
-          if (serverState.site_url && (serverState.missions_list || []).length > 0) {
+          if (serverState.site_url && filteredMissions.length > 0) {
             setStep(6);
           }
           setServerLoading(false);
+
+          // Cargar Quick Wins completados desde Supabase (memoria cross-device)
+          fetchCompletedMissions().then(cwResult => {
+            if (cwResult.success && cwResult.missions.length > 0) {
+              const qwUrls = new Set(
+                cwResult.missions
+                  .filter(m => m.mission_type === 'QUICK_WIN')
+                  .map(m => m.target_url)
+              );
+              if (qwUrls.size > 0) setCompletedQuickWins(qwUrls);
+            }
+          }).catch(() => {});
+
           return;
         }
       }
@@ -184,8 +202,8 @@ export default function Home() {
         try {
           const parsed = JSON.parse(savedMissions);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            missionsList = parsed;
-            setMissions(parsed);
+            missionsList = filterHomeMissions(parsed);
+            setMissions(missionsList);
             if (savedUrl) {
               setStep(6);
             }
@@ -364,6 +382,12 @@ export default function Home() {
         if (!completedIds.has(selectedMission.id)) {
           setXp(prev => prev + (selectedMission.xp || 50));
           setCompletedIds(prev => new Set([...prev, selectedMission.id]));
+          // Guardar en Supabase (no esperar respuesta para no bloquear la UI)
+          markMissionComplete(
+            selectedMission.type,
+            selectedMission.page,
+            selectedMission.xp || 50
+          ).catch(() => {});
         }
         setShowConfetti(true);
         playSuccess();
@@ -406,6 +430,8 @@ export default function Home() {
           });
           setXpPopup({ amount: 100, message: "¡Crecimiento detectado!" });
           setTimeout(() => setXpPopup(null), 4000);
+          // Guardar en Supabase para memoria cross-device
+          markMissionComplete('QUICK_WIN', pageUrl, 100, suggestedTitle).catch(() => {});
         }
       }
     } catch (e) {
@@ -1158,17 +1184,23 @@ export default function Home() {
                       💡 ¿Cómo lo soluciono?
                     </button>
                     
-                    <div className={`overflow-hidden transition-all duration-300 ease-in-out text-left mt-2 ${showHelp ? 'max-h-60 opacity-100' : 'max-h-0 opacity-0'}`}>
-                      <div className="bg-slate-800 p-6 rounded-2xl border-2 border-slate-700 shadow-inner">
+                    <div className={`overflow-hidden transition-all duration-300 ease-in-out text-left mt-2 ${showHelp ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
+                      <div className="bg-slate-800 p-6 rounded-2xl border-2 border-slate-700 shadow-inner space-y-4">
                         <h4 className="text-duo-yellow font-black mb-3 text-base lg:text-lg tracking-wide uppercase">Pasos sugeridos:</h4>
                         <ul className="space-y-3">
-                          {selectedMission.pistas?.map((pista, idx) => (
+                          {(selectedMission.pistas?.classic || (Array.isArray(selectedMission.pistas) ? selectedMission.pistas : []))
+                            .map((pista, idx) => (
                             <li key={idx} className="text-slate-300 text-base lg:text-lg font-bold flex gap-2">
-                              <span className="text-duo-blue flex-shrink-0">{pista.charAt(0)}</span>
-                              <span>{pista.substring(2)}</span>
+                              <span className="text-duo-blue flex-shrink-0 min-w-[1.2rem]">{idx + 1}.</span>
+                              <span>{pista}</span>
                             </li>
                           ))}
                         </ul>
+                        {selectedMission.pistas?.cacheWarning && (
+                          <p className="text-amber-400 text-sm font-bold mt-2 border-t border-slate-700 pt-3">
+                            ⚡ Recordá vaciar el caché de tu sitio después de guardar los cambios.
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1176,9 +1208,9 @@ export default function Home() {
                   {/* Mission Input */}
                   <div className="card-3d bg-white dark:bg-slate-800 space-y-6 p-6 md:p-8">
                     <p className="font-bold text-slate-650 dark:text-slate-300 text-base md:text-lg lg:text-xl">
-                      {selectedMission.type === 'H1' && <>Primero hace el cambio en tu web, después escribí acá el nuevo <span className="text-duo-green">H1</span> que pusiste en <span className="text-duo-blue break-all">{selectedMission.pagePath === '/' ? 'tu página de inicio' : selectedMission.pagePath}</span>:</>}
-                      {selectedMission.type === 'META' && <>Actualizá la <span className="text-duo-yellow">Meta Descripción</span> de tu sitio, después pegala acá para que verifiquemos:</>}
-                      {selectedMission.type === 'ALT' && <>Agregá el texto <span className="text-duo-blue">ALT</span> a una imagen en <span className="text-duo-blue break-all">{selectedMission.pagePath === '/' ? 'tu página de inicio' : selectedMission.pagePath}</span>, después escribí acá el ALT que usaste:</>}
+                      {selectedMission.type === 'H1' && <>Hacé el cambio en tu web, después <span className="text-duo-green">copiá el texto del H1</span> que escribiste en <span className="text-duo-blue break-all">{selectedMission.pagePath === '/' ? 'tu página de inicio' : selectedMission.pagePath}</span> y pegalo acá <span className="text-slate-400 text-sm font-semibold">(el texto, no la URL)</span>:</>}
+                      {selectedMission.type === 'META' && <>Actualizá la <span className="text-duo-yellow">Meta Descripción</span> en tu sitio, después <span className="text-duo-yellow">copiá el texto</span> que pusiste y pegalo acá <span className="text-slate-400 text-sm font-semibold">(el texto, no la URL)</span>:</>}
+                      {selectedMission.type === 'ALT' && <>Agregá el texto <span className="text-duo-blue">ALT</span> a una imagen en <span className="text-duo-blue break-all">{selectedMission.pagePath === '/' ? 'tu página de inicio' : selectedMission.pagePath}</span>, después <span className="text-duo-blue">copiá ese mismo texto</span> y pegalo acá <span className="text-slate-400 text-sm font-semibold">(el texto, no la URL)</span>:</>}
                     </p>
 
                     <input 

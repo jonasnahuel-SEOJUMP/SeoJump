@@ -5,6 +5,7 @@ import path from "path"
 import { signIn, signOut, auth } from "../auth"
 import { getSearchConsoleData, submitGoogleIndexing } from "./google"
 import { GoogleGenerativeAI } from "@google/generative-ai"
+import { completeMission, getMissionsByEmail, type MissionType } from './supabase'
 
 export async function login() {
   await signIn("google")
@@ -297,7 +298,30 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
       return (b.impressions || 0) - (a.impressions || 0);
     });
 
-    const missions = sortedRows.map((row, index) => {
+    // ── Excluir la página de inicio de las misiones regulares ─────────────
+    // La portada representa la marca/categoría del negocio, no un producto
+    // específico. Pedirle al usuario que ponga "limpia llantas" en el H1
+    // de su home es un error SEO. La home se optimiza por Quick Wins
+    // con keywords institucionales (ej: "tienda de car detailing").
+    const isHomeUrl = (url: string): boolean => {
+      try {
+        const page = new URL(url);
+        const site = new URL(
+          cleanSiteUrl.startsWith('http') ? cleanSiteUrl : `https://${cleanSiteUrl}`
+        );
+        return (
+          page.hostname === site.hostname &&
+          (page.pathname === '/' || page.pathname === '')
+        );
+      } catch {
+        return false;
+      }
+    };
+
+    const missionRows = sortedRows.filter(row => !isHomeUrl(row.keys[0]));
+
+    const missions = missionRows.map((row, index) => {
+
       const fullPageUrl = row.keys[0]
       const rawKeyword = row.keys[1] || ""
       const cleanKeyword = rawKeyword.replace(/\$/g, '').replace(/^[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+/g, '').trim()
@@ -1461,6 +1485,27 @@ ${JSON.stringify(opportunities, null, 2)}
     });
     // ────────────────────────────────────────────────────────────────────────
 
+    // ── Filtrar Quick Wins ya completados en Supabase ─────────────────────
+    // Si el usuario ya verificó una oportunidad en una sesión anterior,
+    // no vuelve a aparecer — memoria real entre sesiones.
+    if (session?.user?.email) {
+      try {
+        const doneMissions = await getMissionsByEmail(session.user.email, 'completed');
+        const doneUrls = new Set(
+          doneMissions
+            .filter(m => m.mission_type === 'QUICK_WIN')
+            .map(m => m.target_url)
+        );
+        if (doneUrls.size > 0) {
+          parsed = parsed.filter((win: any) => !doneUrls.has(win.page));
+          console.log(`[QuickWins] Filtradas ${doneUrls.size} oportunidad(es) ya completada(s) para ${session.user.email}`);
+        }
+      } catch (filterErr) {
+        console.warn('[QuickWins] No se pudieron filtrar misiones completadas:', filterErr);
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     return { success: true, quickWins: parsed, isMockData };
   } catch (error: any) {
     console.error("Error en getQuickWins:", error);
@@ -1928,4 +1973,46 @@ REGLAS ESTRICTAS:
     }
     return { success: false, error: userMessage };
   }
+}
+
+// ─── Persistencia de misiones en Supabase ─────────────────────────────────────
+
+/**
+ * Marca una misión como completada en Supabase.
+ * Llamar desde el cliente después de verificar exitosamente una misión o Quick Win.
+ */
+export async function markMissionComplete(
+  missionType: MissionType,
+  targetUrl: string,
+  xpAwarded: number = 0,
+  suggestedValue?: string
+): Promise<{ success: boolean }> {
+  const session = await auth();
+  if (!session?.user?.email) {
+    return { success: false };
+  }
+  const result = await completeMission(
+    session.user.email,
+    missionType,
+    targetUrl,
+    xpAwarded,
+    suggestedValue
+  );
+  return { success: !!result };
+}
+
+/**
+ * Obtiene todas las misiones completadas del usuario desde Supabase.
+ * Usar en el arranque de la app para restaurar el estado entre sesiones.
+ */
+export async function fetchCompletedMissions(): Promise<{
+  success: boolean;
+  missions: Awaited<ReturnType<typeof getMissionsByEmail>>;
+}> {
+  const session = await auth();
+  if (!session?.user?.email) {
+    return { success: false, missions: [] };
+  }
+  const missions = await getMissionsByEmail(session.user.email, 'completed');
+  return { success: true, missions };
 }
