@@ -1170,10 +1170,49 @@ export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
 
     candidates.sort((a, b) => (b.impressions || 0) - (a.impressions || 0));
 
+    // ── LAYER 1: Pre-process — strip product queries from Home page candidates ──
+    // If the page is the Home and the GSC query looks like a specific product
+    // (i.e. a brand/product name, not a category), we drop that candidate entirely.
+    // This prevents the AI from ever seeing a product keyword paired with the Home URL.
+    const isProductQuery = (query: string): boolean => {
+      if (!query) return false;
+      // Institutional/category signals — always safe for Home
+      const institutionalTokens = [
+        'tienda', 'shop', 'local', 'servicio', 'empresa', 'comprar',
+        'mejor', 'precio', 'online', 'argentina', 'buenos aires',
+        'delivery', 'envio', 'envios', 'detailing', 'car detailing',
+      ];
+      const q = query.toLowerCase();
+      if (institutionalTokens.some(t => q.includes(t))) return false;
+      // Short single/double-word queries that don't include the domain name are
+      // likely product/brand names (e.g. "alumax", "limpia llantas", "vintex")
+      const words = q.trim().split(/\s+/);
+      if (words.length <= 3) {
+        // If it matches the raw goldKeyword (or a variant) it's definitely a product
+        if (cleanGoldKeyword) {
+          const kwLower = cleanGoldKeyword.toLowerCase();
+          if (q.includes(kwLower) || kwLower.includes(q)) return true;
+        }
+        // Heuristic: if none of the words are the business domain, treat as product
+        const domainWords = cleanSiteUrl.toLowerCase().replace(/https?:\/\//, '').split(/[.\/\-]/).filter(Boolean);
+        const matchesDomain = words.some(w => domainWords.some(d => d.startsWith(w) || w.startsWith(d)));
+        if (!matchesDomain) return true;
+      }
+      return false;
+    };
+
     const opportunities: any[] = [];
-    for (const cand of candidates.slice(0, 3)) {
+    for (const cand of candidates.slice(0, 5)) { // look at up to 5 to have fallbacks
+      if (opportunities.length >= 3) break;
       const pageUrl = cand.keys[0];
       const query = cand.keys[1];
+
+      // ⛔ LAYER 1 GATE: If this is the Home and the query is product-specific → skip
+      if (isHomePage(pageUrl, cleanSiteUrl) && isProductQuery(query)) {
+        console.warn(`[QuickWins L1] Skipping Home candidate with product query: "${query}"`);
+        continue;
+      }
+
       let pageMeta = { title: "", description: "", h1: "" };
       try {
         pageMeta = await scrapeMetadata(pageUrl);
@@ -1389,30 +1428,38 @@ ${JSON.stringify(opportunities, null, 2)}
       return { success: false, error: "Error al interpretar la respuesta de la IA." };
     }
 
-    // ── POST-PROCESS SAFETY NET ─────────────────────────────────────────────
-    // Even if the AI ignored the rule, we correct any Home titles that still
-    // contain the raw goldKeyword as the main subject.
-    if (cleanGoldKeyword) {
-      const domainLabel = (() => { try { return new URL(cleanSiteUrl).hostname.split('.')[0]; } catch { return ''; } })();
-      const brandFallbackTitle = businessNiche.split('|')[0].trim() ||
-        `${domainLabel ? domainLabel.charAt(0).toUpperCase() + domainLabel.slice(1) + ' | ' : ''}Tienda Online`;
+    // ── LAYER 2: POST-PROCESS SAFETY NET ────────────────────────────────────
+    // Even if the AI ignored every instruction, we detect and correct ANY Home
+    // title that contains a product/brand keyword — regardless of its position.
+    const domainLabel = (() => { try { return new URL(cleanSiteUrl).hostname.split('.')[0]; } catch { return ''; } })();
+    const brandFallbackTitle = businessNiche.split('|')[0].trim() ||
+      `${domainLabel ? domainLabel.charAt(0).toUpperCase() + domainLabel.slice(1) + ' | ' : ''}Tienda Online`;
 
-      parsed = parsed.map((win: any) => {
-        if (!isHomePage(win.page, cleanSiteUrl)) return win; // Only apply to Home
-        const titleLower = (win.suggestedTitle || '').toLowerCase();
-        const kwLower = cleanGoldKeyword.toLowerCase();
-        // If the suggested title STARTS with the raw keyword or is clearly product-focused
-        const isProductTitle = titleLower.startsWith(kwLower) ||
-          (titleLower.includes(kwLower) && titleLower.indexOf(kwLower) < 15);
-        if (isProductTitle) {
-          console.warn(`[QuickWins Safety] Correcting Home title — was: "${win.suggestedTitle}". AI violated Home rule.`);
-          win.suggestedTitle = brandFallbackTitle;
-          win.explanation = `(Corrección automática) ${win.explanation}`;
-        }
-        return win;
-      });
+    // Collect all product terms to check against: goldKeyword + the actual GSC queries used for Home
+    const homeProductTerms: string[] = [];
+    if (cleanGoldKeyword) homeProductTerms.push(cleanGoldKeyword.toLowerCase());
+    // Also collect the raw queries from the original GSC rows that were mapped to the Home
+    for (const row of gscRows) {
+      const rowPage = row.keys?.[0] || '';
+      const rowQuery = row.keys?.[1] || '';
+      if (isHomePage(rowPage, cleanSiteUrl) && rowQuery && isProductQuery(rowQuery)) {
+        homeProductTerms.push(rowQuery.toLowerCase());
+      }
     }
-    // ───────────────────────────────────────────────────────────────────────
+
+    parsed = parsed.map((win: any) => {
+      if (!isHomePage(win.page, cleanSiteUrl)) return win; // Only apply to Home
+      const titleLower = (win.suggestedTitle || '').toLowerCase();
+      // Check if ANY known product term appears anywhere in the suggested title
+      const offendingTerm = homeProductTerms.find(term => titleLower.includes(term));
+      if (offendingTerm) {
+        console.warn(`[QuickWins L2] Correcting Home title — found product term "${offendingTerm}" in: "${win.suggestedTitle}"`);
+        win.suggestedTitle = brandFallbackTitle;
+        win.explanation = `(Corrección automática) ${win.explanation}`;
+      }
+      return win;
+    });
+    // ────────────────────────────────────────────────────────────────────────
 
     return { success: true, quickWins: parsed, isMockData };
   } catch (error: any) {
