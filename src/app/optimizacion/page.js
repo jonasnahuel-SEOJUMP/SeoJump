@@ -6,7 +6,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin } from "../../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 
@@ -465,6 +465,8 @@ export default function Optimizacion() {
           setTimeout(() => {
             syncStateWithServer();
           }, 100);
+          // Guardar en Supabase para memoria cross-device
+          markMissionComplete('QUICK_WIN', pageUrl, 100, suggestedTitle).catch(() => {});
         }
       }
     } catch (e) {

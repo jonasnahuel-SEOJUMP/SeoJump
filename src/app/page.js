@@ -134,6 +134,17 @@ export default function Home() {
         (list || []).filter(m => m.pagePath !== '/' && m.pagePath !== '');
 
       setServerLoading(true);
+
+      // Cargar Quick Wins y sus completados desde caché local antes de sincronizar
+      const savedQuickWins = localStorage.getItem("seojump_quick_wins");
+      if (savedQuickWins) {
+        try { setQuickWins(JSON.parse(savedQuickWins)); } catch (e) {}
+      }
+      const savedCompletedQuickWins = localStorage.getItem("seojump_completed_quick_wins");
+      if (savedCompletedQuickWins) {
+        try { setCompletedQuickWins(new Set(JSON.parse(savedCompletedQuickWins))); } catch (e) {}
+      }
+
       if (session) {
         const serverState = await pullStateFromServer();
         if (serverState) {
@@ -223,14 +234,7 @@ export default function Home() {
         try { suggestions = JSON.parse(savedSuggestions); } catch (e) {}
       }
 
-      const savedQuickWins = localStorage.getItem("seojump_quick_wins");
-      if (savedQuickWins) {
-        try { setQuickWins(JSON.parse(savedQuickWins)); } catch (e) {}
-      }
-      const savedCompletedQuickWins = localStorage.getItem("seojump_completed_quick_wins");
-      if (savedCompletedQuickWins) {
-        try { setCompletedQuickWins(new Set(JSON.parse(savedCompletedQuickWins))); } catch (e) {}
-      }
+
 
       const p = getPhaseProgress(completedSet, suggestions, missionsList, activeKeyword, savedUrl);
       setProg(p);
