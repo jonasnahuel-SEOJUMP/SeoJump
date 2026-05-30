@@ -1324,15 +1324,17 @@ export default function Home() {
                      <p className="text-xs md:text-sm text-slate-400 uppercase font-black tracking-wider mb-1">Keywords Ganadoras</p>
                      <p className="text-3xl lg:text-4xl font-black text-orange-500">{xp} XP</p>
                    </div>
+                   <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
+                 </div>
 
-                   <button
-                      onClick={() => { playClick(); handleReScan(); }}
-                      className="btn-3d btn-white w-full font-black text-duo-green hover:text-green-400 transition-colors text-base md:text-lg py-4 flex items-center justify-center gap-2"
-                      title="Obtener misiones actualizadas desde Google Search Console"
-                   >
-                      🔄 NUEVO ANÁLISIS
-                   </button>
-                 
+                 <button
+                    onClick={() => { playClick(); handleReScan(); }}
+                    className="btn-3d btn-white w-full font-black text-duo-green hover:text-green-400 transition-colors text-base md:text-lg py-4 flex items-center justify-center gap-2 mt-6"
+                    title="Obtener misiones actualizadas desde Google Search Console"
+                 >
+                    🔄 NUEVO ANÁLISIS
+                 </button>
+               
                  <button 
                    onClick={() => { playClick(); signOut(); }} 
                    className="btn-3d btn-white w-full text-slate-500 font-black hover:text-red-500 transition-colors text-base md:text-lg py-4"
