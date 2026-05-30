@@ -1026,6 +1026,7 @@ export default function Home() {
                                  <div className={`w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center border-b-4 text-3xl font-black ${
                                    mission.type === 'H1' ? 'bg-duo-green border-duo-green-shadow text-white' : 
                                    mission.type === 'ALT' ? 'bg-duo-blue border-duo-blue-shadow text-white' : 
+                                   mission.type === 'AEO' ? 'bg-purple-600 border-purple-800 text-white' :
                                    'bg-duo-yellow border-duo-yellow-shadow text-white'
                                  }`}>
                                    {mission.icon}
@@ -1040,6 +1041,11 @@ export default function Home() {
                                             <span className={`text-sm lg:text-base font-black px-3 py-1 rounded-md ${badge.color}`}>
                                               {badge.text}
                                             </span>
+                                            {mission.type === 'AEO' && (
+                                              <span className="text-xs font-black px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-400">
+                                                🤖 AEO
+                                              </span>
+                                            )}
                                           </div>
                                           <div className="flex items-center gap-2 mb-1.5 w-full min-w-0">
                                             <code className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 truncate block w-full max-w-[200px] min-[400px]:max-w-[260px] sm:max-w-[380px] md:max-w-[450px]">

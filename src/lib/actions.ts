@@ -259,7 +259,67 @@ const buildMissionTypes = (goldKeyword?: string) => [
       gifUrl: undefined,
     },
   },
+  // ── MISIÓN AEO: Optimización para IA ─────────────────────────────────────
+  // Se activa cuando la búsqueda de GSC es una pregunta (cómo, qué, cuál, etc.)
+  // Pide agregar una sección FAQ que multiplica chances de aparecer en AI Overviews
+  {
+    type: 'AEO',
+    title: 'Seé la Respuesta de la IA',
+    descriptionTemplate: (path: string) =>
+      goldKeyword
+        ? `La página ${path} aparece para «${goldKeyword}» — una pregunta real. Agreá una sección FAQ y multiplicá 3× tus chances de aparecer en AI Overviews, ChatGPT y Gemini.`
+        : `La página ${path} aparece para búsquedas con preguntas. Agreá una FAQ y multiplicá las chances de aparecer en la IA que está reemplazando a Google.`,
+    xp: 80,
+    icon: '🤖',
+    color: 'purple',
+    pistas: {
+      classic: [
+        `Editá la página desde WordPress → Páginas (o Productos/Entradas) → Editar.`,
+        `Bajá al final del contenido de la página.`,
+        goldKeyword
+          ? `Agreá un bloque de texto nuevo con el título H2: «Preguntas frecuentes sobre ${goldKeyword}».`
+          : `Agreá un bloque de texto nuevo con el título H2: «Preguntas frecuentes».`,
+        `Abajo del H2, escribí al menos 3 preguntas reales que hace tu cliente. Respondélas en 2-3 oraciones cada una. Ej: «¿Para qué sirve?», «¿Cómo se usa?», «¿Cuál es la diferencia entre X e Y?».`,
+        `Hacé clic en Actualizar para guardar. Google y la IA pueden tardar unos días en procesar el nuevo contenido.`,
+      ],
+      visual: [
+        `Abrí tu constructor visual (Elementor, Divi, UX Builder) y editá la página.`,
+        `Bajá al final del contenido. Agreá un bloque de tipo «Acordeón/FAQ» si tu tema lo tiene, o un bloque de texto normal.`,
+        goldKeyword
+          ? `Creá un H2 que diga «Preguntas frecuentes sobre ${goldKeyword}».`
+          : `Creá un H2 que diga «Preguntas frecuentes».`,
+        `Agreá 3 o más preguntas con sus respuestas. Escribí de forma natural, como si le hablaras directamente a tu cliente.`,
+        `Guardá y publicá los cambios.`,
+      ],
+      cacheWarning: false,
+      videoUrl: undefined,
+      gifUrl: undefined,
+    },
+  },
 ]
+
+
+// ── Detecta si una búsqueda es una pregunta (trigger para misiones AEO) ──────
+// Las preguntas indican que el usuario busca una respuesta concreta —
+// exactamente el tipo de contenido que las IAs (ChatGPT, Gemini, AI Overviews)
+// prefieren citar. Agregar FAQ convierte la página en fuente ideal para la IA.
+function isQuestionQuery(keyword: string): boolean {
+  if (!keyword) return false;
+  const kw = keyword.toLowerCase().trim();
+  const questionPatterns = [
+    // Español — inicio de pregunta
+    'qué ', 'que ', 'cómo ', 'como ', 'cuál ', 'cual ', 'cuándo ', 'cuando ',
+    'dónde ', 'donde ', 'por qué', 'para qué', 'cuánto', 'cuánta',
+    // Frases dentro de la búsqueda (no solo al inicio)
+    ' sirve', ' es bueno', ' es mejor', ' diferencia', ' funciona',
+    ' se usa', ' se puede', ' conviene', ' recomendable', ' para qué',
+    // Inglés
+    'how ', 'what ', 'why ', 'when ', 'where ', 'which ', 'is it', 'can i',
+    'does it', 'should i',
+  ];
+  return questionPatterns.some(p => kw.startsWith(p.trimStart()) || kw.includes(p));
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
   // Sanitizar entradas
@@ -382,9 +442,14 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
         }
       }
 
-      // Rotate through mission types based on index
-      const MISSION_TYPES = buildMissionTypes(effectiveKeyword)
-      const missionDef = MISSION_TYPES[index % MISSION_TYPES.length]
+      // Rotación de tipo de misión:
+      // • Si la búsqueda es una PREGUNTA → Misión AEO (FAQ para IA)
+      // • Si no → rotación clásica H1 → META → ALT
+      const MISSION_TYPES = buildMissionTypes(effectiveKeyword);
+      const isQuestion = isQuestionQuery(effectiveKeyword);
+      const aeoType = MISSION_TYPES.find(m => m.type === 'AEO')!;
+      const classicTypes = MISSION_TYPES.filter(m => m.type !== 'AEO');
+      const missionDef = isQuestion ? aeoType : classicTypes[index % classicTypes.length];
 
       return {
         id: `${missionDef.type.toLowerCase()}-${pagePath}`,
