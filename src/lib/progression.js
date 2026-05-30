@@ -154,7 +154,7 @@ export async function pullStateFromServer() {
           site_url: server.site_url || localStorage.getItem("seojump_site_url"),
           gold_query: server.gold_query || localStorage.getItem("gold-tu-busqueda"),
           gold_suggestions: server.gold_suggestions || [],
-          missions: server.missions_list || []
+          missions_list: server.missions_list || []
         };
       }
     }
