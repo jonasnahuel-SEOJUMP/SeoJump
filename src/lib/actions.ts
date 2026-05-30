@@ -320,11 +320,41 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
 
     const missionRows = sortedRows.filter(row => !isHomeUrl(row.keys[0]));
 
+    // ── Coherencia semántica: keyword vs. URL de la página ────────────────
+    // GSC a veces registra búsquedas de productos en páginas de categorías
+    // que no corresponden. Si el keyword no tiene ninguna palabra en común
+    // con la URL de la página, derivamos un keyword desde la URL misma.
+    // Ej: "limpia llantas" en ".../accesorios-varios/" → usa "accesorios varios"
+    const resolveKeyword = (gscKeyword: string, pageUrl: string, fallback: string): string => {
+      if (!gscKeyword) return fallback || '';
+      try {
+        const path = new URL(pageUrl).pathname.toLowerCase();
+        // Words from the keyword with 5+ characters (skip short stop words)
+        const kwWords = gscKeyword.toLowerCase().split(/\s+/).filter(w => w.length >= 5);
+        // If any keyword word (first 5 chars) appears in the path → good match
+        const fits = kwWords.length === 0 ||
+          kwWords.some(w => path.includes(w.slice(0, 5)));
+        if (fits) return gscKeyword;
+        // Poor match: derive a readable keyword from the URL slug
+        const segments = path.replace(/\/$/, '').split('/').filter(Boolean);
+        const lastSegment = segments[segments.length - 1] || '';
+        const urlKeyword = lastSegment.replace(/-/g, ' ').trim();
+        console.log(`[resolveKeyword] Keyword «${gscKeyword}» no encaja en ${path} → usando «${urlKeyword || gscKeyword}»`);
+        return urlKeyword || gscKeyword;
+      } catch {
+        return gscKeyword;
+      }
+    };
+    // ─────────────────────────────────────────────────────────────────────
+
     const missions = missionRows.map((row, index) => {
 
       const fullPageUrl = row.keys[0]
       const rawKeyword = row.keys[1] || ""
       const cleanKeyword = rawKeyword.replace(/\$/g, '').replace(/^[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+/g, '').trim()
+
+      // Keyword que realmente va a usar la misión (coherente con la página)
+      const effectiveKeyword = resolveKeyword(cleanKeyword, fullPageUrl, cleanGoldKeyword)
       
       let pagePath = fullPageUrl
       try {
@@ -353,7 +383,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
       }
 
       // Rotate through mission types based on index
-      const MISSION_TYPES = buildMissionTypes(cleanKeyword || goldKeyword)
+      const MISSION_TYPES = buildMissionTypes(effectiveKeyword)
       const missionDef = MISSION_TYPES[index % MISSION_TYPES.length]
 
       return {
@@ -367,7 +397,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
         icon: missionDef.icon,
         color: missionDef.color,
         pistas: missionDef.pistas,
-        keyword: cleanKeyword || goldKeyword || "",
+        keyword: effectiveKeyword,
         // Real metrics from Search Console
         clicks: row.clicks,
         impressions: row.impressions,
