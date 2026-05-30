@@ -586,7 +586,7 @@ export default function Home() {
                   Convertí tu web en una <span className="text-duo-green">máquina</span> de <span className="text-duo-yellow">atraer clientes.</span>
                 </h1>
                 <p className="text-slate-300 font-semibold text-lg md:text-xl leading-relaxed">
-                  SEO Jump optimiza tu web para que Google, <strong className="text-purple-300">ChatGPT, Gemini</strong> y las respuestas con IA te recomienden a tus clientes — sin que necesites saber de SEO técnico.
+                  SEO Jump analiza tu web, descubre oportunidades ocultas y te guía paso a paso para aparecer en Google, <strong className="text-purple-300">ChatGPT, Gemini</strong> y las nuevas búsquedas impulsadas por IA.
                 </p>
               </div>
 
