@@ -53,10 +53,10 @@ function QuickWinsHighlight({ quickWins, completedQuickWins, playClick, router }
   return (
     <div className="w-full mb-8 relative rounded-3xl border-2 border-purple-500/50 bg-gradient-to-r from-violet-950/90 via-purple-900/85 to-indigo-950/90 p-6 md:p-8 shadow-[0_0_50px_rgba(139,92,246,0.4)] hover:scale-[1.01] transition-transform duration-300">
       <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500/10 via-transparent to-cyan-500/10 opacity-60"></div>
-      <div className="relative z-10 flex flex-col md:flex-row md:items-center gap-5 md:gap-6">
+      <div className="relative z-10 flex flex-col gap-5">
 
         {/* Texto */}
-        <div className="text-left space-y-2 flex-1 min-w-0">
+        <div className="text-left space-y-2">
           <div className="flex items-center gap-2 mb-1">
             <span className="px-2.5 py-0.5 bg-purple-500/30 border border-purple-400/50 rounded-full text-purple-200 text-xs font-black uppercase tracking-wider">🤖 AEO</span>
             <span className="text-purple-300 text-xs font-bold">Answer Engine Optimization</span>
@@ -69,15 +69,13 @@ function QuickWinsHighlight({ quickWins, completedQuickWins, playClick, router }
           </p>
         </div>
 
-        {/* Botón — siempre debajo en mobile, al lado en md+ */}
-        <div className="flex-shrink-0 w-full md:w-auto">
-          <button
-            onClick={() => { playClick(); router.push("/optimizacion"); }}
-            className="btn-3d btn-yellow w-full md:w-auto !text-sm md:!text-base font-black px-6 py-3.5 whitespace-nowrap"
-          >
-            VER OPORTUNIDADES AEO
-          </button>
-        </div>
+        {/* Botón siempre debajo */}
+        <button
+          onClick={() => { playClick(); router.push("/optimizacion"); }}
+          className="btn-3d btn-yellow w-full !text-sm md:!text-base font-black px-6 py-3.5"
+        >
+          VER OPORTUNIDADES AEO
+        </button>
 
       </div>
     </div>
@@ -588,7 +586,7 @@ export default function Home() {
                   Convertí tu web en una <span className="text-duo-green">máquina</span> de <span className="text-duo-yellow">atraer clientes.</span>
                 </h1>
                 <p className="text-slate-300 font-semibold text-lg md:text-xl leading-relaxed">
-                  SEO Jump optimiza tu web para Google <strong className="text-purple-300">y para la IA que lo está reemplazando</strong> — AI Overviews, ChatGPT, Gemini — sin que necesites saber de SEO técnico.
+                  SEO Jump optimiza tu web para que Google, <strong className="text-purple-300">ChatGPT, Gemini</strong> y las respuestas con IA te recomienden a tus clientes — sin que necesites saber de SEO técnico.
                 </p>
               </div>
 
