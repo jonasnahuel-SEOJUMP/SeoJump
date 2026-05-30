@@ -1326,6 +1326,7 @@ export default function Home() {
                    </div>
                    <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full -mr-16 -mt-16 pointer-events-none"></div>
                  </div>
+               </div>
 
                  <button
                     onClick={() => { playClick(); handleReScan(); }}
