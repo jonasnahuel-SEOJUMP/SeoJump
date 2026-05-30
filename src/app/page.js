@@ -44,22 +44,26 @@ const getBadgeInfo = (url) => {
   return staticResponse;
 };
 
-// Componente destacado de Quick Wins (El Gancho)
+// Componente destacado de Oportunidades AEO (El Gancho)
 function QuickWinsHighlight({ quickWins, completedQuickWins, playClick, router }) {
   if (!quickWins || quickWins.length === 0) return null;
   const pendingWins = quickWins.filter(qw => !completedQuickWins.has(qw.page));
   if (pendingWins.length === 0) return null;
 
   return (
-    <div className="w-full mb-8 relative rounded-3xl border-2 border-amber-500/40 bg-gradient-to-r from-violet-950/80 via-purple-900/80 to-slate-900/90 p-6 md:p-8 shadow-[0_0_40px_rgba(139,92,246,0.3)] animate-pulse-glow hover:scale-[1.01] transition-transform duration-300">
-      <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500/10 via-transparent to-pink-500/10 opacity-50"></div>
+    <div className="w-full mb-8 relative rounded-3xl border-2 border-purple-500/50 bg-gradient-to-r from-violet-950/90 via-purple-900/85 to-indigo-950/90 p-6 md:p-8 shadow-[0_0_50px_rgba(139,92,246,0.4)] hover:scale-[1.01] transition-transform duration-300">
+      <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-purple-500/10 via-transparent to-cyan-500/10 opacity-60"></div>
       <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-6">
         <div className="text-left space-y-2 flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 bg-purple-500/30 border border-purple-400/50 rounded-full text-purple-200 text-xs font-black uppercase tracking-wider">🤖 AEO</span>
+            <span className="text-purple-300 text-xs font-bold">Answer Engine Optimization</span>
+          </div>
           <h2 className="text-xl md:text-2xl lg:text-3xl font-black text-white flex items-center gap-2">
-            🚀 Oportunidades: {pendingWins.length} detectadas
+            ⚡ {pendingWins.length} Oportunidades AEO detectadas
           </h2>
           <p className="text-slate-200 text-sm md:text-base font-bold">
-            Detectamos palabras clave donde podés subir posiciones hoy mismo.
+            Páginas listas para aparecer en Google <span className="text-purple-300">y en la IA</span> que lo está reemplazando.
           </p>
         </div>
         
@@ -70,7 +74,7 @@ function QuickWinsHighlight({ quickWins, completedQuickWins, playClick, router }
           }}
           className="btn-3d btn-yellow w-full lg:w-auto !text-sm md:!text-base font-black px-6 py-3.5 whitespace-nowrap flex-shrink-0 mt-2 lg:mt-0"
         >
-          VER OPORTUNIDADES
+          VER OPORTUNIDADES AEO
         </button>
       </div>
     </div>
@@ -572,12 +576,15 @@ export default function Home() {
 
               {/* Título principal */}
               <div className="space-y-5">
-                <div className="text-6xl">🏆</div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-3 py-1 bg-purple-500/20 border border-purple-500/40 rounded-full text-purple-300 text-xs font-black uppercase tracking-widest">🤖 SEO + AEO</span>
+                  <span className="px-3 py-1 bg-green-500/20 border border-green-500/40 rounded-full text-green-300 text-xs font-black uppercase tracking-widest">Google · ChatGPT · Gemini</span>
+                </div>
                 <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.1]">
                   Convertí tu web en una <span className="text-duo-green">máquina</span> de <span className="text-duo-yellow">atraer clientes.</span>
                 </h1>
                 <p className="text-slate-300 font-semibold text-lg md:text-xl leading-relaxed">
-                  SEO Jump analiza tu página con Inteligencia Artificial, detecta oportunidades reales en Google y te guía paso a paso para mejorar tu posicionamiento sin complicarte con SEO técnico.
+                  SEO Jump optimiza tu web para Google <strong className="text-purple-300">y para la IA que lo está reemplazando</strong> — AI Overviews, ChatGPT, Gemini — sin que necesites saber de SEO técnico.
                 </p>
               </div>
 
@@ -605,10 +612,10 @@ export default function Home() {
                   </div>
                 </div>
                 <div className="flex items-start gap-5">
-                  <div className="w-14 h-14 bg-green-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-green-500/30">🤖</div>
+                  <div className="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-purple-500/30">🤖</div>
                   <div>
-                    <h3 className="text-lg md:text-xl font-black text-green-400">Resultados reales impulsados por IA</h3>
-                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Tu web cambia, Google cambia y tu competencia también. SEO Jump analiza constantemente nuevas oportunidades para ayudarte a crecer más rápido.</p>
+                    <h3 className="text-lg md:text-xl font-black text-purple-400">Visible en Google, ChatGPT y Gemini</h3>
+                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">La búsqueda está cambiando. SEO Jump detecta oportunidades AEO para que tu negocio aparezca no solo en Google, sino también en las respuestas generadas por IA — donde va el tráfico del futuro.</p>
                   </div>
                 </div>
               </div>
