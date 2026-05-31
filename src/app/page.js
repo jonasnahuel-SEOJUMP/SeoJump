@@ -4,6 +4,9 @@ import { useState, useEffect, useRef } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import Header from "../components/Header";
+import LandingPage from "../components/LandingPage";
+import AICatch from "../components/AICatch";
 import LoginButton from "../components/LoginButton";
 import NotificationBell from "../components/NotificationBell";
 import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions } from "../lib/actions";
@@ -521,25 +524,17 @@ export default function Home() {
     return { title: "Fase 1: Búsqueda", emoji: "🔍" };
   })();
 
+  if (step === 1 && !showIntroModal) {
+    return (
+      <div className="min-h-screen bg-[#07070d] w-full font-fredoka relative transition-colors duration-300">
+        <LandingPage onStart={() => { playClick(); setShowIntroModal(true); }} playClick={playClick} />
+      </div>
+    );
+  }
+
   return (
     <div className={`min-h-screen bg-transparent flex flex-col items-center ${step < 6 ? 'justify-center' : 'justify-start'} px-4 py-8 md:p-8 w-full font-fredoka relative transition-colors duration-300 text-slate-100 ${step < 6 ? 'max-w-lg md:max-w-3xl lg:max-w-4xl mx-auto border-x dark:border-slate-800 shadow-2xl' : ''}`}>
       
-      {/* Global Top Navbar for Landing Page */}
-      {step === 1 && (
-        <div className="w-full flex items-center justify-between pb-6 border-b border-slate-200 dark:border-slate-800 mb-6">
-          <span className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-            🦉 SEOJUMP
-          </span>
-          <Link
-            href="/blog"
-            onClick={playClick}
-            className="btn-3d btn-white hover:text-cyan-500 text-xs px-4 py-2 font-black uppercase tracking-wider transition-colors"
-          >
-            📖 Academia SEO
-          </Link>
-        </div>
-      )}
-
       {/* Confetti Effect */}
       {showConfetti && (
         <div className="absolute inset-0 pointer-events-none z-50">
@@ -572,116 +567,7 @@ export default function Home() {
           </div>
         )}
 
-        {step === 1 && !showIntroModal && (
-          <div className="w-full max-w-xl md:max-w-3xl mx-auto px-4 py-8 flex flex-col items-center gap-8 animate-in fade-in zoom-in duration-500">
-            
-            {/* Marketing y Valor (antes COLUMNA IZQUIERDA) */}
-            <div className="w-full space-y-10 text-left bg-slate-900 p-8 md:p-12 rounded-3xl border-2 border-slate-700 shadow-2xl relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-64 h-64 bg-duo-green opacity-10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
-              <div className="absolute bottom-0 left-0 w-48 h-48 bg-yellow-500 opacity-5 rounded-full blur-3xl -ml-16 -mb-16 pointer-events-none"></div>
 
-              {/* Título principal */}
-              <div className="space-y-5">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="px-3 py-1 bg-purple-500/20 border border-purple-500/40 rounded-full text-purple-300 text-xs font-black uppercase tracking-widest">🤖 SEO + AEO</span>
-                  <span className="px-3 py-1 bg-green-500/20 border border-green-500/40 rounded-full text-green-300 text-xs font-black uppercase tracking-widest">Google · ChatGPT · Gemini</span>
-                </div>
-                <h1 className="text-3xl md:text-4xl lg:text-5xl font-black text-white tracking-tight leading-[1.1]">
-                  Convertí tu web en una <span className="text-duo-green">máquina</span> de <span className="text-duo-yellow">atraer clientes.</span>
-                </h1>
-                <p className="text-slate-300 font-semibold text-lg md:text-xl leading-relaxed">
-                  SEO Jump analiza tu web, descubre oportunidades ocultas y te guía paso a paso para aparecer en Google, <strong className="text-purple-300">ChatGPT, Gemini</strong> y las nuevas búsquedas impulsadas por IA.
-                </p>
-              </div>
-
-              {/* Puntos clave */}
-              <div className="space-y-7 pt-2">
-                <div className="flex items-start gap-5">
-                  <div className="w-14 h-14 bg-orange-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-orange-500/30">🎯</div>
-                  <div>
-                    <h3 className="text-lg md:text-xl font-black text-orange-400">Encontrá oportunidades que hoy estás perdiendo</h3>
-                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Nuestra IA detecta palabras clave, páginas desaprovechadas y mejoras simples que pueden ayudarte a conseguir más visitas y más clientes desde Google.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-5">
-                  <div className="w-14 h-14 bg-cyan-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-cyan-500/30">✨</div>
-                  <div>
-                    <h3 className="text-lg md:text-xl font-black text-cyan-400">SEO simple, claro y accionable</h3>
-                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Olvidate de dashboards confusos y métricas imposibles de entender. SEO Jump transforma datos complejos en acciones concretas y fáciles de aplicar.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-5">
-                  <div className="w-14 h-14 bg-yellow-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-yellow-500/30">🏎️</div>
-                  <div>
-                    <h3 className="text-lg md:text-xl font-black text-yellow-400">Mejorá tu web en pequeños pasos diarios</h3>
-                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">Recibí misiones inteligentes y prioridades claras para optimizar tu posicionamiento sin dedicar horas ni contratar una agencia enorme.</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-5">
-                  <div className="w-14 h-14 bg-purple-500/20 rounded-xl flex items-center justify-center text-3xl flex-shrink-0 border border-purple-500/30">🤖</div>
-                  <div>
-                    <h3 className="text-lg md:text-xl font-black text-purple-400">Visible en Google, ChatGPT y Gemini</h3>
-                    <p className="text-slate-300 font-semibold text-base md:text-lg leading-relaxed mt-1.5">La búsqueda está cambiando. SEO Jump detecta oportunidades AEO para que tu negocio aparezca no solo en Google, sino también en las respuestas generadas por IA — donde va el tráfico del futuro.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Acción (antes COLUMNA DERECHA) */}
-            <div className="w-full flex flex-col items-center justify-center space-y-8 p-4">
-              <div className="w-full max-w-sm text-center space-y-6">
-                <h2 className="text-3xl font-black text-slate-800 dark:text-slate-100 mb-4">
-                  ¿Listo para despegar?
-                </h2>
-                
-                <button 
-                  onMouseEnter={() => playClick()} 
-                  onClick={() => { playClick(); setShowIntroModal(true); }} 
-                  className="btn-3d btn-green text-xl md:text-2xl px-6 py-4 w-full transform hover:scale-105 transition-all focus:ring-4 focus:ring-green-300/50"
-                >
-                  EMPEZAR A JUGAR
-                </button>
-
-                {/* Trust badge */}
-                <div className="flex items-start gap-3 bg-green-950/40 border border-green-800/40 rounded-2xl px-4 py-3 text-left">
-                  <span className="text-lg flex-shrink-0 mt-0.5">🔒</span>
-                  <p className="text-xs font-bold text-green-300/80 leading-relaxed">
-                    Registro de partida seguro con Google. No solicitamos accesos privados, contraseñas ni permisos sobre tus sitios web para empezar a jugar.
-                  </p>
-                </div>
-
-                <div className="pt-6 w-full flex justify-center">
-                  {session ? (
-                    <div className="flex flex-col items-center gap-4 w-full">
-                      <div className="flex items-center justify-center gap-3 bg-white dark:bg-slate-800 px-6 py-3 w-full rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-sm">
-                        {session.user?.image ? (
-                          <img src={session.user.image} alt="User" className="w-8 h-8 rounded-full border border-slate-200" />
-                        ) : (
-                          <div className="w-8 h-8 bg-slate-200 rounded-full flex items-center justify-center text-sm">👤</div>
-                        )}
-                        <p className="text-sm font-bold text-slate-600 dark:text-slate-300 truncate">Conectado como {session.user?.name}</p>
-                      </div>
-                      <button
-                        onClick={() => { playClick(); signOut(); }}
-                        className="text-xs text-slate-400 font-bold hover:text-red-500 transition-colors"
-                      >
-                        Cerrar sesión / Usar otra cuenta
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => { playClick(); signIn('google'); }}
-                      className="btn-3d btn-white flex items-center justify-center gap-3 text-lg px-8 py-4 w-full"
-                    >
-                      <img src="https://www.gstatic.com/images/branding/product/1x/googleg_48dp.png" alt="Google" className="w-6 h-6" />
-                      CONECTAR CON GOOGLE
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {step === 1 && showIntroModal && (
           <div className="w-full max-w-xl mx-auto text-center space-y-8 animate-in zoom-in duration-500">
