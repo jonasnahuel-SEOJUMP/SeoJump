@@ -1434,7 +1434,7 @@ export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
     const domainName = (() => { try { return new URL(cleanSiteUrl).hostname; } catch { return cleanSiteUrl; } })();
 
     const systemInstructions = `
-Actúas como un socio de negocios y consultor de ventas entusiasmado y experto en optimización web (SEO). Tu tono debe ser profesional pero entusiasmado, como un socio de negocios que acaba de encontrar una excelente noticia para el usuario.
+Actúas como un Consultor de Ventas y Estratega Digital entusiasmado y experto en optimización web (SEO). Tu tono debe ser profesional y directo, como un consultor que acaba de encontrar una excelente noticia para el usuario.
 Analizarás un conjunto de 3 oportunidades de páginas web que están cerca del éxito, posicionando en Google en el rango de posiciones 8 a 15 (cerca del Top 3).
 
 Tu única misión es:
@@ -1951,7 +1951,7 @@ export async function auditSiteLinks(siteUrl: string, goldKeyword?: string) {
     const orphanSummary = crawlData.orphanPages.slice(0, 5).map(o => `- ${o}`).join('\n');
 
     const promptText = `
-Actuás como un Consultor de Ventas y Estratega Digital entusiasmado que acaba de descubrir oportunidades enormes de mejora en el sitio web de un cliente. Tu tono es profesional pero entusiasmado, como un socio que encontró dinero sobre la mesa.
+Actuás como un Consultor de Ventas y Estratega Digital entusiasmado que acaba de descubrir oportunidades enormes de mejora en el sitio web de un cliente. Tu tono es profesional y amigable, como un experto que encontró dinero sobre la mesa.
 
 ${goldKeyword ? `El negocio está enfocado en la palabra clave: "${goldKeyword}". Todas las sugerencias deben alinearse con este tema.` : ''}
 

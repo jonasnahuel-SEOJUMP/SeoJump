@@ -744,7 +744,7 @@ export default function Optimizacion() {
                                   <span className="text-yellow-400 font-black">El Insight:</span> Estás en posición <strong className="text-white font-bold">{qw.position?.toFixed(0)}</strong>. {qw.explanation} Cambiá el título a <strong className="text-amber-300 font-black">«{qw.suggestedTitle}»</strong> y captarás el clic.
                                 </p>
                                 <p className="text-xs text-slate-300 bg-slate-950/40 p-3 rounded-xl border border-slate-800 leading-normal">
-                                  🔒 <strong className="text-purple-300">Aclaración para el Socio:</strong> Cambiar el título o H1 no modifica la dirección del enlace (URL). **No perderás la antigüedad ni la autoridad de tu página**. Solo optimiza el texto para hacerlo más atractivo en las búsquedas.
+                                  🔒 <strong className="text-purple-300">Aclaración técnica:</strong> Cambiar el título o H1 no modifica la dirección del enlace (URL). **No perderás la antigüedad ni la autoridad de tu página**. Solo optimiza el texto para hacerlo más atractivo en las búsquedas.
                                 </p>
                                 <div className="text-xs md:text-sm text-slate-400 font-bold italic flex items-center gap-2 pt-1">
                                   <span>🔗 URL:</span>
