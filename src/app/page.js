@@ -781,7 +781,7 @@ export default function Home() {
                    if (!session) {
                      signIn("google");
                    } else {
-                     router.push("/buscador-de-oro");
+                     setStep(6);
                    }
                  }} 
                  className="btn-3d btn-green text-lg md:text-xl py-3.5 md:py-4 font-black tracking-wide w-full"
