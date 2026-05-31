@@ -14,6 +14,11 @@ export default function RootLayout({ children }) {
           dangerouslySetInnerHTML={{
             __html: `
               try {
+                const version = localStorage.getItem("seojump_version");
+                if (version !== "1.1") {
+                  localStorage.removeItem("seojump_quick_wins");
+                  localStorage.setItem("seojump_version", "1.1");
+                }
                 const savedTheme = localStorage.getItem("seojump_theme");
                 if (savedTheme === "dark") {
                   document.documentElement.classList.add("dark");
