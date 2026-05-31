@@ -50,9 +50,14 @@ const getBadgeInfo = (url) => {
 
 // Componente destacado de Oportunidades AEO (El Gancho)
 function QuickWinsHighlight({ quickWins, completedQuickWins, playClick, router }) {
-  if (!quickWins || quickWins.length === 0) return null;
-  const pendingWins = quickWins.filter(qw => !completedQuickWins.has(qw.page));
-  if (pendingWins.length === 0) return null;
+  const pendingWinsCount = quickWins && quickWins.length > 0 
+    ? quickWins.filter(qw => !completedQuickWins.has(qw.page)).length 
+    : "Múltiples";
+
+  // Si pasamos el array real y resulta que todo está completado, ahí sí lo ocultamos.
+  if (quickWins && quickWins.length > 0 && quickWins.filter(qw => !completedQuickWins.has(qw.page)).length === 0) {
+    return null;
+  }
 
   return (
     <div className="w-full mb-8 relative rounded-3xl border-2 border-purple-500/50 bg-gradient-to-r from-violet-950/90 via-purple-900/85 to-indigo-950/90 p-6 md:p-8 shadow-[0_0_50px_rgba(139,92,246,0.4)] hover:scale-[1.01] transition-transform duration-300">
@@ -66,7 +71,7 @@ function QuickWinsHighlight({ quickWins, completedQuickWins, playClick, router }
             <span className="text-purple-300 text-xs font-bold">Answer Engine Optimization</span>
           </div>
           <h2 className="text-2xl md:text-3xl font-black text-white">
-            ⚡ {pendingWins.length} Oportunidades AEO detectadas
+            ⚡ {pendingWinsCount} Oportunidades AEO detectadas
           </h2>
           <p className="text-slate-200 text-sm md:text-base font-semibold leading-relaxed">
             Páginas con potencial para ser citadas por <span className="text-purple-300 font-bold">ChatGPT, Gemini</span> y las respuestas con IA de Google.

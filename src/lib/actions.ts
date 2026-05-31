@@ -264,7 +264,7 @@ const buildMissionTypes = (goldKeyword?: string) => [
   // Pide agregar una sección FAQ que multiplica chances de aparecer en AI Overviews
   {
     type: 'AEO',
-    title: 'Seé la Respuesta de la IA',
+    title: 'Oportunidad AEO (Respuesta de IA)',
     descriptionTemplate: (path: string) =>
       goldKeyword
         ? `La página ${path} aparece para «${goldKeyword}» — una pregunta real. Agreá una sección FAQ y multiplicá 3× tus chances de aparecer en AI Overviews, ChatGPT y Gemini.`
