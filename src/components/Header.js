@@ -29,9 +29,9 @@ export default function Header({
     <header className="w-full flex flex-col gap-4 bg-white dark:bg-slate-800 p-4 md:p-6 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 relative z-10 transition-colors duration-300 shadow-sm max-w-7xl mx-auto">
       <div className="flex items-center justify-between gap-2">
         {isDashboard ? (
-          <span className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-            🦉 SEOJUMP
-          </span>
+          <div className="flex items-center">
+            <img src="/logo.png" alt="SEOJump" className="h-8 md:h-10 object-contain" />
+          </div>
         ) : (
           <Link
             href="/"
@@ -88,8 +88,8 @@ export default function Header({
                 className="w-8 h-8 md:w-12 md:h-12 rounded-full border-2 border-duo-green-shadow"
               />
             ) : (
-              <div className="w-8 h-8 md:w-12 md:h-12 bg-duo-green rounded-full flex items-center justify-center border-b-2 md:border-b-4 border-duo-green-shadow text-white text-sm md:text-xl">
-                👤
+              <div className="w-8 h-8 md:w-12 md:h-12 bg-duo-green rounded-full flex items-center justify-center border-b-2 md:border-b-4 border-duo-green-shadow overflow-hidden p-1">
+                <img src="/favicon.png" alt="SEOJump Avatar" className="w-full h-full object-contain" />
               </div>
             )}
           </button>

@@ -4,6 +4,9 @@ import "./globals.css";
 export const metadata = {
   title: "SEOJUMP - ¡Domina el SEO jugando!",
   description: "La forma más divertida de aprender y aplicar SEO en tu sitio web.",
+  icons: {
+    icon: '/favicon.png',
+  },
 };
 
 export default function RootLayout({ children }) {

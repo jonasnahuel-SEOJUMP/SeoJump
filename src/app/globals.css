@@ -6,8 +6,8 @@
   --background: #08070f;
   --foreground: #f8fafc;
   
-  --duo-green: #10b981;       /* Emerald */
-  --duo-green-shadow: #047857;
+  --duo-green: #5de19c;       /* Mint Green (Logo) */
+  --duo-green-shadow: #3b9b6b;
   --duo-blue: #3b82f6;        /* Sapphire */
   --duo-blue-shadow: #1d4ed8;
   --duo-yellow: #f59e0b;      /* Gold */
@@ -106,28 +106,28 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom-width: 0 !important;
 }
 
-/* Verde Esmeralda */
+/* Verde Menta (Logo) */
 .btn-green, .bg-green-500 {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
-  border-color: #046a4e !important;
+  background: linear-gradient(135deg, #5de19c 0%, #3ca06c 100%) !important;
+  border-color: #2b744d !important;
   box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4), 
               inset 0 -3px 6px rgba(0, 0, 0, 0.3), 
-              0 6px 20px rgba(16, 185, 129, 0.35),
-              0 0 0 1px rgba(16, 185, 129, 0.2) !important;
+              0 6px 20px rgba(93, 225, 156, 0.35),
+              0 0 0 1px rgba(93, 225, 156, 0.2) !important;
   color: #ffffff !important;
 }
 .btn-green:hover, .bg-green-500:hover {
-  background: linear-gradient(135deg, #34d399 0%, #10b981 100%) !important;
+  background: linear-gradient(135deg, #7cf0b5 0%, #5de19c 100%) !important;
   box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.5), 
               inset 0 -3px 6px rgba(0, 0, 0, 0.3), 
-              0 8px 25px rgba(16, 185, 129, 0.55),
-              0 0 0 2px rgba(52, 211, 153, 0.3) !important;
+              0 8px 25px rgba(93, 225, 156, 0.55),
+              0 0 0 2px rgba(124, 240, 181, 0.3) !important;
   transform: scale(1.02) translateY(-1px);
 }
 .btn-green:active, .bg-green-500:active {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  background: linear-gradient(135deg, #3ca06c 0%, #2b744d 100%) !important;
   box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.5),
-              0 2px 5px rgba(16, 185, 129, 0.2) !important;
+              0 2px 5px rgba(93, 225, 156, 0.2) !important;
   transform: translateY(4px);
   border-bottom-width: 0 !important;
 }
