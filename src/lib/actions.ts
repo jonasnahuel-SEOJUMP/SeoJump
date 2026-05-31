@@ -116,6 +116,7 @@ async function callGeminiREST(apiKey: string, promptText: string): Promise<strin
     headers: {
       "Content-Type": "application/json",
     },
+    cache: "no-store",
     body: JSON.stringify({
       contents: [
         {
@@ -1074,9 +1075,9 @@ Reglas estrictas de generación:
         const originalFetch = global.fetch;
         // @ts-ignore
         global.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
-          console.log("[API Debug] SDK is fetching URL:", input.toString());
-          console.log("[API Debug] Fetch init options:", JSON.stringify(init || {}));
-          return originalFetch(input, init);
+          const newInit = { ...init, cache: 'no-store' as RequestCache };
+          console.log("[API Debug Detective] SDK is fetching URL:", input.toString());
+          return originalFetch(input, newInit);
         };
 
         try {
@@ -1467,6 +1468,7 @@ ${cleanGoldKeyword ? `El usuario está investigando la keyword: "${cleanGoldKeyw
 
 Reglas de lenguaje:
 - NUNCA uses tecnicismos: "canibalización", "backlinks", "DA", "PA", "search intent", "enlazado interno", "thin content".
+- TIENES PROHIBIDO usar la palabra "Socio" o "Socia". Háblale al usuario de forma directa y respetuosa, con un tono más serio pero motivador.
 - Usa lenguaje comercial: "Más clics", "Salto de posición", "Contenido ganador", "Atraer más clientes", "Google está listo para mostrarte más", "Oro puro", "Tráfico valioso".
 
 Devuelve la respuesta ESTRICTAMENTE en formato JSON con el siguiente esquema de array, sin bloques de código markdown ni explicaciones adicionales:
@@ -1502,9 +1504,10 @@ ${JSON.stringify(opportunities, null, 2)}
       const originalFetch = global.fetch;
       // @ts-ignore
       global.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+        const newInit = { ...init, cache: 'no-store' as RequestCache };
         console.log("[API Debug QuickWins] SDK is fetching URL:", input.toString());
-        console.log("[API Debug QuickWins] Fetch init options:", JSON.stringify(init || {}));
-        return originalFetch(input, init);
+        console.log("[API Debug QuickWins] Fetch init options:", JSON.stringify(newInit));
+        return originalFetch(input, newInit);
       };
 
       try {
@@ -1952,6 +1955,7 @@ export async function auditSiteLinks(siteUrl: string, goldKeyword?: string) {
 
     const promptText = `
 Actuás como un Consultor de Ventas y Estratega Digital entusiasmado que acaba de descubrir oportunidades enormes de mejora en el sitio web de un cliente. Tu tono es profesional y amigable, como un experto que encontró dinero sobre la mesa.
+TIENES PROHIBIDO usar la palabra "Socio" o "Socia". Háblale al usuario de forma directa y respetuosa, con un tono más serio pero motivador.
 
 ${goldKeyword ? `El negocio está enfocado en la palabra clave: "${goldKeyword}". Todas las sugerencias deben alinearse con este tema.` : ''}
 
@@ -2012,6 +2016,7 @@ REGLAS ESTRICTAS:
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      cache: "no-store",
       body: JSON.stringify({
         contents: [{ role: "user", parts: [{ text: promptText }] }],
         generationConfig: { responseMimeType: "application/json" }
