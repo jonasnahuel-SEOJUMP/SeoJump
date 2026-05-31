@@ -9,6 +9,7 @@ import { useTheme } from "../../hooks/useTheme";
 import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
+import PaywallModal from "../../components/PaywallModal";
 
 // Mapa de tipos de página para badges
 const getBadgeInfo = (url) => {
@@ -210,6 +211,13 @@ export default function Optimizacion() {
   const [isQuickWinsMock, setIsQuickWinsMock] = useState(false);
   const [xpPopup, setXpPopup] = useState(null);
   const [activeTab, setActiveTab] = useState("quickwins");
+  const [isPremium, setIsPremium] = useState(false);
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
+
+  useEffect(() => {
+    const premiumStatus = localStorage.getItem("isPremium") === "true";
+    setIsPremium(premiumStatus);
+  }, []);
 
   // Level-up sound tracking
   const prevXpRef = useRef(0);
@@ -684,6 +692,32 @@ export default function Optimizacion() {
                       )}
                       
                       {quickWins.map((qw, index) => {
+                        const isUnlocked = isPremium || index < 2;
+                        
+                        if (!isUnlocked) {
+                          return (
+                            <div 
+                              key={index} 
+                              onClick={() => { playClick(); setShowPaywallModal(true); }}
+                              className="card-3d relative overflow-hidden p-6 md:p-8 flex flex-col gap-4 transition-all duration-300 border-dashed border-2 border-slate-300 dark:border-slate-700 bg-slate-800/40 dark:bg-slate-900/60 hover:border-amber-500/50 cursor-pointer group"
+                            >
+                              <div className="absolute inset-0 backdrop-blur-[2px] bg-white/5 dark:bg-slate-950/10 pointer-events-none rounded-3xl"></div>
+                              <div className="relative z-10 flex flex-col md:flex-row items-center gap-4 opacity-70 group-hover:opacity-100 transition-opacity">
+                                <div className="w-16 h-16 rounded-2xl flex-shrink-0 flex items-center justify-center bg-slate-200 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 text-3xl font-black text-slate-400 group-hover:text-amber-500 group-hover:bg-amber-500/10 transition-colors shadow-inner">
+                                  🔒
+                                </div>
+                                <div className="flex-1 text-center md:text-left">
+                                  <h3 className="text-xl md:text-2xl font-black text-slate-500 dark:text-slate-400 mb-2 blur-[1px] group-hover:blur-none transition-all">🚀 Subir posición para: «Oportunidad Oculta»</h3>
+                                  <p className="text-sm md:text-base font-bold text-slate-400 dark:text-slate-500 mb-4">[Desbloquear con SEO Jump Pro]</p>
+                                  <button className="btn-3d !text-sm sm:!text-base !py-2 !px-4 btn-yellow font-black">
+                                    DESBLOQUEAR {quickWins.length - 2} OPORTUNIDADES AEO
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+
                         const isCompleted = completedQuickWins.has(qw.page);
                         const verifyResult = verifyQuickWinResult[index] || {};
                         
@@ -791,12 +825,37 @@ export default function Optimizacion() {
                     <>
                       {pendingMissions.length > 0 ? (
                         pendingMissions.map((mission) => {
+                          const originalIndex = missions.findIndex(m => m.id === mission.id);
+                          const isUnlocked = isPremium || originalIndex < 2;
+
+                          if (!isUnlocked) {
+                             return (
+                               <div 
+                                  key={mission.id}
+                                  onClick={() => { playClick(); setShowPaywallModal(true); }}
+                                  className="card-3d relative flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6 p-4 md:p-8 transition-all group cursor-pointer mb-4 w-full overflow-hidden bg-slate-800/40 dark:bg-slate-900/60 border-dashed border-2 border-slate-300 dark:border-slate-700 hover:border-duo-green/50 dark:hover:border-duo-green/50"
+                               >
+                                 <div className="absolute inset-0 backdrop-blur-[2px] bg-white/5 dark:bg-slate-950/10 pointer-events-none rounded-3xl"></div>
+                                 <div className="relative z-10 w-16 h-16 md:w-20 md:h-20 rounded-2xl flex-shrink-0 flex items-center justify-center bg-slate-200 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 text-3xl font-black text-slate-400 group-hover:text-duo-green group-hover:bg-green-500/10 transition-colors shadow-inner">
+                                   🔒
+                                 </div>
+                                 <div className="relative z-10 flex-1 min-w-0 w-full text-center md:text-left opacity-70 group-hover:opacity-100 transition-opacity">
+                                   <h3 className="text-lg md:text-xl lg:text-2xl font-black text-slate-500 dark:text-slate-400 mb-2 blur-[1px] group-hover:blur-none transition-all">Misión Oculta: Optimización de página clave con alto tráfico potencial.</h3>
+                                   <p className="text-sm md:text-base font-bold text-slate-400 dark:text-slate-500 mb-4">[Desbloquear con SEO Jump Pro]</p>
+                                   <button className="btn-3d !text-sm sm:!text-base !py-2 !px-4 btn-green font-black">
+                                     DESBLOQUEAR {missions.length > 2 ? missions.length - 2 : 0} MISIONES OCULTAS
+                                   </button>
+                                 </div>
+                               </div>
+                             );
+                          }
+
                           const badge = getBadgeInfo(mission.page);
                           const display = getMissionDisplay(mission, goldKeyword);
                           return (
                             <div key={mission.id}
                               onClick={() => { playClick(); openMission(mission); }}
-                              className="card-3d flex flex-col md:flex-row items-start gap-4 md:gap-6 p-4 md:p-8 transition-colors group hover:bg-gray-50 dark:hover:bg-slate-750 cursor-pointer w-full overflow-hidden">
+                              className="card-3d flex flex-col md:flex-row items-start gap-4 md:gap-6 p-4 md:p-8 transition-colors group hover:bg-gray-50 dark:hover:bg-slate-750 cursor-pointer w-full overflow-hidden mb-4">
                               <div className={`w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center border-b-4 text-3xl font-black ${
                                 mission.type === 'H1'  ? 'bg-duo-green border-duo-green-shadow text-white' :
                                 mission.type === 'ALT' ? 'bg-duo-blue border-duo-blue-shadow text-white' :
@@ -1054,6 +1113,14 @@ export default function Optimizacion() {
           </span>
           <span className="text-3xl">✨</span>
         </div>
+      )}
+
+      {showPaywallModal && (
+        <PaywallModal 
+          onClose={() => setShowPaywallModal(false)} 
+          totalHiddenMissions={missions.length > 2 ? missions.length - 2 : 0} 
+          playClick={playClick}
+        />
       )}
 
     </div>

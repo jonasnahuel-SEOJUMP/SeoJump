@@ -88,5 +88,65 @@
     "timestamp": "2026-05-29T19:08:54.221Z",
     "status": "400",
     "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "microfibra"
+    },
+    "timestamp": "2026-05-31T13:36:56.045Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "microfibra"
+    },
+    "timestamp": "2026-05-31T13:36:58.158Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "microfibra"
+    },
+    "timestamp": "2026-05-31T13:37:01.267Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "microfibra"
+    },
+    "timestamp": "2026-05-31T13:37:13.753Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "microfibra"
+    },
+    "timestamp": "2026-05-31T13:37:15.875Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
+  },
+  {
+    "action": "getAIPredictiveSuggestions",
+    "input": {
+      "siteUrl": "https://www.55detailshop.com.ar/",
+      "seedKeyword": "microfibra"
+    },
+    "timestamp": "2026-05-31T13:37:18.963Z",
+    "status": "400",
+    "message": "[GoogleGenerativeAI Error]: Error fetching from https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent: [400 Bad Request] API key expired. Please renew the API key. [{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\"reason\":\"API_KEY_INVALID\",\"domain\":\"googleapis.com\",\"metadata\":{\"service\":\"generativelanguage.googleapis.com\"}},{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"locale\":\"en-US\",\"message\":\"API key expired. Please renew the API key.\"}]"
   }
 ]
