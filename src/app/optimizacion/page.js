@@ -6,7 +6,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete } from "../../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
@@ -247,6 +247,21 @@ export default function Optimizacion() {
           const completedSet = new Set(serverState.completed_missions || []);
           const p = getPhaseProgress(completedSet, serverState.gold_suggestions, serverState.missions, serverState.gold_query, serverState.site_url);
           setProg(p);
+
+          // Fetch completed missions from Supabase
+          fetchCompletedMissions().then(cwResult => {
+            if (cwResult.success && cwResult.missions.length > 0) {
+              const qwUrls = new Set(
+                cwResult.missions
+                  .filter(m => m.mission_type === 'QUICK_WIN')
+                  .map(m => m.target_url)
+              );
+              if (qwUrls.size > 0) {
+                setCompletedQuickWins(qwUrls);
+                localStorage.setItem("seojump_completed_quick_wins", JSON.stringify(Array.from(qwUrls)));
+              }
+            }
+          }).catch(() => {});
 
           // Load Quick Wins from local storage
           const savedQuickWins = localStorage.getItem("seojump_quick_wins");
