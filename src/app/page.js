@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import LandingPage from "../components/LandingPage";
+import PaywallModal from "../components/PaywallModal";
 import AICatch from "../components/AICatch";
 import LoginButton from "../components/LoginButton";
 import NotificationBell from "../components/NotificationBell";
@@ -98,6 +99,13 @@ export default function Home() {
   const [missions, setMissions] = useState([]);
   const [missionError, setMissionError] = useState(null);
   const [selectedMission, setSelectedMission] = useState(null);
+  const [isPremium, setIsPremium] = useState(false);
+  const [showPaywallModal, setShowPaywallModal] = useState(false);
+
+  useEffect(() => {
+    const premiumStatus = localStorage.getItem("isPremium") === "true";
+    setIsPremium(premiumStatus);
+  }, []);
   
   // Mission interaction state
   const [h1Value, setH1Value] = useState("");
@@ -909,6 +917,31 @@ export default function Home() {
                          {/* Pendientes */}
                          {missions.filter(m => !completedIds.has(m.id)).slice(0, 10).length > 0 ? (
                            missions.filter(m => !completedIds.has(m.id)).slice(0, 10).map((mission) => {
+                             const originalIndex = missions.findIndex(m => m.id === mission.id);
+                             const isUnlocked = isPremium || originalIndex < 2;
+
+                             if (!isUnlocked) {
+                               return (
+                                 <div 
+                                    key={mission.id}
+                                    onClick={() => { playClick(); setShowPaywallModal(true); }}
+                                    className="card-3d relative flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6 p-4 md:p-8 transition-all group cursor-pointer mb-4 w-full overflow-hidden bg-slate-800/40 dark:bg-slate-900/60 border-dashed border-2 border-slate-300 dark:border-slate-700 hover:border-duo-green/50 dark:hover:border-duo-green/50"
+                                 >
+                                   <div className="absolute inset-0 backdrop-blur-[2px] bg-white/5 dark:bg-slate-950/10 pointer-events-none rounded-3xl"></div>
+                                   <div className="relative z-10 w-16 h-16 md:w-20 md:h-20 rounded-2xl flex-shrink-0 flex items-center justify-center bg-slate-200 dark:bg-slate-800 border-2 border-slate-300 dark:border-slate-700 text-3xl font-black text-slate-400 group-hover:text-duo-green group-hover:bg-green-500/10 transition-colors shadow-inner">
+                                     🔒
+                                   </div>
+                                   <div className="relative z-10 flex-1 min-w-0 w-full text-center md:text-left opacity-70 group-hover:opacity-100 transition-opacity">
+                                     <h3 className="text-lg md:text-xl lg:text-2xl font-black text-slate-500 dark:text-slate-400 mb-2 blur-[1px] group-hover:blur-none transition-all">Misión Oculta: Optimización de página clave con alto tráfico potencial.</h3>
+                                     <p className="text-sm md:text-base font-bold text-slate-400 dark:text-slate-500 mb-4">[Desbloquear con SEO Jump Pro]</p>
+                                     <button className="btn-3d !text-sm sm:!text-base !py-2 !px-4 btn-green font-black">
+                                       DESBLOQUEAR {missions.length - 2} MISIONES OCULTAS
+                                     </button>
+                                   </div>
+                                 </div>
+                               );
+                             }
+
                              return (
                                <div 
                                   key={mission.id}
@@ -1370,6 +1403,14 @@ export default function Home() {
           </span>
           <span className="text-3xl">✨</span>
         </div>
+      )}
+
+      {showPaywallModal && (
+        <PaywallModal 
+          onClose={() => setShowPaywallModal(false)} 
+          totalHiddenMissions={missions.length > 2 ? missions.length - 2 : 0} 
+          playClick={playClick}
+        />
       )}
 
     </div>
