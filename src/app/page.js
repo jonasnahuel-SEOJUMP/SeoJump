@@ -183,6 +183,8 @@ export default function Home() {
           setProg(p);
           if (serverState.site_url && filteredMissions.length > 0) {
             setStep(6);
+          } else {
+            setShowIntroModal(true);
           }
           setServerLoading(false);
 
@@ -540,7 +542,14 @@ export default function Home() {
   if (step === 1 && !showIntroModal) {
     return (
       <div className="min-h-screen bg-[#07070d] w-full font-fredoka relative transition-colors duration-300">
-        <LandingPage onStart={() => { playClick(); setShowIntroModal(true); }} playClick={playClick} />
+        <LandingPage onStart={() => { 
+          playClick(); 
+          if (!session) {
+            signIn("google");
+          } else {
+            setShowIntroModal(true); 
+          }
+        }} playClick={playClick} />
       </div>
     );
   }
