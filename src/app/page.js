@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import LandingPage from "../components/LandingPage";
-import MissionDetailsModal from '../components/MissionDetailsModal';
+
 import PrivacyModal from '../components/PrivacyModal';
 import TermsModal from '../components/TermsModal';
 import PaywallModal from "../components/PaywallModal";
