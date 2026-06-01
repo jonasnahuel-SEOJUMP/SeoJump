@@ -408,8 +408,17 @@ export default function Home() {
         setMissionStatus("success");
         setFailedAttempts(0);
         if (!completedIds.has(selectedMission.id)) {
-          setXp(prev => prev + (selectedMission.xp || 50));
-          setCompletedIds(prev => new Set([...prev, selectedMission.id]));
+          setXp(prev => {
+             const newXp = prev + (selectedMission.xp || 50);
+             localStorage.setItem("seojump_xp", newXp.toString());
+             return newXp;
+          });
+          setCompletedIds(prev => {
+             const updated = new Set([...prev, selectedMission.id]);
+             localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
+             setTimeout(() => syncStateWithServer(), 100);
+             return updated;
+          });
           // Guardar en Supabase (no esperar respuesta para no bloquear la UI)
           markMissionComplete(
             selectedMission.type,
@@ -450,7 +459,11 @@ export default function Home() {
         setTimeout(() => setShowConfetti(false), 3000);
 
         if (!completedQuickWins.has(pageUrl)) {
-          setXp(prev => prev + 100);
+          setXp(prev => {
+            const newXp = prev + 100;
+            localStorage.setItem("seojump_xp", newXp.toString());
+            return newXp;
+          });
           setCompletedQuickWins(prev => {
             const next = new Set(prev);
             next.add(pageUrl);
@@ -458,6 +471,7 @@ export default function Home() {
           });
           setXpPopup({ amount: 100, message: "¡Crecimiento detectado!" });
           setTimeout(() => setXpPopup(null), 4000);
+          setTimeout(() => syncStateWithServer(), 100);
           // Guardar en Supabase para memoria cross-device
           markMissionComplete('QUICK_WIN', pageUrl, 100, suggestedTitle).catch(() => {});
         }

@@ -477,7 +477,11 @@ export default function Optimizacion() {
         setTimeout(() => setShowConfetti(false), 3000);
 
         if (!completedQuickWins.has(pageUrl)) {
-          setXp(prev => prev + 100);
+          setXp(prev => {
+            const newXp = prev + 100;
+            localStorage.setItem("seojump_xp", newXp.toString());
+            return newXp;
+          });
           setCompletedQuickWins(prev => {
             const next = new Set(prev);
             next.add(pageUrl);
