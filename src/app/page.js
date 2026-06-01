@@ -926,18 +926,89 @@ export default function Home() {
                     />
 
                     <div className="space-y-4">
-                    {missions.length > 0 ? (
-                       <>
-                         {/* Pendientes */}
-                         {missions.filter(m => !completedIds.has(m.id)).slice(0, 10).length > 0 ? (
-                           missions.filter(m => !completedIds.has(m.id)).slice(0, 10).map((mission) => {
-                             const originalIndex = missions.findIndex(m => m.id === mission.id);
-                             const isUnlocked = isPremium || originalIndex < 2;
+                      {missions.length > 0 ? (() => {
+                           const pendingMissions = missions.filter(m => !completedIds.has(m.id)).slice(0, 10);
+                           if (pendingMissions.length === 0) {
+                             return (
+                               <div className="text-center py-4 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700">
+                                 <p className="text-slate-500 font-bold text-lg">¡Todas las misiones completadas! 🎉</p>
+                               </div>
+                             );
+                           }
 
-                             if (!isUnlocked) {
-                               return (
+                           const unlockedMissions = pendingMissions.filter(mission => {
+                             const originalIndex = missions.indexOf(mission);
+                             return isPremium || originalIndex < 2;
+                           });
+
+                           const lockedCount = pendingMissions.length - unlockedMissions.length;
+
+                           return (
+                             <>
+                               {unlockedMissions.map((mission) => (
                                  <div 
                                     key={mission.id}
+                                    onClick={() => { playClick(); openMission(mission); }}
+                                    className="card-3d flex flex-col md:flex-row items-start gap-4 md:gap-6 p-4 md:p-8 transition-colors group hover:bg-gray-50 dark:hover:bg-slate-750 cursor-pointer mb-4 w-full overflow-hidden"
+                                 >
+                                   <div className={`w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center border-b-4 text-3xl font-black ${
+                                     mission.type === 'H1' ? 'bg-duo-green border-duo-green-shadow text-white' : 
+                                     mission.type === 'ALT' ? 'bg-duo-blue border-duo-blue-shadow text-white' : 
+                                     mission.type === 'AEO' ? 'bg-purple-600 border-purple-800 text-white' :
+                                     'bg-duo-yellow border-duo-yellow-shadow text-white'
+                                   }`}>
+                                     {mission.icon}
+                                   </div>
+                                   <div className="flex-1 min-w-0 w-full">
+                                     {(() => {
+                                        const badge = getBadgeInfo(mission.page);
+                                        return (
+                                          <>
+                                            <div className="flex items-center gap-3 flex-wrap mb-1.5">
+                                              <h3 className="text-xl md:text-2xl lg:text-3xl font-black transition-colors text-slate-800 dark:text-slate-100 group-hover:text-duo-green">{mission.title}</h3>
+                                              <span className={`text-sm lg:text-base font-black px-3 py-1 rounded-md ${badge.color}`}>
+                                                {badge.text}
+                                              </span>
+                                              {mission.type === 'AEO' && (
+                                                <span className="text-xs font-black px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-400">
+                                                  🤖 AEO
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="flex items-center gap-2 mb-1.5 w-full min-w-0">
+                                              <code className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 truncate block w-full max-w-[200px] min-[400px]:max-w-[260px] sm:max-w-[380px] md:max-w-[450px]">
+                                                {mission.page}
+                                              </code>
+                                              <button 
+                                                onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(mission.page); playClick(); }}
+                                                className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex-shrink-0 text-lg"
+                                                title="Copiar URL"
+                                              >
+                                                📋
+                                              </button>
+                                            </div>
+                                            <p className="text-sm lg:text-base text-slate-400 dark:text-slate-500 font-bold italic mb-2">
+                                              {badge.wpPath}
+                                            </p>
+                                          </>
+                                        );
+                                      })()}
+                                     <p className="font-bold text-slate-650 dark:text-slate-350 text-base lg:text-lg mb-2">{mission.description}</p>
+                                     <div className="flex flex-wrap gap-4 mt-3 text-sm lg:text-base font-bold text-slate-550 dark:text-slate-400">
+                                       <span>👆 {mission.clicks} oportunidades de venta</span>
+                                       <span>👁️ {mission.impressions} dinero sobre la mesa</span>
+                                       <span>📊 Pos. {mission.position?.toFixed(1)}</span>
+                                     </div>
+                                     <div className="mt-4 w-full">
+                                       <button className="btn-3d !text-sm sm:!text-base md:!text-lg lg:!text-xl !py-2.5 !px-4 sm:!py-3 sm:!px-6 btn-green w-full md:w-auto font-black">
+                                         EMPEZAR (+{mission.xp} XP)
+                                       </button>
+                                     </div>
+                                   </div>
+                                 </div>
+                               ))}
+                               {!isPremium && lockedCount > 0 && (
+                                 <div 
                                     onClick={() => { playClick(); setShowPaywallModal(true); }}
                                     className="card-3d relative flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6 p-4 md:p-8 transition-all group cursor-pointer mb-4 w-full overflow-hidden bg-slate-800/40 dark:bg-slate-900/60 border-dashed border-2 border-slate-300 dark:border-slate-700 hover:border-duo-green/50 dark:hover:border-duo-green/50"
                                  >
@@ -946,86 +1017,18 @@ export default function Home() {
                                      🔒
                                    </div>
                                    <div className="relative z-10 flex-1 min-w-0 w-full text-center md:text-left opacity-70 group-hover:opacity-100 transition-opacity">
-                                     <h3 className="text-lg md:text-xl lg:text-2xl font-black text-slate-500 dark:text-slate-400 mb-2 blur-[1px] group-hover:blur-none transition-all">Misión Oculta: Optimización de página clave con alto tráfico potencial.</h3>
-                                     <p className="text-sm md:text-base font-bold text-slate-400 dark:text-slate-500 mb-4">[Desbloquear con SEO Jump Pro]</p>
+                                     <h3 className="text-lg md:text-xl lg:text-2xl font-black text-slate-500 dark:text-slate-400 mb-2 blur-[1px] group-hover:blur-none transition-all">Misiones Ocultas</h3>
+                                     <p className="text-sm md:text-base font-bold text-slate-400 dark:text-slate-500 mb-4">Descubrí el resto de las oportunidades de optimización y acelerá tu crecimiento.</p>
                                      <button className="btn-3d !text-sm sm:!text-base !py-2 !px-4 btn-green font-black">
-                                       DESBLOQUEAR {missions.length - 2} MISIONES OCULTAS
+                                       DESBLOQUEAR {lockedCount} MISIONES OCULTAS
                                      </button>
                                    </div>
                                  </div>
-                               );
-                             }
-
-                             return (
-                               <div 
-                                  key={mission.id}
-                                  onClick={() => { playClick(); openMission(mission); }}
-                                  className="card-3d flex flex-col md:flex-row items-start gap-4 md:gap-6 p-4 md:p-8 transition-colors group hover:bg-gray-50 dark:hover:bg-slate-750 cursor-pointer mb-4 w-full overflow-hidden"
-                               >
-                                 <div className={`w-20 h-20 rounded-2xl flex-shrink-0 flex items-center justify-center border-b-4 text-3xl font-black ${
-                                   mission.type === 'H1' ? 'bg-duo-green border-duo-green-shadow text-white' : 
-                                   mission.type === 'ALT' ? 'bg-duo-blue border-duo-blue-shadow text-white' : 
-                                   mission.type === 'AEO' ? 'bg-purple-600 border-purple-800 text-white' :
-                                   'bg-duo-yellow border-duo-yellow-shadow text-white'
-                                 }`}>
-                                   {mission.icon}
-                                 </div>
-                                 <div className="flex-1 min-w-0 w-full">
-                                   {(() => {
-                                      const badge = getBadgeInfo(mission.page);
-                                      return (
-                                        <>
-                                          <div className="flex items-center gap-3 flex-wrap mb-1.5">
-                                            <h3 className="text-xl md:text-2xl lg:text-3xl font-black transition-colors text-slate-800 dark:text-slate-100 group-hover:text-duo-green">{mission.title}</h3>
-                                            <span className={`text-sm lg:text-base font-black px-3 py-1 rounded-md ${badge.color}`}>
-                                              {badge.text}
-                                            </span>
-                                            {mission.type === 'AEO' && (
-                                              <span className="text-xs font-black px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-400">
-                                                🤖 AEO
-                                              </span>
-                                            )}
-                                          </div>
-                                          <div className="flex items-center gap-2 mb-1.5 w-full min-w-0">
-                                            <code className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 truncate block w-full max-w-[200px] min-[400px]:max-w-[260px] sm:max-w-[380px] md:max-w-[450px]">
-                                              {mission.page}
-                                            </code>
-                                            <button 
-                                              onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(mission.page); playClick(); }}
-                                              className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex-shrink-0 text-lg"
-                                              title="Copiar URL"
-                                            >
-                                              📋
-                                            </button>
-                                          </div>
-                                          <p className="text-sm lg:text-base text-slate-400 dark:text-slate-500 font-bold italic mb-2">
-                                            {badge.wpPath}
-                                          </p>
-                                        </>
-                                      );
-                                    })()}
-                                   <p className="font-bold text-slate-650 dark:text-slate-350 text-base lg:text-lg mb-2">{mission.description}</p>
-                                   <div className="flex flex-wrap gap-4 mt-3 text-sm lg:text-base font-bold text-slate-550 dark:text-slate-400">
-                                     <span>👆 {mission.clicks} oportunidades de venta</span>
-                                     <span>👁️ {mission.impressions} dinero sobre la mesa</span>
-                                     <span>📊 Pos. {mission.position?.toFixed(1)}</span>
-                                   </div>
-                                   <div className="mt-4 w-full">
-                                     <button className="btn-3d !text-sm sm:!text-base md:!text-lg lg:!text-xl !py-2.5 !px-4 sm:!py-3 sm:!px-6 btn-green w-full md:w-auto font-black">
-                                       EMPEZAR (+{mission.xp} XP)
-                                     </button>
-                                   </div>
-                                 </div>
-                               </div>
-                             );
-                           })
-                         ) : (
-                           <div className="text-center py-4 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700">
-                             <p className="text-slate-500 font-bold text-lg">¡Todas las misiones completadas! 🎉</p>
-                           </div>
-                         )}
-                       </>
-                    ) : (
+                               )}
+                             </>
+                           );
+                         })()
+                    : (
                       <div className="text-center py-8 space-y-4">
                         {missionError ? (
                           missionError === "MISSING_SEARCH_CONSOLE_SCOPE" ? (

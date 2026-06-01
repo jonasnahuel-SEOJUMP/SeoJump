@@ -453,7 +453,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
       const missionDef = isQuestion ? aeoType : classicTypes[index % classicTypes.length];
 
       return {
-        id: `${missionDef.type.toLowerCase()}-${pagePath}`,
+        id: `${missionDef.type.toLowerCase()}-${pagePath}-${effectiveKeyword.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`,
         title: missionDef.title,
         description: missionDef.descriptionTemplate(displayPath),
         xp: missionDef.xp,
