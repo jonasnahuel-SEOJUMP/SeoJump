@@ -609,17 +609,17 @@ export default function Home() {
           <div className="w-full max-w-xl mx-auto text-center space-y-8 animate-in zoom-in duration-500">
              <div className="text-8xl animate-bounce">🦉</div>
              <h2 className="text-2xl md:text-3xl font-extrabold text-yellow-400 tracking-tight drop-shadow-md">
-               ¡Atención, Jugador!
+               ¡Te damos la bienvenida, Jugador!
              </h2>
              <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl border-2 border-slate-700 shadow-xl relative text-left w-full mx-auto">
                <p className="text-base md:text-lg font-bold leading-relaxed mb-5">
-                 Antes de arrancar, tenés que saber una <span className="text-yellow-400 font-black">regla de oro</span>: este juego tiene <span className="text-cyan-400 font-black">consecuencias en tu vida real</span>.
+                 Antes de comenzar, es importante recordar nuestra <span className="text-yellow-400 font-black">regla de oro</span>: cada meta que alcances en esta plataforma tiene un <span className="text-cyan-400 font-black">impacto directo en el éxito de tu empresa</span>.
                </p>
                <p className="text-base md:text-lg font-bold leading-relaxed mb-5">
-                 Cada H1, Meta o texto ALT que optimices acá viaja directo a <span className="text-green-400 font-black">Google</span>. Sumar XP en SEOJUMP significa que clientes reales van a encontrar tu negocio en su celular.
+                 Cada título, descripción o etiqueta que optimices aquí se sincroniza de forma segura con los motores de búsqueda. Sumar puntos de experiencia (XP) en SEO Jump significa que tu negocio ganará <span className="text-green-400 font-black">máxima visibilidad en internet</span>, posicionándose en los primeros lugares justo cuando tus clientes potenciales buscan lo que ofrecés.
                </p>
                <p className="text-lg md:text-xl font-bold text-white text-center pt-2">
-                 ¿Listo para <span className="text-green-400 font-black">vender más</span>?
+                 ¿Todo listo para hacer crecer tu marca?
                </p>
                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-0 h-0 border-b-[16px] border-b-slate-900 border-x-[12px] border-x-transparent"></div>
              </div>
