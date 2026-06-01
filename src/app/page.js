@@ -162,46 +162,102 @@ export default function Home() {
       }
 
       if (session) {
-        const serverState = await pullStateFromServer();
-        if (serverState) {
-          setXp(serverState.xp || 0);
-          setUrl(serverState.site_url || "");
-          setHasGoldKeyword(!!serverState.gold_query);
-          setCompletedIds(new Set(serverState.completed_missions || []));
-          setPrestigeCycles(serverState.ciclos_prestigio || 0);
-          const filteredMissions = filterHomeMissions(serverState.missions_list);
-          setMissions(filteredMissions);
+        // Cargar todo el historial de Supabase (Single Source of Truth para XP y completadas)
+        fetchCompletedMissions().then(cwResult => {
+          if (cwResult.success && cwResult.missions) {
+            let totalXp = 0;
+            const newCompletedIds = new Set();
+            const newCompletedQuickWins = new Set();
+            const newCompletedAeo = new Set();
 
-          const completedSet = new Set(serverState.completed_missions || []);
-          const p = getPhaseProgress(
-            completedSet,
-            serverState.gold_suggestions,
-            filteredMissions,
-            serverState.gold_query,
-            serverState.site_url
-          );
-          setProg(p);
-          if (serverState.site_url && filteredMissions.length > 0) {
-            setStep(6);
-          } else {
-            setShowIntroModal(true);
+            cwResult.missions.forEach(m => {
+              totalXp += (m.xp_awarded || 0);
+
+              if (m.mission_type === 'QUICK_WIN') {
+                newCompletedQuickWins.add(m.target_url);
+              } else if (m.mission_type === 'AEO_OPP') {
+                newCompletedAeo.add(m.target_url + '::' + (m.suggested_value || ''));
+              } else {
+                // Reconstruir ID para H1, META, ALT
+                let path = '/';
+                try {
+                  if (m.target_url.startsWith('http')) {
+                    path = new URL(m.target_url).pathname;
+                  } else {
+                    path = m.target_url;
+                  }
+                } catch (e) {}
+                path = path.replace(/\/+$/, '') || '/';
+                newCompletedIds.add(`${m.mission_type.toLowerCase()}-${path}`);
+              }
+            });
+
+            // Combinar con local por si hay algo súper reciente
+            const localXp = parseInt(localStorage.getItem("seojump_xp") || "0", 10);
+            setXp(Math.max(totalXp, localXp));
+
+            setCompletedIds(prev => {
+              const merged = new Set([...prev, ...newCompletedIds]);
+              localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(merged)));
+              return merged;
+            });
+
+            setCompletedQuickWins(prev => {
+              const merged = new Set([...prev, ...newCompletedQuickWins]);
+              localStorage.setItem("seojump_completed_quick_wins", JSON.stringify(Array.from(merged)));
+              return merged;
+            });
+
+            // Fallback load from local storage for other state
+            const savedUrl = localStorage.getItem("seojump_site_url");
+            if (savedUrl) setUrl(savedUrl);
+
+            const activeKeyword = localStorage.getItem("gold-tu-busqueda");
+            setHasGoldKeyword(!!activeKeyword);
+
+            const prestige = parseInt(localStorage.getItem("seojump_prestigio_cycles") || "0", 10);
+            setPrestigeCycles(prestige);
+
+            let missionsList = [];
+            const savedMissions = localStorage.getItem("seojump_missions");
+            if (savedMissions) {
+              try {
+                const parsed = JSON.parse(savedMissions);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                  missionsList = filterHomeMissions(parsed);
+                  setMissions(missionsList);
+                  if (savedUrl) setStep(6);
+                }
+              } catch (e) {}
+            }
+
+            let suggestionsList = [];
+            const savedSuggestions = localStorage.getItem("gold-suggestions");
+            if (savedSuggestions) {
+              try { suggestionsList = JSON.parse(savedSuggestions); } catch (e) {}
+            }
+
+            const p = getPhaseProgress(
+              new Set([...newCompletedIds]),
+              suggestionsList,
+              missionsList,
+              activeKeyword,
+              savedUrl
+            );
+            setProg(p);
+
+            if (savedUrl && missionsList.length > 0) {
+              setStep(6);
+            } else {
+              setShowIntroModal(true);
+            }
           }
           setServerLoading(false);
+        }).catch(() => {
+          setServerLoading(false);
+        });
 
-          // Cargar Quick Wins completados desde Supabase (memoria cross-device)
-          fetchCompletedMissions().then(cwResult => {
-            if (cwResult.success && cwResult.missions.length > 0) {
-              const qwUrls = new Set(
-                cwResult.missions
-                  .filter(m => m.mission_type === 'QUICK_WIN')
-                  .map(m => m.target_url)
-              );
-              if (qwUrls.size > 0) setCompletedQuickWins(qwUrls);
-            }
-          }).catch(() => {});
-
-          return;
-        }
+        return;
       }
 
       const savedXp = localStorage.getItem("seojump_xp");
