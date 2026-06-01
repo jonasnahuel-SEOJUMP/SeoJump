@@ -6,6 +6,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Header from "../components/Header";
 import LandingPage from "../components/LandingPage";
+import MissionDetailsModal from '../components/MissionDetailsModal';
+import PrivacyModal from '../components/PrivacyModal';
+import TermsModal from '../components/TermsModal';
 import PaywallModal from "../components/PaywallModal";
 import AICatch from "../components/AICatch";
 import LoginButton from "../components/LoginButton";
@@ -625,6 +628,8 @@ export default function Home() {
           onShowPrivacy={() => setShowPrivacyModal(true)}
           onShowTerms={() => setShowTermsModal(true)}
         />
+        {showPrivacyModal && <PrivacyModal onClose={() => setShowPrivacyModal(false)} playClick={playClick} />}
+        {showTermsModal && <TermsModal onClose={() => setShowTermsModal(false)} playClick={playClick} />}
       </div>
     );
   }
@@ -1395,102 +1400,10 @@ export default function Home() {
       )}
 
       {/* Privacy Modal */}
-      {showPrivacyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-8 max-w-2xl w-full text-slate-200 shadow-2xl relative">
-            <h2 className="text-3xl font-black text-duo-green mb-4">Política de Privacidad</h2>
-            <div className="space-y-5 text-sm font-semibold leading-relaxed max-h-[60vh] overflow-y-auto pr-2 text-slate-350">
-              <p className="text-xs text-slate-500">Última actualización: Mayo 2026</p>
-              
-              <p>En SEO Jump valoramos la privacidad y la transparencia en el uso de datos.</p>
-              
-              <div className="space-y-2">
-                <h3 className="text-white font-black text-base">Información que utilizamos</h3>
-                <p>SEO Jump utiliza acceso de solo lectura a Google Search Console para analizar el rendimiento orgánico de sitios web y generar recomendaciones SEO automatizadas.</p>
-                <p>Los datos a los que accedemos pueden incluir:</p>
-                <ul className="list-disc pl-5 space-y-1 text-slate-400">
-                  <li>Clics</li>
-                  <li>Impresiones</li>
-                  <li>Posiciones</li>
-                  <li>Consultas de búsqueda</li>
-                  <li>URLs y métricas relacionadas</li>
-                </ul>
-                <p className="text-slate-450 font-bold mt-2">SEO Jump no modifica configuraciones ni contenido dentro de Google Search Console.</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-white font-black text-base">Cómo utilizamos la información</h3>
-                <p>La información obtenida se utiliza exclusivamente para:</p>
-                <ul className="list-disc pl-5 space-y-1 text-slate-400">
-                  <li>Analizar oportunidades SEO</li>
-                  <li>Detectar mejoras potenciales</li>
-                  <li>Generar insights automatizados</li>
-                  <li>Mostrar estadísticas y progreso dentro de la plataforma</li>
-                </ul>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-white font-black text-base">Almacenamiento de datos</h3>
-                <p>Parte de la información puede almacenarse temporalmente en el navegador del usuario (<code className="text-duo-yellow font-bold">localStorage</code>) para mantener configuraciones, progreso y funcionalidades de la aplicación.</p>
-                <p className="text-slate-450 font-bold mt-2">SEO Jump no vende datos de usuarios ni comparte información de Google Search Console con terceros con fines comerciales.</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-white font-black text-base">Servicios de terceros</h3>
-                <p>SEO Jump puede utilizar proveedores externos de infraestructura y servicios de inteligencia artificial para procesar información y generar recomendaciones automatizadas.</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-white font-black text-base">Seguridad</h3>
-                <p>Utilizamos conexiones seguras y medidas razonables de protección para resguardar la información procesada por la aplicación.</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-white font-black text-base">Control del usuario</h3>
-                <p>Los usuarios pueden revocar el acceso de SEO Jump a Google Search Console en cualquier momento desde la configuración de su cuenta de Google.</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-white font-black text-base">Cumplimiento con Google API Services</h3>
-                <p>El uso y transferencia de información recibida desde Google APIs por parte de SEO Jump cumple con la <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer" className="text-duo-green underline hover:text-green-300">Política de Datos de Usuario de los Servicios API de Google</a>.</p>
-              </div>
-
-              <div className="space-y-2">
-                <h3 className="text-white font-black text-base">Contacto</h3>
-                <p>Si tenés preguntas sobre esta política de privacidad, podés contactarnos a través de:</p>
-                <p className="text-duo-green font-bold">contacto@seojump.ai</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => { playClick(); setShowPrivacyModal(false); }} 
-              className="mt-8 btn-3d btn-white w-full py-3 text-slate-800"
-            >
-              CERRAR
-            </button>
-          </div>
-        </div>
-      )}
+      {showPrivacyModal && <PrivacyModal onClose={() => setShowPrivacyModal(false)} playClick={playClick} />}
 
       {/* Terms Modal */}
-      {showTermsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
-          <div className="bg-slate-900 border-2 border-slate-700 rounded-3xl p-8 max-w-2xl w-full text-slate-200 shadow-2xl relative">
-            <h2 className="text-3xl font-black text-duo-yellow mb-4">Términos del Servicio</h2>
-            <div className="space-y-4 text-sm font-semibold leading-relaxed">
-              <p>Bienvenido a SEOJUMP, el software de optimización SEO gamificado.</p>
-              <p>Al conectar tu cuenta de Google, nos otorgas permiso de solo lectura para acceder a tus datos de Search Console con el fin de generar las misiones del juego.</p>
-              <p>Ten en cuenta que las recomendaciones proporcionadas por SEOJUMP son sugerencias basadas en buenas prácticas de la industria. <strong className="text-white">Toda modificación que realices en tu sitio web es bajo tu propia responsabilidad.</strong> No garantizamos posiciones específicas en los resultados de búsqueda de Google.</p>
-              <p>El uso de este software implica la aceptación de que el juego tiene consecuencias reales en tu posicionamiento orgánico.</p>
-            </div>
-            <button 
-              onClick={() => { playClick(); setShowTermsModal(false); }} 
-              className="mt-8 btn-3d btn-white w-full py-3 text-slate-800"
-            >
-              CERRAR
-            </button>
-          </div>
-        </div>
-      )}
+      {showTermsModal && <TermsModal onClose={() => setShowTermsModal(false)} playClick={playClick} />}
 
       {/* Visual XP Popup Feedback */}
       {xpPopup && (
