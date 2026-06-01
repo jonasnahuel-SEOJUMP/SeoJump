@@ -362,10 +362,10 @@ export default function LandingPage({ onStart, playClick, onShowPrivacy, onShowT
 
       <footer className="w-full border-t border-slate-800 py-8 text-center text-slate-500 text-sm">
         <p>© {new Date().getFullYear()} SEO Jump. Todos los derechos reservados.</p>
-        <div className="flex gap-4 justify-center mt-4">
-          <a href="#" onClick={(e) => { e.preventDefault(); if (onShowTerms) onShowTerms(); }} className="hover:text-slate-300 transition-colors">Términos y Condiciones</a>
-          <a href="#" onClick={(e) => { e.preventDefault(); if (onShowPrivacy) onShowPrivacy(); }} className="hover:text-slate-300 transition-colors">Política de Privacidad</a>
-          <a href="mailto:soporte@seojump.com" className="hover:text-slate-300 transition-colors">Contacto</a>
+        <div className="flex gap-4 justify-center mt-4 relative z-50">
+          <a href="#" onClick={(e) => { e.preventDefault(); if (onShowTerms) onShowTerms(); }} className="hover:text-slate-300 transition-colors cursor-pointer">Términos y Condiciones</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); if (onShowPrivacy) onShowPrivacy(); }} className="hover:text-slate-300 transition-colors cursor-pointer">Política de Privacidad</a>
+          <a href="mailto:soporte@seojump.com" className="hover:text-slate-300 transition-colors cursor-pointer">Contacto</a>
         </div>
       </footer>
 
