@@ -354,7 +354,7 @@ export default function LandingPage({ onStart, playClick, onShowPrivacy, onShowT
               🚀 Empezar Gratis Ahora
             </button>
             <p className="text-slate-500 text-xs mt-6">
-              Al registrarte aceptás nuestros <button onClick={(e) => { e.preventDefault(); if (onShowTerms) onShowTerms(); }} className="underline hover:text-slate-300">Términos de Servicio</button> y <button onClick={(e) => { e.preventDefault(); if (onShowPrivacy) onShowPrivacy(); }} className="underline hover:text-slate-300">Política de Privacidad</button>.
+              Al registrarte aceptás nuestros <a href="#" onClick={(e) => { e.preventDefault(); if (onShowTerms) onShowTerms(); }} className="underline hover:text-slate-300">Términos de Servicio</a> y <a href="#" onClick={(e) => { e.preventDefault(); if (onShowPrivacy) onShowPrivacy(); }} className="underline hover:text-slate-300">Política de Privacidad</a>.
             </p>
           </div>
         </div>
@@ -363,8 +363,8 @@ export default function LandingPage({ onStart, playClick, onShowPrivacy, onShowT
       <footer className="w-full border-t border-slate-800 py-8 text-center text-slate-500 text-sm">
         <p>© {new Date().getFullYear()} SEO Jump. Todos los derechos reservados.</p>
         <div className="flex gap-4 justify-center mt-4">
-          <button onClick={(e) => { e.preventDefault(); if (onShowTerms) onShowTerms(); }} className="hover:text-slate-300 transition-colors">Términos y Condiciones</button>
-          <button onClick={(e) => { e.preventDefault(); if (onShowPrivacy) onShowPrivacy(); }} className="hover:text-slate-300 transition-colors">Política de Privacidad</button>
+          <a href="#" onClick={(e) => { e.preventDefault(); if (onShowTerms) onShowTerms(); }} className="hover:text-slate-300 transition-colors">Términos y Condiciones</a>
+          <a href="#" onClick={(e) => { e.preventDefault(); if (onShowPrivacy) onShowPrivacy(); }} className="hover:text-slate-300 transition-colors">Política de Privacidad</a>
           <a href="mailto:soporte@seojump.com" className="hover:text-slate-300 transition-colors">Contacto</a>
         </div>
       </footer>
