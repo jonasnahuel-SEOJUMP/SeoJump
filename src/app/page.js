@@ -948,12 +948,14 @@ export default function Home() {
                                  <p className="text-slate-500 font-bold text-lg">¡Todas las misiones completadas! 🎉</p>
                                </div>
                              );
-                           }
+                            }
 
-                           const unlockedMissions = pendingMissions.filter(mission => {
-                             const originalIndex = missions.indexOf(mission);
-                             return isPremium || originalIndex < 2;
-                           });
+                           // Show first 2 pending missions to free users (not first 2 of the full
+                           // missions array – that old logic broke when the first 2 slots were
+                           // already completed, leaving free users with 0 unlocked missions).
+                           const unlockedMissions = isPremium
+                             ? pendingMissions
+                             : pendingMissions.slice(0, 2);
 
                            const lockedCount = pendingMissions.length - unlockedMissions.length;
 
@@ -1262,9 +1264,13 @@ export default function Home() {
                     </button>
                   </div>
 
-                  {missionStatus === "success" && (
+                  {missionStatus === "success" ? (
                     <button onClick={() => { playClick(); setStep(6); }} className="btn-3d btn-green w-full text-2xl md:text-3xl py-5 mt-4 font-black">
                       VOLVER AL DASHBOARD
+                    </button>
+                  ) : (
+                    <button onClick={() => { playClick(); setStep(6); }} className="btn-3d btn-white w-full text-lg md:text-xl py-3 mt-4 font-black text-slate-500 hover:text-slate-800 transition-colors uppercase">
+                      ✖ Cancelar y volver al Dashboard
                     </button>
                   )}
                 </div>

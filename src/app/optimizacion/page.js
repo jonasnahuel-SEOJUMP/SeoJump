@@ -6,10 +6,72 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions } from "../../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, getAeoOpportunities, verifyAeoMission } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
+
+/**
+ * Extrae el prefijo "tipo-pagePath" de un mission ID, ignorando el sufijo de keyword.
+ * IDs viejos: "h1-/producto/balde-xyz-baldedetailing"  → "h1-/producto/balde-xyz"
+ * IDs nuevos: "h1-/producto/balde-xyz"                 → "h1-/producto/balde-xyz"
+ *
+ * Lógica: el tipo es todo antes del primer "-", el pagePath empieza en el primer "/".
+ * Todo lo que sigue después del pagePath (que no empiece con "/") es keyword → se ignora.
+ */
+const extractMissionKey = (id) => {
+  if (!id) return '';
+  // Formato: "type-/path/to/page" o "type-/path/to/page-keywordstuff"
+  const dashIdx = id.indexOf('-');
+  if (dashIdx === -1) return id;
+  const type = id.substring(0, dashIdx); // "h1", "meta", "alt", "aeo"
+  const rest = id.substring(dashIdx + 1); // "/path/to/page-keyword" or "/path/to/page"
+  
+  // El pagePath empieza con "/" y se extiende hasta el final de la parte que tiene "/"
+  // Buscamos el último "/" y cortamos después del siguiente segmento de path
+  if (!rest.startsWith('/')) return id;
+  
+  // Encontrar dónde termina el path: después del último "/" hay un segmento,
+  // y si después de ese segmento hay un "-" seguido de texto sin "/", eso es la keyword.
+  // Estrategia simple: buscar el patrón del path completo (todo hasta el último segmento con "/")
+  const pathParts = rest.split('/');
+  // El último segmento del path puede tener "-keyword" pegado.
+  // En URLs de WooCommerce: /producto/balde-para-lavar-autos-black-line-20l/
+  // El keyword viejo estaba pegado sin "/": /producto/balde-xyz-baldedetailing
+  // Pero no podemos distinguir dashes del path vs dashes de la keyword de forma confiable.
+  // Solución: simplemente usar type + el path tal cual viene de la misión actual.
+  return `${type}-${rest}`;
+};
+
+/**
+ * Compara si una misión ya fue completada, basándose en tipo+página.
+ * Soporta tanto IDs viejos (con keyword) como nuevos (sin keyword).
+ */
+const isMissionCompletedBySet = (completedSet, missionId, missionType, missionPagePath) => {
+  // 1. Chequeo directo por ID exacto (funciona con IDs nuevos)
+  if (completedSet.has(missionId)) return true;
+  
+  // 2. Chequeo por tipo+pagePath: buscar si algún ID completado empieza con "tipo-pagePath"
+  // Esto matchea tanto "h1-/producto/balde" como "h1-/producto/balde-baldedetailing"
+  if (missionType && missionPagePath) {
+    const prefix = `${missionType.toLowerCase()}-${missionPagePath}`;
+    for (const completedId of completedSet) {
+      if (completedId === prefix || completedId.startsWith(prefix + '-') || completedId.startsWith(prefix)) {
+        // Verificar que realmente es el mismo tipo (no confundir "h1" con "h1x")
+        const completedType = completedId.substring(0, completedId.indexOf('-'));
+        if (completedType === missionType.toLowerCase()) {
+          // Verificar que el path matchea
+          const completedRest = completedId.substring(completedId.indexOf('-') + 1);
+          if (completedRest === missionPagePath || completedRest.startsWith(missionPagePath)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  
+  return false;
+};
 
 // Mapa de tipos de página para badges
 const getBadgeInfo = (url) => {
@@ -214,6 +276,15 @@ export default function Optimizacion() {
   const [isPremium, setIsPremium] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
 
+  // AEO State
+  const [aeoOpportunities, setAeoOpportunities] = useState([]);
+  const [aeoLoading, setAeoLoading] = useState(false);
+  const [aeoError, setAeoError] = useState(null);
+  const [completedAeo, setCompletedAeo] = useState(new Set());
+  const [verifyingAeoIndex, setVerifyingAeoIndex] = useState(null);
+  const [verifyAeoResult, setVerifyAeoResult] = useState({});
+  const [manualAeoUrl, setManualAeoUrl] = useState('');
+
   useEffect(() => {
     const premiumStatus = localStorage.getItem("isPremium") === "true";
     setIsPremium(premiumStatus);
@@ -260,6 +331,16 @@ export default function Optimizacion() {
                 setCompletedQuickWins(qwUrls);
                 localStorage.setItem("seojump_completed_quick_wins", JSON.stringify(Array.from(qwUrls)));
               }
+              // Load completed AEO from Supabase
+              const aeoKeys = new Set(
+                cwResult.missions
+                  .filter(m => m.mission_type === 'AEO_OPP')
+                  .map(m => `${m.target_url}::${m.mission_details || ''}`)
+              );
+              if (aeoKeys.size > 0) {
+                setCompletedAeo(aeoKeys);
+                localStorage.setItem("seojump_completed_aeo", JSON.stringify(Array.from(aeoKeys)));
+              }
             }
           }).catch(() => {});
 
@@ -271,6 +352,11 @@ export default function Optimizacion() {
           const savedCompletedQuickWins = localStorage.getItem("seojump_completed_quick_wins");
           if (savedCompletedQuickWins) {
             try { setCompletedQuickWins(new Set(JSON.parse(savedCompletedQuickWins))); } catch(e) {}
+          }
+          // Load completed AEO from local storage
+          const savedCompletedAeo = localStorage.getItem("seojump_completed_aeo");
+          if (savedCompletedAeo) {
+            try { setCompletedAeo(new Set(JSON.parse(savedCompletedAeo))); } catch(e) {}
           }
 
           setServerLoading(false);
@@ -331,6 +417,11 @@ export default function Optimizacion() {
       const savedCompletedQuickWins = localStorage.getItem("seojump_completed_quick_wins");
       if (savedCompletedQuickWins) {
         try { setCompletedQuickWins(new Set(JSON.parse(savedCompletedQuickWins))); } catch(e) {}
+      }
+      // Load completed AEO from local storage
+      const savedCompletedAeo = localStorage.getItem("seojump_completed_aeo");
+      if (savedCompletedAeo) {
+        try { setCompletedAeo(new Set(JSON.parse(savedCompletedAeo))); } catch(e) {}
       }
 
       const p = getPhaseProgress(completedSet, suggestions, missionsList, keyword, savedUrl);
@@ -405,6 +496,33 @@ export default function Optimizacion() {
     localStorage.setItem("seojump_completed_quick_wins", JSON.stringify(Array.from(completedQuickWins)));
   }, [completedQuickWins]);
 
+  // Load AEO opportunities when tab is active and siteUrl is available
+  useEffect(() => {
+    if (activeTab === 'aeo' && siteUrl && aeoOpportunities.length === 0 && !aeoLoading) {
+      const saved = localStorage.getItem('seojump_aeo_opportunities');
+      if (saved) {
+        try { setAeoOpportunities(JSON.parse(saved)); return; } catch(e) {}
+      }
+      setAeoLoading(true);
+      getAeoOpportunities(siteUrl, goldKeyword || undefined)
+        .then(res => {
+          if (res.success && res.data) {
+            setAeoOpportunities(res.data);
+            localStorage.setItem('seojump_aeo_opportunities', JSON.stringify(res.data));
+          } else {
+            setAeoError(res.error || 'No se pudieron obtener oportunidades AEO.');
+          }
+        })
+        .catch(() => setAeoError('Error de conexión al cargar oportunidades AEO.'))
+        .finally(() => setAeoLoading(false));
+    }
+  }, [activeTab, siteUrl, aeoOpportunities.length, aeoLoading]);
+
+  // Persist completed AEO
+  useEffect(() => {
+    localStorage.setItem('seojump_completed_aeo', JSON.stringify(Array.from(completedAeo)));
+  }, [completedAeo]);
+
   const openMission = (mission) => {
     setSelectedMission(mission);
     setH1Value("");
@@ -428,7 +546,7 @@ export default function Optimizacion() {
       if (result.success) {
         setMissionStatus("success");
         setFailedAttempts(0);
-        if (!completedIds.has(selectedMission.id)) {
+        if (!isMissionCompletedBySet(completedIds, selectedMission.id, selectedMission.type, selectedMission.pagePath)) {
           const newXp = xp + (selectedMission.xp || 50);
           setXp(newXp);
           localStorage.setItem("seojump_xp", newXp.toString());
@@ -506,6 +624,51 @@ export default function Optimizacion() {
     }
   };
 
+  const handleVerifyAeo = async (index, pageUrl, headingText, optimizedText) => {
+    setVerifyingAeoIndex(index);
+    setVerifyAeoResult(prev => ({ ...prev, [index]: { success: false, message: '', loading: true } }));
+    try {
+      const res = await verifyAeoMission(pageUrl, headingText, optimizedText);
+      setVerifyAeoResult(prev => ({ ...prev, [index]: { success: res.success, message: res.message, loading: false } }));
+      if (res.success) {
+        playSuccess();
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+        const aeoKey = `${pageUrl}::${headingText}`;
+        if (!completedAeo.has(aeoKey)) {
+          setXp(prev => { const n = prev + 30; localStorage.setItem('seojump_xp', n.toString()); return n; });
+          setCompletedAeo(prev => { const next = new Set(prev); next.add(aeoKey); return next; });
+          setXpPopup({ amount: 30, message: '¡Snack informativo aplicado!' });
+          setTimeout(() => setXpPopup(null), 4000);
+          setTimeout(() => syncStateWithServer(), 100);
+          markMissionComplete('AEO_OPP', pageUrl, 30, headingText).catch(() => {});
+        }
+      }
+    } catch (e) {
+      setVerifyAeoResult(prev => ({ ...prev, [index]: { success: false, message: 'Error al verificar.', loading: false } }));
+    } finally {
+      setVerifyingAeoIndex(null);
+    }
+  };
+
+  const handleLoadAeo = (customUrl) => {
+    setAeoOpportunities([]);
+    setAeoError(null);
+    setAeoLoading(true);
+    localStorage.removeItem('seojump_aeo_opportunities');
+    getAeoOpportunities(siteUrl, goldKeyword || undefined, customUrl || undefined)
+      .then(res => {
+        if (res.success && res.data) {
+          setAeoOpportunities(res.data);
+          localStorage.setItem('seojump_aeo_opportunities', JSON.stringify(res.data));
+        } else {
+          setAeoError(res.error || 'No se pudieron obtener oportunidades AEO.');
+        }
+      })
+      .catch(() => setAeoError('Error de conexión.'))
+      .finally(() => setAeoLoading(false));
+  };
+
   if (status === "loading" || !session || serverLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#07070d]">
@@ -521,7 +684,7 @@ export default function Optimizacion() {
     );
   }
 
-  const pendingMissions = missions.filter(m => !completedIds.has(m.id)).slice(0, 10);
+  const pendingMissions = missions.filter(m => !isMissionCompletedBySet(completedIds, m.id, m.type, m.pagePath)).slice(0, 10);
 
   return (
     <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-screen-lg mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka px-4">
@@ -610,7 +773,7 @@ export default function Optimizacion() {
               <div className="text-center space-y-3 py-4 w-full max-w-xl mx-auto mt-4">
                 <div className="text-4xl md:text-5xl">🦉</div>
                 <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
-                  {activeTab === "quickwins" ? "Tu Plan de Acción 🚀" : "Fase 3: Optimización On-Page 🛠️"}
+                  {activeTab === 'quickwins' ? 'Tu Plan de Acción 🚀' : activeTab === 'aeo' ? 'Auditoría AEO 🤖' : 'Fase 3: Optimización On-Page 🛠️'}
                 </h1>
                 <div className="pt-1">
                   <button
@@ -660,6 +823,16 @@ export default function Optimizacion() {
                       🔒 Misiones (Bloqueado)
                     </button>
                   )}
+                  <button
+                    onClick={() => { playClick(); setActiveTab('aeo'); }}
+                    className={`px-5 py-2.5 rounded-full font-black text-xs md:text-sm border-2 transition-all duration-300 flex items-center gap-2 ${
+                      activeTab === 'aeo'
+                        ? 'bg-gradient-to-r from-purple-500 to-violet-500 border-purple-400 text-white shadow-[0_0_15px_rgba(139,92,246,0.3)] scale-105'
+                        : 'bg-slate-800/40 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-white'
+                    }`}
+                  >
+                    🤖 Oportunidades AEO
+                  </button>
                 </div>
               </div>
 
@@ -797,6 +970,143 @@ export default function Optimizacion() {
                     <div className="text-center py-12 card-3d">
                       <div className="text-6xl mb-4">🏆</div>
                       <p className="text-slate-400 font-bold text-xl">No detectamos oportunidades en el rango de posiciones 8 a 15 para tu sitio aún. ¡Seguí optimizando!</p>
+                    </div>
+                  )}
+                </div>
+              ) : activeTab === 'aeo' ? (
+                // AEO OPPORTUNITIES TAB VIEW
+                <div className="space-y-6">
+                  {/* Manual URL input */}
+                  <div className="card-3d p-5 flex flex-col sm:flex-row gap-3 items-end">
+                    <div className="flex-1 w-full">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-wider mb-1 block">🔗 Analizar una URL específica (opcional)</label>
+                      <input
+                        type="url"
+                        value={manualAeoUrl}
+                        onChange={e => setManualAeoUrl(e.target.value)}
+                        placeholder="https://tusitio.com/pagina-a-analizar"
+                        className="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-sm focus:border-purple-500 focus:outline-none transition-colors"
+                      />
+                    </div>
+                    <button
+                      onClick={() => { playClick(); handleLoadAeo(manualAeoUrl || undefined); }}
+                      disabled={aeoLoading}
+                      className="btn-3d bg-purple-600 border-purple-700 border-b-4 hover:bg-purple-500 text-white font-black text-sm py-3 px-6 whitespace-nowrap"
+                    >
+                      {aeoLoading ? '⏳ ANALIZANDO...' : '🔍 ANALIZAR WEB'}
+                    </button>
+                  </div>
+
+                  {aeoLoading ? (
+                    <div className="text-center py-12 card-3d">
+                      <div className="relative w-16 h-16 mx-auto mb-4">
+                        <div className="absolute inset-0 rounded-full border-4 border-purple-500/20 animate-pulse" />
+                        <div className="absolute inset-0 rounded-full border-4 border-t-purple-500 border-r-purple-500/50 animate-spin" />
+                      </div>
+                      <p className="text-slate-400 font-bold uppercase tracking-wider animate-pulse">Escaneando tu web para oportunidades AEO...</p>
+                      <p className="text-xs text-slate-500 mt-2">Analizando H2/H3 y párrafos con IA</p>
+                    </div>
+                  ) : aeoError ? (
+                    <div className="text-center py-12 card-3d space-y-4">
+                      <div className="text-6xl">⚠️</div>
+                      <p className="text-red-400 font-bold text-lg">{aeoError}</p>
+                      <button onClick={() => { setAeoError(null); setAeoOpportunities([]); }} className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4">REINTENTAR</button>
+                    </div>
+                  ) : aeoOpportunities.length > 0 ? (
+                    <div className="space-y-6">
+                      {aeoOpportunities.map((opp, index) => {
+                        const aeoKey = `${opp.pageUrl}::${opp.heading_affected}`;
+                        const isCompleted = completedAeo.has(aeoKey);
+                        const isUnlocked = isPremium || index < 2;
+                        const result = verifyAeoResult[index] || {};
+
+                        if (!isUnlocked) {
+                          return (
+                            <div key={index} onClick={() => { playClick(); setShowPaywallModal(true); }}
+                              className="card-3d relative overflow-hidden p-6 md:p-8 flex flex-col gap-4 transition-all duration-300 border-dashed border-2 border-slate-700 bg-slate-900/60 hover:border-purple-500/50 cursor-pointer group">
+                              <div className="absolute inset-0 backdrop-blur-[2px] bg-slate-950/10 pointer-events-none rounded-3xl" />
+                              <div className="relative z-10 flex flex-col md:flex-row items-center gap-4 opacity-70 group-hover:opacity-100 transition-opacity">
+                                <div className="w-16 h-16 rounded-2xl flex-shrink-0 flex items-center justify-center bg-slate-800 border-2 border-slate-700 text-3xl font-black text-slate-400 group-hover:text-purple-500 group-hover:bg-purple-500/10 transition-colors shadow-inner">🔒</div>
+                                <div className="flex-1 text-center md:text-left">
+                                  <h3 className="text-xl md:text-2xl font-black text-slate-400 mb-2 blur-[1px] group-hover:blur-none transition-all">🤖 Misión Oculta AEO</h3>
+                                  <p className="text-sm font-bold text-slate-500 mb-4">Optimizá la definición de tu servicio principal para ser citado por ChatGPT y Gemini.</p>
+                                  <button className="btn-3d !text-sm !py-2 !px-4 bg-purple-600 border-purple-700 border-b-4 text-white font-black">
+                                    DESBLOQUEAR {aeoOpportunities.length - 2} MISIONES AEO
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        return (
+                          <div key={index} className={`card-3d relative overflow-hidden p-6 md:p-8 flex flex-col gap-5 transition-all duration-300 ${isCompleted ? 'border-green-500/50 opacity-85' : 'border-purple-500/30'}`}>
+                            {isCompleted && (
+                              <div className="absolute top-0 right-0 bg-green-500 text-slate-955 font-black text-xs px-4 py-1.5 rounded-bl-xl uppercase tracking-wider">¡Completado! 🎉</div>
+                            )}
+                            <div className="space-y-4 text-left w-full">
+                              {/* Header */}
+                              <div className="flex items-start gap-3">
+                                <div className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center bg-purple-600 border-b-4 border-purple-800 text-2xl font-black text-white">🤖</div>
+                                <div>
+                                  <h3 className="text-xl md:text-2xl font-black text-white">Oportunidad AEO</h3>
+                                  <p className="text-sm font-bold text-purple-400">Heading: <span className="text-purple-300">«{opp.heading_affected}»</span> <span className="text-slate-500">({opp.heading_tag})</span></p>
+                                  <code className="text-xs font-mono text-slate-500 truncate block max-w-md mt-1">{opp.pageUrl}</code>
+                                </div>
+                              </div>
+
+                              {/* Problem */}
+                              <div className="bg-red-950/30 border border-red-500/30 rounded-2xl p-4">
+                                <p className="text-sm font-bold text-red-400"><span className="text-red-300 font-black">⚠️ Problema:</span> {opp.problem_identified}</p>
+                              </div>
+
+                              {/* Current text */}
+                              <div className="bg-slate-900/60 border border-slate-700/50 rounded-2xl p-4">
+                                <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-2">📝 Texto actual en tu web:</p>
+                                <p className="text-sm font-bold text-slate-400 italic leading-relaxed">"{opp.current_text_snippet}"</p>
+                              </div>
+
+                              {/* Optimized text */}
+                              <div className="bg-purple-950/30 border border-purple-500/30 rounded-2xl p-4">
+                                <div className="flex items-center justify-between mb-2">
+                                  <p className="text-xs font-black text-purple-400 uppercase tracking-wider">✅ Texto optimizado para IA ({opp.word_count} palabras):</p>
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(opp.optimized_text_replacement); playClick(); }}
+                                    className="text-xs font-black text-purple-300 hover:text-white bg-purple-800/50 hover:bg-purple-700/50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                  >📋 COPIAR</button>
+                                </div>
+                                <p className="text-base font-bold text-purple-200 leading-relaxed">"{opp.optimized_text_replacement}"</p>
+                              </div>
+
+                              {/* Verification result */}
+                              {result.message && (
+                                <div className={`p-4 rounded-xl border text-sm font-bold ${result.success ? 'bg-green-950/40 border-green-500/50 text-green-300' : 'bg-red-950/40 border-red-500/50 text-red-400'}`}>
+                                  {result.success ? '✅' : '⚠️'} {result.message}
+                                </div>
+                              )}
+
+                              {/* Verify button */}
+                              {!isCompleted && (
+                                <div className="pt-2">
+                                  <button
+                                    onClick={() => handleVerifyAeo(index, opp.pageUrl, opp.heading_affected, opp.optimized_text_replacement)}
+                                    disabled={result.loading}
+                                    className="btn-3d bg-purple-600 border-purple-700 border-b-4 hover:bg-purple-500 text-white text-sm md:text-base font-black px-6 py-3"
+                                  >
+                                    {result.loading ? '⏳ VERIFICANDO...' : 'YA LO CAMBIÉ (+30 XP)'}
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 card-3d">
+                      <div className="text-6xl mb-4">🤖</div>
+                      <p className="text-slate-400 font-bold text-xl">Hacé clic en "ANALIZAR WEB" para escanear tu sitio y encontrar oportunidades AEO.</p>
+                      <p className="text-sm text-slate-500 mt-2">Vamos a buscar textos bajo tus H2/H3 que pueden optimizarse para que la IA te cite como fuente.</p>
                     </div>
                   )}
                 </div>

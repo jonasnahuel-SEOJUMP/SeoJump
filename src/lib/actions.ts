@@ -408,23 +408,36 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
     };
     // ─────────────────────────────────────────────────────────────────────
 
-    const missions = missionRows.map((row, index) => {
+    const generatedTypesPerPage = new Map<string, Set<string>>();
+    const missions: any[] = [];
 
-      const fullPageUrl = row.keys[0]
-      const rawKeyword = row.keys[1] || ""
-      const cleanKeyword = rawKeyword.replace(/\$/g, '').replace(/^[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+/g, '').trim()
+    for (const row of missionRows) {
+      const fullPageUrl = row.keys[0];
+      const rawKeyword = row.keys[1] || "";
+      const cleanKeyword = rawKeyword.replace(/\$/g, '').replace(/^[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+/g, '').trim();
 
       // Keyword que realmente va a usar la misión (coherente con la página)
-      const effectiveKeyword = resolveKeyword(cleanKeyword, fullPageUrl, cleanGoldKeyword)
+      const effectiveKeyword = resolveKeyword(cleanKeyword, fullPageUrl, cleanGoldKeyword);
       
-      let pagePath = fullPageUrl
+      let pagePath = fullPageUrl;
       try {
         if (fullPageUrl.startsWith('http')) {
-          pagePath = new URL(fullPageUrl).pathname
+          pagePath = new URL(fullPageUrl).pathname;
         }
       } catch (e) {
         // keep fullPageUrl as fallback
       }
+
+      // Normalize path: remove trailing slash so the same page always gets the
+      // same mission ID regardless of whether GSC returns the URL with or without
+      // a trailing slash. Without this, "h1-/producto/balde/" and
+      // "h1-/producto/balde" are treated as two different (never-completed) missions.
+      pagePath = pagePath.replace(/\/+$/, '') || '/';
+
+      if (!generatedTypesPerPage.has(pagePath)) {
+        generatedTypesPerPage.set(pagePath, new Set());
+      }
+      const usedTypes = generatedTypesPerPage.get(pagePath)!;
       
       // Format path for display: human readable
       let displayPath = pagePath;
@@ -443,17 +456,27 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
         }
       }
 
-      // Rotación de tipo de misión:
-      // • Si la búsqueda es una PREGUNTA → Misión AEO (FAQ para IA)
-      // • Si no → rotación clásica H1 → META → ALT
+      // Rotación de tipo de misión sin repetir H1, META o ALT para la misma página
       const MISSION_TYPES = buildMissionTypes(effectiveKeyword);
       const isQuestion = isQuestionQuery(effectiveKeyword);
       const aeoType = MISSION_TYPES.find(m => m.type === 'AEO')!;
       const classicTypes = MISSION_TYPES.filter(m => m.type !== 'AEO');
-      const missionDef = isQuestion ? aeoType : classicTypes[index % classicTypes.length];
+      
+      let missionDef;
+      if (isQuestion && !usedTypes.has('AEO')) {
+        missionDef = aeoType;
+      } else {
+        missionDef = classicTypes.find(m => !usedTypes.has(m.type));
+      }
 
-      return {
-        id: `${missionDef.type.toLowerCase()}-${pagePath}-${effectiveKeyword.replace(/[^a-zA-Z0-9]/g, '').toLowerCase()}`,
+      if (!missionDef) {
+        continue; // Ya generamos todas las misiones posibles para esta página
+      }
+
+      usedTypes.add(missionDef.type);
+
+      missions.push({
+        id: `${missionDef.type.toLowerCase()}-${pagePath}`,
         title: missionDef.title,
         description: missionDef.descriptionTemplate(displayPath),
         xp: missionDef.xp,
@@ -469,8 +492,8 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
         impressions: row.impressions,
         ctr: row.ctr,
         position: row.position,
-      }
-    })
+      });
+    }
 
     return { success: true, data: missions }
   } catch (error: any) {
@@ -2115,4 +2138,461 @@ export async function fetchCompletedMissions(): Promise<{
   }
   const missions = await getMissionsByEmail(session.user.email, 'completed');
   return { success: true, missions };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AEO ENGINE — Answer Engine Optimization
+// ═══════════════════════════════════════════════════════════════════════════
+
+type HeadingSection = {
+  heading: string;
+  headingTag: 'H2' | 'H3';
+  paragraphText: string;
+  charCount: number;
+};
+
+/**
+ * Fetch a page's HTML and extract H2/H3 headings with their following paragraph text.
+ * Used by getAeoOpportunities to gather real content for Gemini analysis.
+ */
+async function scrapeHeadingSections(pageUrl: string): Promise<HeadingSection[]> {
+  if (!pageUrl) return [];
+
+  let targetUrl = pageUrl.trim();
+  if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
+    targetUrl = "https://" + targetUrl;
+  }
+
+  try {
+    const res = await fetch(targetUrl, {
+      cache: 'no-store',
+      // @ts-ignore
+      next: { revalidate: 0 },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+      signal: AbortSignal.timeout(6000),
+    });
+
+    if (!res.ok) return [];
+
+    let html = await res.text();
+
+    // Strip script and style tags (same pattern as verifyContentMission)
+    html = html
+      .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
+      .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ');
+
+    // Find all H2 and H3 tags
+    const headingRegex = /<h([23])[^>]*>([\s\S]*?)<\/h[23]>/gi;
+    const sections: HeadingSection[] = [];
+    let match;
+
+    while ((match = headingRegex.exec(html)) !== null) {
+      const headingTag = match[1] === '2' ? 'H2' : 'H3' as const;
+      const headingText = match[2].replace(/<[^>]+>/g, '').trim();
+
+      if (!headingText) continue;
+
+      // Find the next <p> tag after this heading in the HTML
+      const afterHeading = html.substring(match.index + match[0].length);
+      const pMatch = afterHeading.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
+
+      let paragraphText = '';
+      if (pMatch) {
+        paragraphText = pMatch[1].replace(/<[^>]+>/g, '').trim();
+      }
+
+      // Filter: skip sections where paragraph is empty or less than 20 chars
+      if (!paragraphText || paragraphText.length < 20) continue;
+
+      sections.push({
+        heading: headingText,
+        headingTag,
+        paragraphText,
+        charCount: paragraphText.length,
+      });
+    }
+
+    // Sort by paragraph length (longest first - more content to optimize)
+    sections.sort((a, b) => b.charCount - a.charCount);
+
+    // Return max 5 sections
+    return sections.slice(0, 5);
+  } catch (error) {
+    console.error("[scrapeHeadingSections] Error:", error);
+    return [];
+  }
+}
+
+/**
+ * Main AEO server action. Analyzes user's pages and generates AEO optimization
+ * opportunities via Gemini. Returns "Snacks Informativos" — ultra-concise rewrites
+ * optimized for AI citation by ChatGPT, Gemini, and Perplexity.
+ */
+export async function getAeoOpportunities(siteUrl: string, goldKeyword?: string, manualUrl?: string) {
+  const urlSanit = sanitizeInput(siteUrl, 'url');
+  if (!urlSanit.isValid) {
+    return { success: false, error: urlSanit.error };
+  }
+  const cleanSiteUrl = urlSanit.sanitized;
+
+  let cleanGoldKeyword = "";
+  if (goldKeyword) {
+    const kwSanit = sanitizeInput(goldKeyword, 'keyword');
+    if (kwSanit.isValid) {
+      cleanGoldKeyword = kwSanit.sanitized;
+    }
+  }
+
+  try {
+    const session = await auth();
+
+    // ── Determine which pages to analyze (up to 3) ─────────────────────────
+    const pagesToAnalyze: string[] = [];
+
+    // If manualUrl is provided and valid, add it as the FIRST page
+    if (manualUrl) {
+      const manualSanit = sanitizeInput(manualUrl, 'url');
+      if (manualSanit.isValid) {
+        let cleanManualUrl = manualSanit.sanitized;
+        if (!cleanManualUrl.startsWith('http://') && !cleanManualUrl.startsWith('https://')) {
+          cleanManualUrl = 'https://' + cleanManualUrl;
+        }
+        pagesToAnalyze.push(cleanManualUrl);
+      }
+    }
+
+    // Get GSC data and pick top pages by impressions in position 11-20
+    if (session?.accessToken) {
+      try {
+        const gscRows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined, 100);
+
+        // Filter for position 11-20 (just outside top 10 = ripe for AEO)
+        const candidates = gscRows.filter((row: any) => {
+          const pos = row.position;
+          return pos >= 11 && pos <= 20;
+        });
+
+        // Sort by impressions DESC
+        candidates.sort((a: any, b: any) => (b.impressions || 0) - (a.impressions || 0));
+
+        // Take top pages until we have 3 total (skip duplicates with manualUrl)
+        for (const cand of candidates) {
+          if (pagesToAnalyze.length >= 3) break;
+          const pageUrl = cand.keys[0];
+          // Normalize for dedup
+          const normPage = pageUrl.replace(/\/+$/, '').toLowerCase();
+          const isDuplicate = pagesToAnalyze.some(
+            p => p.replace(/\/+$/, '').toLowerCase() === normPage
+          );
+          if (!isDuplicate) {
+            pagesToAnalyze.push(pageUrl);
+          }
+        }
+      } catch (err: any) {
+        console.warn("[AEO] Fallo al obtener datos de GSC:", err.message);
+      }
+    }
+
+    // Fallback: just the siteUrl home page if no pages found
+    if (pagesToAnalyze.length === 0) {
+      let homeUrl = cleanSiteUrl;
+      if (!homeUrl.startsWith('http://') && !homeUrl.startsWith('https://')) {
+        homeUrl = 'https://' + homeUrl;
+      }
+      pagesToAnalyze.push(homeUrl);
+    }
+
+    // ── Scrape heading sections from each page ────────────────────────────
+    const allSections: Array<{ pageUrl: string; heading: string; headingTag: string; paragraphText: string }> = [];
+
+    for (const pageUrl of pagesToAnalyze.slice(0, 3)) {
+      const sections = await scrapeHeadingSections(pageUrl);
+      for (const sec of sections) {
+        allSections.push({
+          pageUrl,
+          heading: sec.heading,
+          headingTag: sec.headingTag,
+          paragraphText: sec.paragraphText,
+        });
+      }
+    }
+
+    if (allSections.length === 0) {
+      return { success: true, data: [] };
+    }
+
+    // ── Call Gemini ───────────────────────────────────────────────────────
+    const apiKey = process.env.GEMINI_API_KEY;
+    if (!apiKey) {
+      console.error("GEMINI_API_KEY no configurada.");
+      return { success: false, error: "GEMINI_API_KEY no configurada en las variables de entorno." };
+    }
+
+    const systemInstructions = `Actuás como un Ingeniero Consultor Senior de AEO (Answer Engine Optimization) y GEO (Generative Engine Optimization). Tu único objetivo es analizar fragmentos de texto de la web de un usuario y transformarlos en "Snacks Informativos": respuestas directas, ultra-concisas y semánticamente perfectas para ser devoradas por modelos de lenguaje de IA.
+
+Reglas de Oro para la Optimización (El Formato "Snack"):
+1. La Regla de los 150-200 caracteres: La respuesta al encabezado (H2/H3) debe arrancar de forma inmediata en el primer párrafo. No debe dar rodeos, ni introducciones poéticas, ni usar lenguaje corporativo/ventas.
+2. Estructura Semántica Directa: Debe responder al "Qué", "Cómo" o "Cuánto" usando el verbo en la primera frase de forma asertiva.
+3. Extensión Máxima: Entre 40 y 50 palabras por respuesta optimizada.
+4. Eliminación de Fluff: Remover adjetivos de marketing (ej. "somos los mejores", "líderes en el mercado", "revolucionario"). La IA busca datos objetivos y resolutivos.
+
+EJEMPLOS DE ENTRENAMIENTO:
+
+Ejemplo 1 - Input Heading: "¿Qué es el sellado cerámico?"
+Texto pésimo: "En 55 Detail Shop nos apasiona cuidar tu auto como si fuera nuestro. Por eso, nuestro sellado cerámico es la opción ideal si buscás el brillo más espectacular del mercado..."
+Texto optimizado correcto: "El sellado cerámico es un recubrimiento de polímero líquido que se aplica sobre la laca del vehículo. Al curar, se une químicamente a la pintura creando una capa hidrofóbica permanente de dióxido de silicio (SiO2) que protege contra rayos UV, químicos y marcas circulares."
+
+Ejemplo 2 - Input Heading: "¿Cuánto dura el tratamiento para plásticos del interior?"
+Texto pésimo: "La duración de nuestro producto Black Line es realmente muy buena y te va a sorprender desde la primera aplicación..."
+Texto optimizado correcto: "Un tratamiento para plásticos interiores de alta calidad dura entre 3 y 6 meses, dependiendo de la exposición solar y el uso del vehículo. Las fórmulas basadas en SiO2 generan una barrera antiestática duradera que resiste la degradación por rayos UV sin dejar residuos grasos."
+
+Para cada sección que analices, devolvé estrictamente un JSON. Si el texto actual YA es bueno para AEO (responde directo, sin fluff, con datos objetivos), marcá is_opportunity como false.
+
+Devolvé un array JSON sin bloques de código markdown:
+[
+  {
+    "is_opportunity": true,
+    "section_index": 0,
+    "heading_affected": "texto exacto del heading",
+    "heading_tag": "H2 o H3",
+    "current_text_snippet": "primeros 100 chars del texto actual...",
+    "problem_identified": "Diagnóstico breve de por qué la IA no lo citaría",
+    "optimized_text_replacement": "Texto optimizado de 40-50 palabras listo para copiar y pegar",
+    "word_count": 45
+  }
+]`;
+
+    const userPrompt = `Analizá las siguientes secciones de texto extraídas de la web del usuario.
+Palabra clave del negocio: "${cleanGoldKeyword || 'no especificada'}"
+
+Secciones a analizar:
+${JSON.stringify(allSections, null, 2)}`;
+
+    console.log("[API Debug AEO] Initializing GoogleGenerativeAI using model: models/gemini-3.5-flash");
+    const genAI = new GoogleGenerativeAI(apiKey);
+    const model = genAI.getGenerativeModel({
+      model: "models/gemini-3.5-flash"
+    });
+
+    let responseText = "";
+    try {
+      const originalFetch = global.fetch;
+      // @ts-ignore
+      global.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
+        const newInit = { ...init, cache: 'no-store' as RequestCache };
+        console.log("[API Debug AEO] SDK is fetching URL:", input.toString());
+        return originalFetch(input, newInit);
+      };
+
+      try {
+        const result = await model.generateContent(
+          {
+            contents: [
+              { role: 'user', parts: [{ text: systemInstructions + "\n\n" + userPrompt }] }
+            ]
+          },
+          {
+            timeout: 30000
+          }
+        );
+        responseText = await result.response.text();
+      } finally {
+        global.fetch = originalFetch;
+      }
+    } catch (geminiErr: any) {
+      console.warn("[API Debug AEO] SDK call failed. Trying direct REST API fallback...", geminiErr.message || geminiErr);
+      try {
+        responseText = await callGeminiREST(apiKey, systemInstructions + "\n\n" + userPrompt);
+        console.log("[API Debug AEO] Direct REST API fallback succeeded!");
+      } catch (restErr: any) {
+        console.error("[API Debug AEO] REST fallback failed as well:", restErr.message || restErr);
+        throw geminiErr;
+      }
+    }
+
+    // ── Parse JSON response ──────────────────────────────────────────────
+    let parsed: any[] = [];
+    try {
+      const jsonStart = responseText.indexOf('[');
+      const jsonEnd = responseText.lastIndexOf(']');
+      if (jsonStart !== -1 && jsonEnd !== -1) {
+        parsed = JSON.parse(responseText.substring(jsonStart, jsonEnd + 1));
+      } else {
+        parsed = JSON.parse(responseText);
+      }
+    } catch (parseErr: any) {
+      console.error("Error parseando JSON de Gemini para AEO:", responseText, parseErr);
+      return { success: false, error: "Error al interpretar la respuesta de la IA." };
+    }
+
+    // ── Filter: only keep sections where is_opportunity is true ──────────
+    let opportunities = parsed.filter((item: any) => item.is_opportunity === true);
+
+    // ── Add pageUrl to each opportunity result ──────────────────────────
+    opportunities = opportunities.map((opp: any) => {
+      const sectionIdx = opp.section_index ?? 0;
+      const matchedSection = allSections[sectionIdx];
+      return {
+        ...opp,
+        pageUrl: matchedSection?.pageUrl || pagesToAnalyze[0] || cleanSiteUrl,
+      };
+    });
+
+    // ── Filter already-completed AEO_OPP missions from Supabase ─────────
+    if (session?.user?.email) {
+      try {
+        const doneMissions = await getMissionsByEmail(session.user.email, 'completed');
+        const doneUrls = new Set(
+          doneMissions
+            .filter(m => m.mission_type === 'AEO_OPP')
+            .map(m => m.target_url)
+        );
+        if (doneUrls.size > 0) {
+          opportunities = opportunities.filter((opp: any) => !doneUrls.has(opp.pageUrl));
+          console.log(`[AEO] Filtradas ${doneUrls.size} oportunidad(es) ya completada(s) para ${session.user.email}`);
+        }
+      } catch (filterErr) {
+        console.warn('[AEO] No se pudieron filtrar misiones completadas:', filterErr);
+      }
+    }
+
+    return { success: true, data: opportunities };
+  } catch (error: any) {
+    console.error("Error en getAeoOpportunities:", error);
+    logErrorToFile(
+      "getAeoOpportunities",
+      { siteUrl: cleanSiteUrl, goldKeyword: cleanGoldKeyword, manualUrl },
+      error.status || "500",
+      error.message || String(error)
+    );
+    const errMsg = String(error.message || error).toLowerCase();
+    let userMessage = "";
+    if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
+      userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
+    } else if (errMsg.includes("404") || errMsg.includes("not found")) {
+      userMessage = "El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.";
+    } else {
+      userMessage = "Error temporal al conectar con la IA. Intentá de nuevo en unos segundos.";
+    }
+    return { success: false, error: userMessage };
+  }
+}
+
+/**
+ * Verifies that the user actually applied the optimized AEO text on their page.
+ * Fetches the live page and checks if significant words from the optimized text
+ * appear near the specified heading.
+ */
+export async function verifyAeoMission(pageUrl: string, headingText: string, optimizedText: string) {
+  if (!pageUrl || !headingText?.trim() || !optimizedText?.trim()) {
+    return { success: false, message: 'Faltan datos para verificar.' };
+  }
+
+  let html: string;
+  try {
+    console.log(`[verifyAeoMission] Fetching page (no-cache): ${pageUrl}`);
+    const finalUrl = pageUrl.includes('?') ? `${pageUrl}&nocache=${Date.now()}` : `${pageUrl}?nocache=${Date.now()}`;
+    const response = await fetch(finalUrl, {
+      cache: 'no-store',
+      // @ts-ignore
+      next: { revalidate: 0 },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+      signal: AbortSignal.timeout(8000),
+    });
+
+    if (!response.ok) {
+      return {
+        success: false,
+        message: `No pude acceder a la página (Error ${response.status}). Verificá que la URL sea pública.`,
+      };
+    }
+    html = await response.text();
+  } catch (err: any) {
+    if (err?.name === 'TimeoutError') {
+      return { success: false, message: 'La página tardó demasiado en responder (>8s). Intentá de nuevo.' };
+    }
+    return { success: false, message: `Error al acceder a la página: ${err?.message}` };
+  }
+
+  // Strip script and style tags (same pattern as verifyContentMission)
+  let cleanHtml = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ');
+
+  // Find the heading in the HTML (case-insensitive search using normalize)
+  const normalizedHeading = normalize(headingText);
+  const headingRegex = /<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi;
+  let headingMatch;
+  let headingEndIndex = -1;
+
+  while ((headingMatch = headingRegex.exec(cleanHtml)) !== null) {
+    const extractedHeading = headingMatch[1].replace(/<[^>]+>/g, '').trim();
+    if (normalize(extractedHeading) === normalizedHeading) {
+      headingEndIndex = headingMatch.index + headingMatch[0].length;
+      break;
+    }
+  }
+
+  if (headingEndIndex === -1) {
+    return {
+      success: false,
+      message: `No detectamos el texto optimizado en tu web. ¿Ya lo pegaste y borraste la caché? El heading "${headingText}" todavía tiene el contenido anterior.`,
+    };
+  }
+
+  // Extract text content after the heading until the next heading tag (h1-h6) or end
+  const afterHeading = cleanHtml.substring(headingEndIndex);
+  const nextHeadingMatch = afterHeading.match(/<h[1-6][^>]*>/i);
+  const sectionContent = nextHeadingMatch
+    ? afterHeading.substring(0, nextHeadingMatch.index)
+    : afterHeading;
+
+  // Strip HTML tags to get plain text
+  const sectionText = sectionContent.replace(/<[^>]+>/g, ' ').trim();
+
+  // Normalize both texts for comparison
+  const normalizedSection = normalize(sectionText);
+  const normalizedOptimized = normalize(optimizedText);
+
+  // Word-by-word comparison: extract significant words (length > 3) from optimizedText
+  const significantWords = normalizedOptimized
+    .split(' ')
+    .filter(w => w.length > 3);
+
+  if (significantWords.length === 0) {
+    return {
+      success: false,
+      message: `No detectamos el texto optimizado en tu web. ¿Ya lo pegaste y borraste la caché? El heading "${headingText}" todavía tiene el contenido anterior.`,
+    };
+  }
+
+  // Check what percentage appear in the extracted text
+  const matchCount = significantWords.filter(w => normalizedSection.includes(w)).length;
+  const matchPercentage = matchCount / significantWords.length;
+
+  console.log(`[verifyAeoMission] Heading: "${headingText}" | Match: ${(matchPercentage * 100).toFixed(1)}% (${matchCount}/${significantWords.length} words)`);
+
+  if (matchPercentage >= 0.6) {
+    return {
+      success: true,
+      message: "¡Snack informativo detectado! Tu sección ahora está optimizada para ser citada por ChatGPT, Gemini y Perplexity. 🤖",
+    };
+  } else {
+    return {
+      success: false,
+      message: `No detectamos el texto optimizado en tu web. ¿Ya lo pegaste y borraste la caché? El heading "${headingText}" todavía tiene el contenido anterior.`,
+    };
+  }
 }

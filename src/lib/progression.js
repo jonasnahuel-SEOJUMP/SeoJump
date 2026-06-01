@@ -31,13 +31,32 @@ export function getPhaseProgress(completedMissionsSet, suggestions, rawMissions,
   const p2Percent = (p2Completed / p2Total) * 100;
   const p3Unlocked = p2Unlocked && p2Percent >= 70;
 
+  // Helper: chequea si una misión fue completada comparando tipo+pagePath
+  // Soporta IDs viejos (con keyword) e IDs nuevos (sin keyword)
+  const isMissionDone = (missionId, missionType, missionPagePath) => {
+    if (completedMissionsSet.has(missionId)) return true;
+    if (missionType && missionPagePath) {
+      const prefix = `${missionType.toLowerCase()}-${missionPagePath}`;
+      for (const cid of completedMissionsSet) {
+        const cidType = cid.substring(0, cid.indexOf('-'));
+        if (cidType === missionType.toLowerCase()) {
+          const cidRest = cid.substring(cid.indexOf('-') + 1);
+          if (cidRest === missionPagePath || cidRest.startsWith(missionPagePath)) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
+  };
+
   // 3. Phase 3 Progress (Optimización)
   // We only show and count the top 10 missions!
   const p3Missions = rawMissions ? rawMissions.slice(0, 10) : [];
   const p3Total = p3Missions.length > 0 ? p3Missions.length : 10;
   let p3Completed = 0;
   p3Missions.forEach(m => {
-    if (completedMissionsSet.has(m.id)) {
+    if (isMissionDone(m.id, m.type, m.pagePath)) {
       p3Completed++;
     }
   });

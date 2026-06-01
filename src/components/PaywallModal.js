@@ -32,7 +32,7 @@ export default function PaywallModal({ onClose, totalHiddenMissions, playClick }
 
         <button 
           onClick={(e) => { e.stopPropagation(); if (playClick) playClick(); onClose(); }}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white text-3xl transition-colors z-10"
+          className="absolute top-4 right-4 text-slate-400 hover:text-white text-3xl transition-colors z-50"
         >
           ✕
         </button>
