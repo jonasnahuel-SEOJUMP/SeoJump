@@ -72,6 +72,7 @@ export default function PrivacidadPage() {
 
           <div className="space-y-3">
             <h2 className="text-white font-black text-lg">6. Contacto</h2>
+            <p>El responsable legal del desarrollo y tratamiento de datos de esta plataforma es <strong className="text-white">Nahuel Cosentino</strong>.</p>
             <p>Para cualquier consulta legal, técnica o sobre el ejercicio de tus derechos de privacidad, podés contactarnos de forma directa a:</p>
             <p className="text-emerald-400 font-bold text-base">contacto@seojump.ai</p>
           </div>
