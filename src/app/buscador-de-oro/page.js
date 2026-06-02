@@ -467,7 +467,7 @@ export default function BuscadorDeOro() {
 
       {/* Header y Tipografía Centrados Arriba */}
       <div className="text-center space-y-2 py-4 mt-2">
-        <div className="text-4xl md:text-5xl">🦉</div>
+        <img src="/images/logo-owl.png" alt="SEO Jump" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
         <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
           ¡Atención, Jugador!
         </h1>
@@ -564,7 +564,7 @@ export default function BuscadorDeOro() {
               {/* Todas descartadas — mensaje del Búho */}
               {suggestions.every((_, i) => discardedSuggestions.has(i)) ? (
                 <div className="text-center py-14 px-6 bg-slate-900 rounded-3xl border-2 border-slate-700 shadow-xl animate-in fade-in duration-300">
-                  <div className="text-7xl mb-5 animate-bounce">🦉</div>
+                  <div className="flex justify-center mb-5"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-20 h-20 object-contain animate-bounce" /></div>
                   <h3 className="text-2xl md:text-3xl font-black text-amber-400 mb-3">¡Pista despejada!</h3>
                   <p className="text-base md:text-lg font-bold text-slate-300 leading-relaxed max-w-sm mx-auto">
                     Podés usar tu siguiente ficha diaria para buscar una nueva tanda de palabras clave enfocadas en tu stock.
@@ -865,7 +865,7 @@ export default function BuscadorDeOro() {
                 
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out mt-2 ${showOwl ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
                   <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 shadow-xl flex gap-3 items-start relative">
-                     <div className="text-4xl animate-bounce flex-shrink-0 drop-shadow-lg z-10">🦉</div>
+                     <img src="/images/logo-owl.png" alt="SEO Jump" className="w-10 h-10 object-contain animate-bounce flex-shrink-0 drop-shadow-lg z-10" />
                      <div className="flex-1">
                         <div className="bg-slate-800 text-slate-200 p-4 rounded-xl rounded-tl-none font-bold text-xs leading-relaxed shadow-lg border border-slate-700 relative">
                            {allCompleted ? (

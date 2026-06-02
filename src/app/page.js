@@ -673,7 +673,7 @@ export default function Home() {
 
         {step === 1 && showIntroModal && (
           <div className="w-full max-w-xl mx-auto text-center space-y-8 animate-in zoom-in duration-500">
-             <div className="text-8xl animate-bounce">🦉</div>
+             <div className="flex justify-center mb-2"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-28 h-28 object-contain animate-bounce drop-shadow-2xl" /></div>
              <h2 className="text-2xl md:text-3xl font-extrabold text-yellow-400 tracking-tight drop-shadow-md">
                ¡Te damos la bienvenida, Jugador!
              </h2>
@@ -1346,7 +1346,7 @@ export default function Home() {
             {/* PANEL DERECHO (Panel de Boxes / Stats) */}
             <div className="hidden lg:flex w-[340px] flex-shrink-0 flex-col gap-6 lg:sticky lg:top-8 z-10">
                <div className="card-3d bg-slate-800 text-white border-slate-700 shadow-xl relative overflow-hidden p-8">
-                 <div className="text-7xl mb-3 text-center animate-bounce">🦉</div>
+                 <div className="flex justify-center mb-3"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-20 h-20 object-contain animate-bounce" /></div>
                  <h3 className="text-2xl lg:text-3xl font-black text-yellow-400 text-center mb-4 leading-tight">Panel de<br/>Boxes</h3>
                  <p className="text-sm lg:text-base font-bold text-slate-300 mb-6 text-center leading-relaxed">
                    Monitoreando el tráfico orgánico de<br/><span className="text-green-400 font-bold truncate block mt-1">{url}</span>

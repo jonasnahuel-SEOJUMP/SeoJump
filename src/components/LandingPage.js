@@ -19,6 +19,7 @@ export default function LandingPage({ onStart, playClick }) {
         <span className="px-4 py-1.5 bg-duo-green/20 border border-duo-green/40 rounded-full text-duo-green text-xs md:text-sm font-black uppercase tracking-widest mb-6">
           LA PRIMERA PLATAFORMA GAMIFICADA DE VISIBILIDAD WEB
         </span>
+        <img src="/images/logo-full.png" alt="SEO Jump" className="w-48 md:w-64 h-auto object-contain mb-6 drop-shadow-2xl" />
         <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.1] max-w-4xl mb-6">
           Convertí tu web en una máquina de atraer <span className="text-duo-green">clientes reales.</span>
         </h1>

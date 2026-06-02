@@ -30,7 +30,7 @@ export default function Header({
       <div className="flex items-center justify-between gap-2">
         {isDashboard ? (
           <span className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
-            🦉 SEOJUMP
+            <img src="/images/logo-owl.png" alt="SEO Jump" className="w-8 h-8 object-contain" /> SEOJUMP
           </span>
         ) : (
           <Link

@@ -335,7 +335,7 @@ export default function ContenidoFase2() {
 
           {/* Owl Introduction */}
           <div className="flex items-start gap-4 bg-white dark:bg-slate-800 p-8 rounded-2xl border-2 border-gray-155 dark:border-slate-700 shadow-sm">
-            <div className="text-6xl md:text-7xl animate-bounce flex-shrink-0">🦉</div>
+            <img src="/images/logo-owl.png" alt="SEO Jump" className="w-16 h-16 md:w-20 md:h-20 object-contain animate-bounce flex-shrink-0" />
             <div className="flex-1 text-left space-y-2">
               <p className="font-bold text-slate-700 dark:text-slate-200 text-lg lg:text-xl">
                 ¡Tenemos la palabra clave de oro! Ahora necesitamos una página web dedicada en tu sitio.
@@ -480,7 +480,7 @@ export default function ContenidoFase2() {
       ) : (
         /* Empty state: No active keyword */
         <div className="w-full max-w-xl mx-auto text-center py-20 px-8 card-3d bg-white dark:bg-slate-800 border-dashed border-2 border-slate-200 dark:border-slate-700 shadow-none space-y-6">
-          <div className="text-8xl opacity-50 animate-pulse">🦉</div>
+          <div className="flex justify-center"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-24 h-24 object-contain opacity-50 animate-pulse" /></div>
           <h2 className="text-3xl lg:text-4xl font-black text-slate-750 dark:text-slate-200">No hay palabras clave activas</h2>
           <p className="text-slate-600 dark:text-slate-350 text-base lg:text-lg font-bold leading-relaxed">
             Primero tenés que detectar una oportunidad de búsqueda en la Fase 1. El Búho usará esa palabra clave de oro para guiarte en tu estrategia de contenidos.

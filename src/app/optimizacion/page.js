@@ -783,7 +783,7 @@ export default function Optimizacion() {
 
           {/* Stats Panel */}
           <div className="card-3d bg-slate-800 text-white border-slate-700 shadow-xl relative overflow-hidden p-6">
-            <div className="text-5xl mb-2 text-center animate-bounce">🦉</div>
+            <div className="flex justify-center mb-2"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-14 h-14 object-contain animate-bounce" /></div>
             <h3 className="text-xl font-black text-yellow-400 text-center mb-4">Panel de Boxes</h3>
             <div className="space-y-3">
               <div className="bg-slate-900 rounded-xl p-3 border-2 border-slate-700">
@@ -816,7 +816,7 @@ export default function Optimizacion() {
               
               {/* Header y Tipografía Centrados Arriba */}
               <div className="text-center space-y-3 py-4 w-full max-w-xl mx-auto mt-4">
-                <div className="text-4xl md:text-5xl">🦉</div>
+                <img src="/images/logo-owl.png" alt="SEO Jump" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
                 <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
                   {activeTab === 'quickwins' ? 'Tu Plan de Acción 🚀' : activeTab === 'aeo' ? 'Auditoría AEO 🤖' : 'Fase 3: Optimización On-Page 🛠️'}
                 </h1>
@@ -1353,12 +1353,12 @@ export default function Optimizacion() {
               <div className="w-full">
                 <button onClick={() => { playClick(); setShowOwl(!showOwl); }}
                   className={`w-full flex items-center justify-between p-5 rounded-2xl border-2 font-black transition-all text-xl md:text-2xl ${showOwl ? 'bg-slate-800 border-slate-600 text-white' : 'bg-white dark:bg-slate-800 border-gray-100 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-slate-300'}`}>
-                  <span className="flex items-center gap-4"><span className="text-4xl">🦉</span> Explicación del Búho</span>
+                  <span className="flex items-center gap-4"><img src="/images/logo-owl.png" alt="Búho" className="w-10 h-10 object-contain" /> Explicación del Búho</span>
                   <span className="text-3xl">{showOwl ? '−' : '+'}</span>
                 </button>
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out mt-2 ${showOwl ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0'}`}>
                   <div className="bg-slate-900 p-6 rounded-2xl border-2 border-slate-700 shadow-xl flex gap-4 items-start">
-                    <div className="text-6xl md:text-7xl animate-bounce flex-shrink-0">🦉</div>
+                    <img src="/images/logo-owl.png" alt="SEO Jump" className="w-16 h-16 md:w-20 md:h-20 object-contain animate-bounce flex-shrink-0" />
                     <div className="flex-1">
                       <div className="bg-slate-800 text-slate-200 p-6 rounded-2xl rounded-tl-none font-bold text-base md:text-lg lg:text-xl leading-relaxed shadow-lg border border-slate-600 relative">
                         {selectedMission.type === 'H1'  && <p>El <strong className="text-duo-green">H1</strong> es el título principal de tu local. Google lo lee primero para saber EXACTAMENTE de qué se trata tu página. Tiene que ser claro, contener tu palabra clave y convencer al usuario.</p>}
