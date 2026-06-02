@@ -10,7 +10,7 @@ export default function LandingPage({ onStart, playClick }) {
     <div className="w-full text-slate-100 font-fredoka flex flex-col items-center max-w-7xl mx-auto animate-in fade-in zoom-in duration-500">
       
       {/* BARRA DE ANUNCIO SUPERIOR */}
-      <div className="w-full bg-gradient-to-r from-duo-green to-teal-500 text-slate-900 font-bold text-center py-2 px-4 rounded-b-xl shadow-lg mb-8 text-sm md:text-base animate-pulse">
+      <div className="w-full bg-duo-green/20 border-b border-duo-green/40 text-duo-green font-bold text-center py-2 px-4 mb-8 text-sm md:text-base">
         ✨ Nuevo módulo AEO: Detectá oportunidades ocultas en tu web para aparecer en las respuestas de ChatGPT, Gemini y Google AI.
       </div>
 
