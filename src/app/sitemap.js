@@ -1,7 +1,7 @@
 import { getAllPosts } from "../lib/blog";
 
 export default async function sitemap() {
-  const baseUrl = "https://seo-jump.vercel.app";
+  const baseUrl = "https://seo-jump.ai";
 
   // Obtener todos los posts del blog
   const posts = getAllPosts();
