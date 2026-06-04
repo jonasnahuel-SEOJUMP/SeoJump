@@ -34,26 +34,43 @@ async function getVerifiedSiteProperty(accessToken, userInputUrl) {
 
   const normalizedInput = normalizeUrl(userInputUrl);
 
+  console.log(`[GSC Match] Input URL: "${userInputUrl}" → normalized: "${normalizedInput}"`);
+  console.log(`[GSC Match] User has ${siteEntry.length} GSC properties:`, siteEntry.map(s => s.siteUrl));
+
   // Try to find a match by comparing normalized URLs
   const match = siteEntry.find(site => {
     return normalizeUrl(site.siteUrl) === normalizedInput;
   });
 
   if (match) {
+    console.log(`[GSC Match] ✅ Exact match: "${match.siteUrl}"`);
     return match.siteUrl; // Use exact GSC registered property URL
   }
+  console.log(`[GSC Match] No exact match, trying domain fallback...`);
 
-  // Fallback check: check if it matches a domain property (e.g. sc-domain:example.com)
-  const domainOnly = userInputUrl.replace(/^https?:\/\//, '').replace(/\/$/, '').replace(/^www\./, '').toLowerCase();
+  // Fallback check: compare by bare domain (strip protocol + www + trailing slash)
+  const domainOnly = userInputUrl
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '')
+    .replace(/^www\./, '')
+    .toLowerCase();
+
   const domainMatch = siteEntry.find(site => {
-    const cleanSite = site.siteUrl.replace(/^sc-domain:/, '').replace(/\/$/, '').replace(/^www\./, '').toLowerCase();
+    const cleanSite = site.siteUrl
+      .replace(/^sc-domain:/, '')   // strip Domain Property prefix
+      .replace(/^https?:\/\//, '')  // strip protocol FIRST (was missing → www strip never worked)
+      .replace(/\/$/, '')           // strip trailing slash
+      .replace(/^www\./, '')        // now www is at the start — this works correctly
+      .toLowerCase();
     return cleanSite === domainOnly;
   });
 
   if (domainMatch) {
+    console.log(`[GSC Match] ✅ Domain fallback match: "${domainMatch.siteUrl}" (domainOnly="${domainOnly}")`);
     return domainMatch.siteUrl;
   }
 
+  console.warn(`[GSC Match] ❌ No property found for "${userInputUrl}" (domainOnly="${domainOnly}"). All properties: ${siteEntry.map(s => s.siteUrl).join(', ')}`);
   return null;
 }
 
