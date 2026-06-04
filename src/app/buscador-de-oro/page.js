@@ -77,6 +77,8 @@ export default function BuscadorDeOro() {
 
   const [xp, setXp] = useState(0);
   const [query, setQuery] = useState("");
+  const [searchInput, setSearchInput] = useState("");
+  const [viewMode, setViewMode] = useState("automated");
   const [excludedWords, setExcludedWords] = useState("");
   const [loading, setLoading] = useState(false);
   const [suggestions, setSuggestions] = useState([]);
@@ -274,7 +276,7 @@ export default function BuscadorDeOro() {
 
   const handleSearch = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
-    if (!query.trim() || loading || cooldown > 0) return;
+    if (!searchInput.trim() || loading || cooldown > 0) return;
 
     // Verificar límite diario ANTES de la búsqueda
     const currentCredits = readCredits();
@@ -287,6 +289,8 @@ export default function BuscadorDeOro() {
     setLoading(true);
     setError(null);
     setSuggestions([]);
+    setQuery(searchInput);
+    setViewMode("manual");
 
     try {
       // Parsear palabras excluidas: separadas por coma, limpiar espacios
@@ -297,7 +301,7 @@ export default function BuscadorDeOro() {
         .join(',');
 
       const response = await fetch(
-        `/api/suggestions?q=${encodeURIComponent(query)}&siteUrl=${encodeURIComponent(siteUrl)}${
+        `/api/suggestions?q=${encodeURIComponent(searchInput)}&siteUrl=${encodeURIComponent(siteUrl)}${
           parsedExcluded ? `&excludedWords=${encodeURIComponent(parsedExcluded)}` : ''
         }`,
         {
@@ -559,7 +563,7 @@ export default function BuscadorDeOro() {
                 Esto puede tardar unos segundos.
               </p>
             </div>
-          ) : suggestions.length > 0 ? (
+          ) : viewMode === 'manual' && suggestions.length > 0 ? (
             <div className="w-full space-y-6 animate-in fade-in duration-300">
               <h2 className="text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100 mb-2 flex items-center gap-3 justify-center md:justify-start">
                 <span className="text-3xl">🪙</span> Resultados de Oro
@@ -691,7 +695,7 @@ export default function BuscadorDeOro() {
                      ✖ Cerrar error
                    </button>
                  </div>
-               ) : query && !loading ? (
+               ) : viewMode === 'manual' && query && !loading ? (
                  <div className="space-y-4">
                    <div className="text-7xl opacity-50 mb-2">🌵</div>
                    <p className="text-slate-550 dark:text-slate-400 font-black text-2xl">No encontramos oro para esta búsqueda.</p>
@@ -845,8 +849,8 @@ export default function BuscadorDeOro() {
               <form onSubmit={handleSearch} className="w-full space-y-3 border-t border-slate-100 dark:border-slate-700 pt-3">
                  <input
                    type="text"
-                   value={query}
-                   onChange={(e) => setQuery(e.target.value)}
+                   value={searchInput}
+                   onChange={(e) => setSearchInput(e.target.value)}
                    placeholder="Ej: limpieza de tapizados..."
                    className="w-full p-3 text-base border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-duo-yellow outline-none font-black text-slate-800 dark:text-slate-100 dark:bg-slate-900/50"
                  />
@@ -865,9 +869,9 @@ export default function BuscadorDeOro() {
                  </div>
                   <button
                     type="submit"
-                    disabled={loading || !query.trim() || cooldown > 0}
+                    disabled={loading || !searchInput.trim() || cooldown > 0}
                     className={`btn-3d w-full text-base py-3.5 font-black flex items-center justify-center gap-2 transition-all ${
-                      loading || !query.trim() || cooldown > 0
+                      loading || !searchInput.trim() || cooldown > 0
                         ? "btn-white text-slate-400 dark:bg-slate-900 dark:border-slate-800 cursor-not-allowed" 
                         : "bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white active:scale-[0.99]"
                     }`}
