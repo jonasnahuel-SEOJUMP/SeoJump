@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { auditSiteLinks, requestGoogleIndexing } from "../../lib/actions";
+import { auditSiteLinks, requestGoogleIndexing, checkIsAdmin } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 
@@ -24,6 +24,7 @@ export default function DetectiveDeEnlaces() {
   const [prog, setProg] = useState(null);
   const [prestigeCycles, setPrestigeCycles] = useState(0);
   const [serverLoading, setServerLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // ── Detective State ──
   const [scanState, setScanState] = useState("idle"); // idle | scanning | results | complete
@@ -47,6 +48,10 @@ export default function DetectiveDeEnlaces() {
   useEffect(() => {
     const init = async () => {
       setServerLoading(true);
+      // Resolver God Mode antes de calcular fases
+      const adminResult = await checkIsAdmin().catch(() => false);
+      setIsAdmin(adminResult);
+
       if (session) {
         const serverState = await pullStateFromServer();
         if (serverState) {
@@ -62,7 +67,8 @@ export default function DetectiveDeEnlaces() {
             serverState.gold_suggestions,
             serverState.missions,
             serverState.gold_query,
-            serverState.site_url
+            serverState.site_url,
+            adminResult
           );
           setProg(p);
 
@@ -137,7 +143,7 @@ export default function DetectiveDeEnlaces() {
         try { suggestions = JSON.parse(savedSuggestions); } catch (e) {}
       }
 
-      const p = getPhaseProgress(completedSet, suggestions, missionsList, savedKw, savedUrl);
+      const p = getPhaseProgress(completedSet, suggestions, missionsList, savedKw, savedUrl, adminResult);
       setProg(p);
       setServerLoading(false);
     };
@@ -150,9 +156,9 @@ export default function DetectiveDeEnlaces() {
     try { suggestions = JSON.parse(localStorage.getItem("gold-suggestions") || "[]"); } catch (e) {}
     let missions = [];
     try { missions = JSON.parse(localStorage.getItem("seojump_missions") || "[]"); } catch (e) {}
-    const p = getPhaseProgress(completedIds, suggestions, missions, goldKeyword, siteUrl);
+    const p = getPhaseProgress(completedIds, suggestions, missions, goldKeyword, siteUrl, isAdmin);
     setProg(p);
-  }, [completedIds, siteUrl, goldKeyword]);
+  }, [completedIds, siteUrl, goldKeyword, isAdmin]);
 
   // XP persist
   useEffect(() => {
@@ -171,12 +177,14 @@ export default function DetectiveDeEnlaces() {
     }
   }, [session, status, router]);
 
-  // Lock protection
+  // Lock protection — freno de mano: esperar sesión y God Mode antes de redirigir
   useEffect(() => {
+    if (status === 'loading') return;          // sesión todavía cargando
+    if (isAdmin) return;                       // admins siempre tienen acceso
     if (prog && !prog.p4.unlocked) {
       router.push("/optimizacion");
     }
-  }, [prog, router]);
+  }, [prog, router, status, isAdmin]);
 
   // ── Handlers ──
   const handleScan = async () => {
@@ -384,6 +392,7 @@ export default function DetectiveDeEnlaces() {
         playClick={playClick}
         prog={prog}
         activePhase={4}
+        isAdmin={isAdmin}
       />
 
       {/* Title */}

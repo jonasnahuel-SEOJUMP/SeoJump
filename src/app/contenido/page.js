@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { verifyContentMission } from "../../lib/actions";
+import { verifyContentMission, checkIsAdmin } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Link from "next/link";
 import Header from "../../components/Header";
@@ -48,6 +48,7 @@ export default function ContenidoFase2() {
   const [prog, setProg] = useState(null);
   const [prestigeCycles, setPrestigeCycles] = useState(0);
   const [serverLoading, setServerLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   // Track Level Up sound
   const prevXpRef = useRef(0);
@@ -69,6 +70,10 @@ export default function ContenidoFase2() {
   useEffect(() => {
     const init = async () => {
       setServerLoading(true);
+      // Resolver God Mode antes de calcular fases
+      const adminResult = await checkIsAdmin().catch(() => false);
+      setIsAdmin(adminResult);
+
       if (session) {
         const serverState = await pullStateFromServer();
         if (serverState) {
@@ -86,7 +91,8 @@ export default function ContenidoFase2() {
             serverState.gold_suggestions,
             serverState.missions,
             serverState.gold_query,
-            serverState.site_url
+            serverState.site_url,
+            adminResult
           );
           setProg(p);
           setServerLoading(false);
@@ -143,7 +149,7 @@ export default function ContenidoFase2() {
         try { suggestions = JSON.parse(savedSuggestions); } catch (e) {}
       }
 
-      const p = getPhaseProgress(completedSet, suggestions, missionsList, savedKeyword, savedUrl);
+      const p = getPhaseProgress(completedSet, suggestions, missionsList, savedKeyword, savedUrl, adminResult);
       setProg(p);
       setServerLoading(false);
     };
@@ -160,16 +166,19 @@ export default function ContenidoFase2() {
     try {
       missions = JSON.parse(localStorage.getItem("seojump_missions") || "[]");
     } catch (e) {}
-    const p = getPhaseProgress(completedMissions, suggestions, missions, activeKeyword, siteUrl);
+    const p = getPhaseProgress(completedMissions, suggestions, missions, activeKeyword, siteUrl, isAdmin);
     setProg(p);
-  }, [completedMissions, activeKeyword, siteUrl]);
+  }, [completedMissions, activeKeyword, siteUrl, isAdmin]);
 
   // Lock protection: redirect if Phase 2 is locked
+  // FRENO: esperar sesión resuelta y que isAdmin esté calculado antes de redirigir
   useEffect(() => {
+    if (status === 'loading') return;          // sesión todavía cargando
+    if (isAdmin) return;                       // admins siempre tienen acceso
     if (prog && !prog.p2.unlocked) {
       router.push("/buscador-de-oro");
     }
-  }, [prog, router]);
+  }, [prog, router, status, isAdmin]);
 
   // Auth Protection
   useEffect(() => {
@@ -302,6 +311,7 @@ export default function ContenidoFase2() {
         playClick={playClick}
         prog={prog}
         activePhase={2}
+        isAdmin={isAdmin}
       />
 
       {/* Main Content */}

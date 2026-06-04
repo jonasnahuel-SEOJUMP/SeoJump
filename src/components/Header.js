@@ -17,6 +17,7 @@ export default function Header({
   prog,
   activePhase, // 1, 2, 3, or 4
   isDashboard = false,
+  isAdmin = false,   // God Mode: bypass all phase locks in the nav
 }) {
   const { data: session } = useSession();
   const router = useRouter();
@@ -121,7 +122,7 @@ export default function Header({
             <span className="md:hidden">✍️ F2</span>
             <span className="hidden md:inline">✍️ Fase 2: Contenido</span>
           </div>
-        ) : prog?.p2?.unlocked ? (
+        ) : (isAdmin || prog?.p2?.unlocked) ? (
           <Link
             href="/contenido"
             onClick={handleLinkClick}
@@ -146,7 +147,7 @@ export default function Header({
             <span className="md:hidden">🛠️ F3</span>
             <span className="hidden md:inline">🛠️ Fase 3: Optimización</span>
           </div>
-        ) : prog?.p3?.unlocked ? (
+        ) : (isAdmin || prog?.p3?.unlocked) ? (
           <Link
             href="/optimizacion"
             onClick={handleLinkClick}
@@ -171,7 +172,7 @@ export default function Header({
             <span className="md:hidden">🕵️‍♂️ F4</span>
             <span className="hidden md:inline">🕵️‍♂️ Fase 4: Detective</span>
           </div>
-        ) : prog?.p4?.unlocked ? (
+        ) : (isAdmin || prog?.p4?.unlocked) ? (
           <Link
             href="/detective-de-enlaces"
             onClick={handleLinkClick}
