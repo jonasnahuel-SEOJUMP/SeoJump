@@ -895,7 +895,10 @@ export async function requestGoogleIndexing(urlToIndex: string) {
   }
 }
 
-const metadataCache = new Map<string, { title: string; description: string; h1: string }>();
+// NOTE: metadataCache was removed — module-level Maps on Vercel serverless
+// share state across requests in the same warm Lambda instance, which caused
+// desktop users' cached metadata to 'poison' cold-start instances used by
+// mobile clients. Each request now scrapes independently.
 
 
 /**
@@ -1022,12 +1025,10 @@ export async function getAIPredictiveSuggestions(siteUrl: string, seedKeyword: s
     try {
       inferredNicho = inferNichoFromUrl(cleanSiteUrl);
       
-      let cached = metadataCache.get(normalizedSiteUrl);
-      if (!cached) {
-        cached = await scrapeMetadata(cleanSiteUrl);
-        metadataCache.set(normalizedSiteUrl, cached);
-      }
-      meta = cached;
+      // No module-level cache — each server action invocation is isolated.
+      // The scrape result is used only to enrich the Gemini prompt context;
+      // if it fails the pipeline continues with the domain-inferred niche.
+      meta = await scrapeMetadata(cleanSiteUrl);
     } catch (scrapeErr: any) {
       console.warn("Scraper step failed, ignoring scrape context:", scrapeErr.message);
       // Falla el scraper: se ignora y se continúa con nicho genérico/derivable

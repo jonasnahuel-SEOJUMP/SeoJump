@@ -220,7 +220,7 @@ export default function Home() {
             });
 
             // Fallback load from local storage for other state
-            const savedUrl = localStorage.getItem("seojump_site_url");
+            const savedUrl = (localStorage.getItem("seojump_site_url") || "").toLowerCase().trim();
             if (savedUrl) setUrl(savedUrl);
 
             const activeKeyword = localStorage.getItem("gold-tu-busqueda");
@@ -274,7 +274,7 @@ export default function Home() {
       const savedXp = localStorage.getItem("seojump_xp");
       if (savedXp) setXp(parseInt(savedXp, 10));
 
-      const savedUrl = localStorage.getItem("seojump_site_url");
+      const savedUrl = (localStorage.getItem("seojump_site_url") || "").toLowerCase().trim();
       if (savedUrl) setUrl(savedUrl);
 
       const activeKeyword = localStorage.getItem("gold-tu-busqueda");
