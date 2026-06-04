@@ -91,6 +91,7 @@ export default function BuscadorDeOro() {
   const [discardedSuggestions, setDiscardedSuggestions] = useState(new Set());
   const [dismissingIndex, setDismissingIndex] = useState(null);
   const [hasMissions, setHasMissions] = useState(false);
+  const [missions, setMissions] = useState([]);
   const [prog, setProg] = useState(null);
   const [prestigeCycles, setPrestigeCycles] = useState(0);
   const [serverLoading, setServerLoading] = useState(true);
@@ -156,6 +157,7 @@ export default function BuscadorDeOro() {
           setCompletedSuggestions(new Set(serverState.completed_missions || []));
           setPrestigeCycles(serverState.ciclos_prestigio || 0);
           setHasMissions((serverState.missions || []).length > 0);
+          setMissions(serverState.missions || []);
 
           const suggestionsList = serverState.gold_suggestions || [];
           setSuggestions(suggestionsList.map(s =>
@@ -237,6 +239,7 @@ export default function BuscadorDeOro() {
           if (Array.isArray(parsed) && parsed.length > 0) {
             missionsList = parsed;
             setHasMissions(true);
+            setMissions(parsed);
           }
         } catch (e) {}
       }
@@ -694,7 +697,53 @@ export default function BuscadorDeOro() {
                    <p className="text-slate-550 dark:text-slate-400 font-black text-2xl">No encontramos oro para esta búsqueda.</p>
                    <p className="text-slate-455 dark:text-slate-500 font-bold text-lg">¡Probá con otra palabra más general o un sinónimo!</p>
                  </div>
-               ) : (
+               ) : missions.length > 0 ? (
+                  <div className="w-full animate-in fade-in slide-in-from-bottom duration-500">
+                    <div className="flex items-center gap-3 mb-6 bg-purple-50 dark:bg-purple-900/20 p-4 md:p-6 rounded-2xl border-2 border-purple-200 dark:border-purple-800 shadow-sm">
+                      <div className="text-4xl animate-bounce">🤖</div>
+                      <div>
+                        <h3 className="text-xl md:text-2xl font-black text-purple-900 dark:text-purple-300">Oportunidades Automatizadas</h3>
+                        <p className="text-sm md:text-base font-bold text-purple-700 dark:text-purple-400">El Búho escaneó tu sitio y encontró estas palabras clave ganadoras. ¡Elegí una para empezar!</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {(() => {
+                        // Extract unique keywords from missions
+                        const kwMap = new Map();
+                        missions.forEach(m => {
+                          if (m.keyword && !kwMap.has(m.keyword)) {
+                            kwMap.set(m.keyword, m);
+                          }
+                        });
+                        const uniqueMissions = Array.from(kwMap.values()).slice(0, 8); // Top 8
+                        return uniqueMissions.map((m, idx) => (
+                          <div 
+                            key={idx} 
+                            onClick={() => { 
+                              playClick(); 
+                              localStorage.setItem("gold-tu-busqueda", m.keyword);
+                              setQuery(m.keyword);
+                              router.push('/contenido');
+                            }}
+                            className="card-3d bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 p-5 cursor-pointer hover:border-duo-green hover:bg-green-50 dark:hover:bg-green-900/20 transition-all group"
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 group-hover:text-duo-green line-clamp-2">
+                                "{m.keyword}"
+                              </h4>
+                            </div>
+                            <p className="text-sm font-bold text-slate-500 dark:text-slate-400 truncate mb-4">
+                              Detectado en: {m.pagePath}
+                            </p>
+                            <button className="btn-3d btn-green w-full py-2 text-sm font-black">
+                              ESCARBAR ESTA OPORTUNIDAD ⛏️
+                            </button>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                  </div>
+                ) : (
                  <div className="space-y-4">
                    <div className="text-7xl opacity-50 mb-2 animate-pulse">⛏️</div>
                    <p className="text-slate-550 dark:text-slate-400 font-black text-2xl">Esperando para escarbar...</p>
