@@ -49,6 +49,7 @@ export default function ContenidoFase2() {
   const [prestigeCycles, setPrestigeCycles] = useState(0);
   const [serverLoading, setServerLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdminResolved, setIsAdminResolved] = useState(false);
 
   // Track Level Up sound
   const prevXpRef = useRef(0);
@@ -70,10 +71,6 @@ export default function ContenidoFase2() {
   useEffect(() => {
     const init = async () => {
       setServerLoading(true);
-      // Resolver God Mode antes de calcular fases
-      const adminResult = await checkIsAdmin().catch(() => false);
-      setIsAdmin(adminResult);
-
       if (session) {
         const serverState = await pullStateFromServer();
         if (serverState) {
@@ -92,7 +89,7 @@ export default function ContenidoFase2() {
             serverState.missions,
             serverState.gold_query,
             serverState.site_url,
-            adminResult
+            isAdmin
           );
           setProg(p);
           setServerLoading(false);
@@ -156,6 +153,16 @@ export default function ContenidoFase2() {
     init();
   }, [session]);
 
+  // ── Resolver admin status de forma independiente y TEMPRANA ──────────────
+  // Corre en cuanto status deja de ser 'loading'. No espera al init() completo.
+  // isAdminResolved=false bloquea los guards de redirección hasta que esto resuelva.
+  useEffect(() => {
+    if (status === 'loading') return;
+    checkIsAdmin()
+      .then(result => { setIsAdmin(result); setIsAdminResolved(true); })
+      .catch(() => { setIsAdmin(false); setIsAdminResolved(true); });
+  }, [status]);
+
   // Recalculate progress when state updates
   useEffect(() => {
     let suggestions = [];
@@ -171,14 +178,15 @@ export default function ContenidoFase2() {
   }, [completedMissions, activeKeyword, siteUrl, isAdmin]);
 
   // Lock protection: redirect if Phase 2 is locked
-  // FRENO: esperar sesión resuelta y que isAdmin esté calculado antes de redirigir
+  // FRENO TRIPLE: esperar (1) sesión, (2) admin resuelto, (3) que no sea admin
   useEffect(() => {
-    if (status === 'loading') return;          // sesión todavía cargando
-    if (isAdmin) return;                       // admins siempre tienen acceso
+    if (status === 'loading') return;       // sesión todavía cargando
+    if (!isAdminResolved) return;           // esperar que checkIsAdmin() termine
+    if (isAdmin) return;                    // admins siempre tienen acceso
     if (prog && !prog.p2.unlocked) {
-      router.push("/buscador-de-oro");
+      router.push('/buscador-de-oro');
     }
-  }, [prog, router, status, isAdmin]);
+  }, [prog, router, status, isAdmin, isAdminResolved]);
 
   // Auth Protection
   useEffect(() => {

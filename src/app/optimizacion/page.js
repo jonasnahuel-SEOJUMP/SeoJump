@@ -967,7 +967,8 @@ export default function Optimizacion() {
         playThemeToggle={playThemeToggle}
         playClick={playClick}
         prog={prog}
-        activePhase={prog?.p3?.unlocked ? 3 : null}
+        activePhase={(isAdmin || prog?.p3?.unlocked) ? 3 : null}
+        isAdmin={isAdmin}
       />
 
       {/* Main Layout: 3 columns on desktop */}

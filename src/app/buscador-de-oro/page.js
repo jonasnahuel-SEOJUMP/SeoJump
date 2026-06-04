@@ -463,6 +463,7 @@ export default function BuscadorDeOro() {
         playClick={playClick}
         prog={prog}
         activePhase={1}
+        isAdmin={isVip()}
       />
 
       {/* Header y Tipografía Centrados Arriba */}

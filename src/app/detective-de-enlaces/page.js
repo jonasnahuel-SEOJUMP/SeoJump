@@ -25,6 +25,7 @@ export default function DetectiveDeEnlaces() {
   const [prestigeCycles, setPrestigeCycles] = useState(0);
   const [serverLoading, setServerLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdminResolved, setIsAdminResolved] = useState(false);
 
   // ── Detective State ──
   const [scanState, setScanState] = useState("idle"); // idle | scanning | results | complete
@@ -160,6 +161,14 @@ export default function DetectiveDeEnlaces() {
     setProg(p);
   }, [completedIds, siteUrl, goldKeyword, isAdmin]);
 
+  // ── Resolver admin status de forma independiente y TEMPRANA ──────────────
+  useEffect(() => {
+    if (status === 'loading') return;
+    checkIsAdmin()
+      .then(result => { setIsAdmin(result); setIsAdminResolved(true); })
+      .catch(() => { setIsAdmin(false); setIsAdminResolved(true); });
+  }, [status]);
+
   // XP persist
   useEffect(() => {
     if (xp > 0) localStorage.setItem("seojump_xp", xp.toString());
@@ -177,14 +186,15 @@ export default function DetectiveDeEnlaces() {
     }
   }, [session, status, router]);
 
-  // Lock protection — freno de mano: esperar sesión y God Mode antes de redirigir
+  // Lock protection — FRENO TRIPLE: sesión + admin resuelto + no es admin
   useEffect(() => {
-    if (status === 'loading') return;          // sesión todavía cargando
-    if (isAdmin) return;                       // admins siempre tienen acceso
+    if (status === 'loading') return;
+    if (!isAdminResolved) return;           // esperar que checkIsAdmin() termine
+    if (isAdmin) return;
     if (prog && !prog.p4.unlocked) {
-      router.push("/optimizacion");
+      router.push('/optimizacion');
     }
-  }, [prog, router, status, isAdmin]);
+  }, [prog, router, status, isAdmin, isAdminResolved]);
 
   // ── Handlers ──
   const handleScan = async () => {
