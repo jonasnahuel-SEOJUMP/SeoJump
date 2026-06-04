@@ -667,17 +667,29 @@ export async function verifyMission(pageUrl: string, type: string, userInput: st
     return { success: false, message: 'Faltan datos para verificar.' }
   }
 
-  // Keyword gate: el input DEBE contener la keyword de oro
+  // Keyword gate: verificar que el INPUT del usuario incluya las palabras clave activas.
+  // IMPORTANTE: usamos matching por palabras individuales (no cadena completa) para tolerar
+  // títulos naturales como "Óxido de cerio puro - Pulidor" cuando la keyword es "oxido cerio".
+  // Si el input pasa, bien. Si no, le decimos exactamente qué palabra falta.
   if (goldKeyword?.trim()) {
-    const normalizedInput = normalize(userInput)
+    const normalizedInput   = normalize(userInput)
     const normalizedKeyword = normalize(goldKeyword)
-    // Verificar palabra por palabra (ignorar stop words de 1-2 letras)
-    const keywordWords = normalizedKeyword.split(' ').filter(w => w.length > 2)
-    const inputContainsKeyword = keywordWords.length > 0 && keywordWords.every(w => normalizedInput.includes(w))
-    if (!inputContainsKeyword) {
-      return {
-        success: false,
-        message: `Tu ${type} no incluye la palabra clave activa «${goldKeyword}». Agregala para que Google entienda de qué trata tu página y así subir posiciones.`,
+
+    // Solo verificar palabras significativas (> 3 chars) para ignorar artículos/preposiciones
+    const keywordWords = normalizedKeyword.split(' ').filter(w => w.length > 3)
+    const missingWords = keywordWords.filter(w => !normalizedInput.includes(w))
+
+    console.log(`[verifyMission] Keyword gate — words to find: [${keywordWords}], missing: [${missingWords}]`)
+
+    if (keywordWords.length > 0 && missingWords.length > 0) {
+      // Si falta MÁS DE LA MITAD de las palabras clave → rechazar.
+      // Esto tolera títulos largos donde alguna palabra puede estar en forma ligeramente distinta.
+      const missingRatio = missingWords.length / keywordWords.length
+      if (missingRatio > 0.5) {
+        return {
+          success: false,
+          message: `Tu ${type} no incluye palabras clave importantes de «${goldKeyword}» (falta: ${missingWords.slice(0, 3).join(', ')}). Incorporalas para que Google entienda de qué trata tu página.`,
+        }
       }
     }
   }
@@ -757,13 +769,32 @@ export async function verifyMission(pageUrl: string, type: string, userInput: st
     if (typeof val === 'string') {
       const normalizedLive = normalize(val)
       
-      // 1. Matches user input exactly or contains/is contained by it
-      const matchesInput = normalizedLive === normalizedInput || normalizedLive.includes(normalizedInput) || normalizedInput.includes(normalizedLive);
+      // 1. El live value coincide con el input del usuario (exacto o contiene/está contenido)
+      const matchesInput = normalizedLive === normalizedInput
+        || normalizedLive.includes(normalizedInput)
+        || normalizedInput.includes(normalizedLive);
       
-      // 2. Contains the target keyword (direct comparison)
-      const matchesKeyword = normalizedKeyword && (normalizedLive === normalizedKeyword || normalizedLive.includes(normalizedKeyword));
+      // 2. El live value contiene la keyword directamente (sin importar el input del usuario)
+      const matchesKeyword = normalizedKeyword
+        && (normalizedLive === normalizedKeyword || normalizedLive.includes(normalizedKeyword));
+
+      // 3. ⭐ NUEVO: matching por palabras individuales de la keyword en el live value.
+      // Evita falsos negativos cuando el H1 tiene un título natural largo como
+      // "Óxido de cerio puro - Pulidor premium para vidrios" y la keyword es "oxido cerio".
+      let matchesKeywordWords = false;
+      if (normalizedKeyword && !matchesKeyword) {
+        const kwWords = normalizedKeyword.split(' ').filter(w => w.length > 3);
+        if (kwWords.length > 0) {
+          const foundWords = kwWords.filter(w => normalizedLive.includes(w));
+          // Pasa si al menos el 50% de las palabras clave significativas están en el H1 vivo
+          matchesKeywordWords = foundWords.length / kwWords.length >= 0.5;
+          if (matchesKeywordWords) {
+            console.log(`[verifyMission] ✅ Keyword-words match on live value: found [${foundWords}] of [${kwWords}]`);
+          }
+        }
+      }
       
-      if (matchesInput || matchesKeyword) {
+      if (matchesInput || matchesKeyword || matchesKeywordWords) {
         isMatch = true
         matchedValue = val
         break
