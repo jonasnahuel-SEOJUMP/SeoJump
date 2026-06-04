@@ -50,7 +50,7 @@ function sanitizeInput(text: string, type: 'keyword' | 'url'): { isValid: boolea
   } else {
     const cleanUrl = clean.toLowerCase();
     // Expresión regular para validar dominio o URL básico
-    const domainRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+    const domainRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z]{2,10})([/\w .-]*)*\/?$/;
     if (!domainRegex.test(cleanUrl)) {
       return { 
         isValid: false, 
@@ -108,40 +108,68 @@ function logErrorToFile(actionName: string, input: any, status: string | number,
  * Realiza una llamada directa a la API REST de Google Gemini, omitiendo el SDK.
  */
 async function callGeminiREST(apiKey: string, promptText: string): Promise<string> {
-  const url = `https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
-  console.log(`[API REST Debug] Llamando directamente a Gemini REST API...`);
+  // Model fallback chain — each model has independent quota
+  const models = [
+    { name: 'gemini-2.5-flash', api: 'v1beta' },
+    { name: 'gemini-2.5-flash-lite', api: 'v1beta' },
+    { name: 'gemini-2.0-flash', api: 'v1beta' },
+  ];
+
+  let lastError = '';
   
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    cache: "no-store",
-    body: JSON.stringify({
-      contents: [
-        {
-          role: "user",
-          parts: [{ text: promptText }]
+  for (const model of models) {
+    const url = `https://generativelanguage.googleapis.com/${model.api}/models/${model.name}:generateContent?key=${apiKey}`;
+    
+    // Try each model up to 2 times with backoff
+    for (let attempt = 0; attempt < 2; attempt++) {
+      console.log(`[Gemini REST] Trying ${model.name} (attempt ${attempt + 1})...`);
+      
+      try {
+        const response = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          cache: "no-store",
+          body: JSON.stringify({
+            contents: [{ role: "user", parts: [{ text: promptText }] }],
+            generationConfig: { responseMimeType: "application/json" }
+          }),
+          signal: AbortSignal.timeout(15000)
+        });
+
+        if (response.status === 429 || response.status === 503) {
+          lastError = `${model.name}: ${response.status}`;
+          if (attempt === 0) {
+            // Retry once after 3s, then move to next model
+            console.warn(`[Gemini REST] ${model.name} returned ${response.status}, retrying in 3s...`);
+            await new Promise(r => setTimeout(r, 3000));
+            continue;
+          }
+          console.warn(`[Gemini REST] ${model.name} exhausted, trying next model...`);
+          break; // Move to next model
         }
-      ],
-      generationConfig: {
-        responseMimeType: "application/json"
+
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = `${model.name}: ${response.status} ${errText.substring(0, 200)}`;
+          break; // Non-retryable error, try next model
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        if (!text) {
+          lastError = `${model.name}: empty response`;
+          break;
+        }
+        console.log(`[Gemini REST] ✅ ${model.name} succeeded!`);
+        return text;
+      } catch (fetchErr: any) {
+        lastError = `${model.name}: ${fetchErr.message}`;
+        break; // Network/timeout error, try next model
       }
-    }),
-    signal: AbortSignal.timeout(30000)
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`Google REST API returned status ${response.status}: ${errText}`);
+    }
   }
 
-  const data = await response.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-  if (!text) {
-    throw new Error("La API de Google devolvió una respuesta vacía.");
-  }
-  return text;
+  throw new Error(`All Gemini models failed. Last error: ${lastError}`);
 }
 
 
@@ -1082,89 +1110,28 @@ Reglas estrictas de generación:
 
     // 4. Llamar a la API de Gemini con mecanismo de reintento (retry) y retroceso exponencial (exponential backoff)
     let responseText = "";
-    const maxRetries = 3;
-    let attempt = 0;
-    let delayMs = 1000;
 
-    while (attempt < maxRetries) {
-      try {
-        console.log(`Initializing GoogleGenerativeAI (Attempt ${attempt + 1}/${maxRetries}) using model: models/gemini-3.5-flash`);
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({
-          model: "models/gemini-3.5-flash"
-        });
-
-        // Intercept global fetch to log SDK requests
-        const originalFetch = global.fetch;
-        // @ts-ignore
-        global.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
-          const newInit = { ...init, cache: 'no-store' as RequestCache };
-          console.log("[API Debug Detective] SDK is fetching URL:", input.toString());
-          return originalFetch(input, newInit);
-        };
-
-        try {
-          const result = await model.generateContent(
-            {
-              contents: [{ role: 'user', parts: [{ text: systemInstructions }] }]
-            },
-            {
-              timeout: 30000 // Timeout de 30 segundos
-            }
-          );
-          responseText = await result.response.text();
-        } finally {
-          // Restore original fetch
-          global.fetch = originalFetch;
-        }
-        break; // Éxito, salir del bucle
-      } catch (geminiErr: any) {
-        console.warn("[API Debug] SDK call failed. Trying direct REST API fallback...", geminiErr.message || geminiErr);
-        try {
-          responseText = await callGeminiREST(apiKey, systemInstructions);
-          console.log("[API Debug] Direct REST API fallback succeeded!");
-          break; // Éxito, salir del bucle
-        } catch (restErr: any) {
-          console.error("[API Debug] REST fallback failed as well:", restErr.message || restErr);
-        }
-
-        attempt++;
-        
-        // Log detailed error info on the server console
-        console.error(`[API Debug] Attempt ${attempt} failed.`);
-        console.error(`[API Debug] Error Message: ${geminiErr.message}`);
-        console.error(`[API Debug] Error Status: ${geminiErr.status || "N/A"}`);
-        console.error("FULL GEMINI ERROR OBJECT:", geminiErr);
-        
-        // Log persistently to error_log.json on the server
-        logErrorToFile(
-          "getAIPredictiveSuggestions", 
-          { siteUrl: cleanSiteUrl, seedKeyword: cleanSeedKeyword }, 
-          geminiErr.status || "503", 
-          geminiErr.message || String(geminiErr)
-        );
-        
-        if (attempt >= maxRetries) {
-          // Build user-friendly error message instead of raw API JSON
-          let userMessage = "";
-          const errMsg = String(geminiErr.message || geminiErr).toLowerCase();
-          if (geminiErr.status === 429 || errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
-            userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
-          } else if (geminiErr.status === 404 || errMsg.includes("404") || errMsg.includes("not found")) {
-            userMessage = "El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.";
-          } else {
-            userMessage = "Error temporal al conectar con la IA. Intentá de nuevo en unos segundos.";
-          }
-          return { 
-            success: false, 
-            error: userMessage
-          };
-        }
-        
-        console.log(`Waiting ${delayMs}ms before retrying Gemini API...`);
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        delayMs *= 2; // Retroceso exponencial
+    try {
+      console.log("[API Debug Detective] Calling Gemini REST API directly (skipping SDK)...");
+      responseText = await callGeminiREST(apiKey, systemInstructions);
+    } catch (geminiErr: any) {
+      console.error("[API Debug Detective] REST call failed:", geminiErr.message || geminiErr);
+      logErrorToFile(
+        "getAIPredictiveSuggestions", 
+        { siteUrl: cleanSiteUrl, seedKeyword: cleanSeedKeyword }, 
+        geminiErr.status || "503", 
+        geminiErr.message || String(geminiErr)
+      );
+      const errMsg = String(geminiErr.message || geminiErr).toLowerCase();
+      let userMessage = "";
+      if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
+        userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
+      } else if (errMsg.includes("404") || errMsg.includes("not found")) {
+        userMessage = "El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.";
+      } else {
+        userMessage = "Error temporal al conectar con la IA. Intentá de nuevo en unos segundos.";
       }
+      return { success: false, error: userMessage };
     }
 
     // 5. Parsear y Validar JSON
@@ -1277,6 +1244,15 @@ export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
     }
   }
 
+  // Hard timeout: never hang more than 25 seconds on Vercel
+  const timeoutPromise = new Promise<{ success: false; error: string }>((resolve) =>
+    setTimeout(() => resolve({ success: false, error: "El análisis tardó demasiado. Intentá de nuevo en unos segundos." }), 25000)
+  );
+
+  return Promise.race([_getQuickWinsCore(cleanSiteUrl, cleanGoldKeyword), timeoutPromise]);
+}
+
+async function _getQuickWinsCore(cleanSiteUrl: string, cleanGoldKeyword: string) {
   try {
     const session = await auth();
 
@@ -1344,33 +1320,53 @@ export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
       return false;
     };
 
-    const opportunities: any[] = [];
-    for (const cand of candidates.slice(0, 5)) { // look at up to 5 to have fallbacks
-      if (opportunities.length >= 3) break;
-      const pageUrl = cand.keys[0];
-      const query = cand.keys[1];
+    // Filter candidates first (before scraping)
+    // Rule: one Quick Win per physical URL — pick the keyword with the most impressions for each URL.
+    // We never block two different URLs from using a similar keyword; that would drop valid pages.
+    const urlToBestCand = new Map<string, any>();
 
-      // ⛔ LAYER 1 GATE: If this is the Home and the query is product-specific → skip
+    for (const cand of candidates) {
+      const pageUrl = cand.keys?.[0];
+      const query   = cand.keys?.[1];
+      if (!pageUrl || !query) continue;
+
+      // Skip Home page rows that look like specific product queries
       if (isHomePage(pageUrl, cleanSiteUrl) && isProductQuery(query)) {
         console.warn(`[QuickWins L1] Skipping Home candidate with product query: "${query}"`);
         continue;
       }
 
-      let pageMeta = { title: "", description: "", h1: "" };
-      try {
-        pageMeta = await scrapeMetadata(pageUrl);
-      } catch (e) {}
-      opportunities.push({
-        page: pageUrl,
-        keyword: query,
-        clicks: cand.clicks || 0,
-        impressions: cand.impressions || 0,
-        position: cand.position,
-        currentTitle: pageMeta.title || "",
-        currentDescription: pageMeta.description || "",
-        currentH1: pageMeta.h1 || ""
-      });
+      const normUrl = pageUrl.replace(/\/$/, "").toLowerCase();
+      const existing = urlToBestCand.get(normUrl);
+
+      // Keep the candidate with the highest impressions for this URL
+      if (!existing || (cand.impressions || 0) > (existing.impressions || 0)) {
+        urlToBestCand.set(normUrl, cand);
+      }
     }
+
+    // Take at most 3 unique-URL candidates (already sorted by impressions via candidates.sort above)
+    const validCandidates: any[] = Array.from(urlToBestCand.values()).slice(0, 3);
+    console.log(`[QuickWins L1] Unique-URL candidates selected: ${validCandidates.length}`);
+
+
+    // Scrape all candidate pages IN PARALLEL (was sequential: up to 5x4s = 20s!)
+    const candidateMetas = await Promise.all(
+      validCandidates.map(cand =>
+        scrapeMetadata(cand.keys[0]).catch(() => ({ title: '', description: '', h1: '' }))
+      )
+    );
+
+    const opportunities: any[] = validCandidates.map((cand, i) => ({
+      page: cand.keys[0],
+      keyword: cand.keys[1],
+      clicks: cand.clicks || 0,
+      impressions: cand.impressions || 0,
+      position: cand.position,
+      currentTitle: candidateMetas[i].title || '',
+      currentDescription: candidateMetas[i].description || '',
+      currentH1: candidateMetas[i].h1 || '',
+    }));
 
     if (opportunities.length < 3) {
       const niche = inferredNicho || 'general';
@@ -1418,34 +1414,33 @@ export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
       };
 
       const templates = fallbackTemplates[niche] || fallbackTemplates['general'];
-      let idx = 0;
-      while (opportunities.length < 3 && idx < templates.length) {
-        const t = templates[idx];
+      const needed = templates.filter((t: any) => {
         const pageUrl = cleanSiteUrl.replace(/\/$/, '') + t.path;
-        
-        if (!opportunities.some(o => o.page === pageUrl)) {
-          let pageMeta = { title: "", description: "", h1: "" };
-          if (t.path === '') {
-            pageMeta = homeMeta;
-          } else {
-            try {
-              pageMeta = await scrapeMetadata(pageUrl);
-            } catch (e) {}
-          }
-          opportunities.push({
-            page: pageUrl,
-            // ⚠️ Hard-coded safety: Home always gets the brand/category keyword
-            keyword: isHomePage(pageUrl, cleanSiteUrl) ? homeNicheKeyword : t.keyword,
-            clicks: t.cl,
-            impressions: t.imp,
-            position: t.pos,
-            currentTitle: pageMeta.title || "",
-            currentDescription: pageMeta.description || "",
-            currentH1: pageMeta.h1 || ""
-          });
-        }
-        idx++;
-      }
+        const normPageUrl = pageUrl.replace(/\/$/, "").toLowerCase();
+        return !opportunities.some(o => o.page.replace(/\/$/, "").toLowerCase() === normPageUrl);
+      }).slice(0, 3 - opportunities.length);
+
+      // Scrape fallback pages IN PARALLEL too
+      const fallbackMetas = await Promise.all(
+        needed.map((t: any) => {
+          if (t.path === '') return Promise.resolve(homeMeta);
+          return scrapeMetadata(cleanSiteUrl.replace(/\/$/, '') + t.path).catch(() => ({ title: '', description: '', h1: '' }));
+        })
+      );
+
+      needed.forEach((t: any, i: number) => {
+        const pageUrl = cleanSiteUrl.replace(/\/$/, '') + t.path;
+        opportunities.push({
+          page: pageUrl,
+          keyword: isHomePage(pageUrl, cleanSiteUrl) ? homeNicheKeyword : t.keyword,
+          clicks: t.cl,
+          impressions: t.imp,
+          position: t.pos,
+          currentTitle: fallbackMetas[i].title || '',
+          currentDescription: fallbackMetas[i].description || '',
+          currentH1: fallbackMetas[i].h1 || '',
+        });
+      });
     }
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -1484,6 +1479,29 @@ Si la URL es la HOME/PORTADA:
 
 Si la URL es una PÁGINA INTERNA (producto, servicio, blog):
   ✅ PUEDES y DEBES: usar la goldKeyword y términos específicos libremente.
+
+██████████████████████████████████████████████████████████████
+⚠️  REGLA ABSOLUTA #2 — ÁNGULO ÚNICO ⚠️
+██████████████████████████████████████████████████████████████
+No intentes combinar múltiples beneficios comerciales distintos si eso compromete la naturalidad del texto (ej: "Brillo y Venta Mayorista" suena forzado y robótico → es incorrecto).
+Analizá los datos de la URL (keyword, título actual, contexto del negocio) y elegí el ÚNICO ángulo más potente y de mayor impacto para el usuario. Puede ser:
+  - El beneficio técnico del producto (ej: "Brillo Profesional", "Máxima Potencia")
+  - El gancho comercial (ej: "Precio Mayorista", "Envío Gratis", "Para Tu Auto")
+  - La intención de búsqueda dominante según la keyword y las impresiones
+Escribí un título fluido, humano y persuasivo enfocado exclusivamente en ese ángulo elegido.
+Cada URL física del listado debe recibir exactamente un único registro en tu JSON final.
+██████████████████████████████████████████████████████████████
+
+
+██████████████████████████████████████████████████████████████
+⚠️  REGLA ABSOLUTA #3 — LONGITUD DEL TÍTULO — CRÍTICA PARA SEO ⚠️
+██████████████████████████████████████████████████████████████
+El campo "suggestedTitle" de CADA oportunidad DEBE tener entre 50 y 60 caracteres de longitud total (incluyendo espacios y caracteres especiales).
+- Mínimo: 50 caracteres. Si es más corto, agregá un beneficio o modificador atractivo.
+- Máximo ABSOLUTO: 60 caracteres. Si superas los 60 caracteres, Google lo cortará con "..." y el usuario perderá el clic.
+- Contá los caracteres mentalmente antes de escribir el título. Si tu primer borrador tiene 70 caracteres, comprimilo.
+- Priorizá claridad y beneficio comercial por sobre completitud. Un título de 58 caracteres bien elegido vence a uno de 80.
+🔒 VIOLACIÓN DE ESTA REGLA = Título inútil para el cliente. No se mostrará completo en Google.
 ██████████████████████████████████████████████████████████████
 
 Nexo con la Semilla (Seed Keyword):
@@ -1516,48 +1534,9 @@ Oportunidades a analizar:
 ${JSON.stringify(opportunities, null, 2)}
 `;
 
-    console.log("[API Debug QuickWins] Initializing GoogleGenerativeAI using model: models/gemini-3.5-flash");
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "models/gemini-3.5-flash"
-    });
-
+    console.log("[API Debug QuickWins] Calling Gemini REST API directly (skipping SDK)...");
     let responseText = "";
-    try {
-      const originalFetch = global.fetch;
-      // @ts-ignore
-      global.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
-        const newInit = { ...init, cache: 'no-store' as RequestCache };
-        console.log("[API Debug QuickWins] SDK is fetching URL:", input.toString());
-        console.log("[API Debug QuickWins] Fetch init options:", JSON.stringify(newInit));
-        return originalFetch(input, newInit);
-      };
-
-      try {
-        const result = await model.generateContent(
-          {
-            contents: [
-              { role: 'user', parts: [{ text: systemInstructions + "\n\n" + userPrompt }] }
-            ]
-          },
-          {
-            timeout: 30000
-          }
-        );
-        responseText = await result.response.text();
-      } finally {
-        global.fetch = originalFetch;
-      }
-    } catch (geminiErr: any) {
-      console.warn("[API Debug QuickWins] SDK call failed. Trying direct REST API fallback...", geminiErr.message || geminiErr);
-      try {
-        responseText = await callGeminiREST(apiKey, systemInstructions + "\n\n" + userPrompt);
-        console.log("[API Debug QuickWins] Direct REST API fallback succeeded!");
-      } catch (restErr: any) {
-        console.error("[API Debug QuickWins] REST fallback failed as well:", restErr.message || restErr);
-        throw geminiErr; // Throw original error if fallback also fails
-      }
-    }
+    responseText = await callGeminiREST(apiKey, systemInstructions + "\n\n" + userPrompt);
 
     let parsed: any[] = [];
     try {
@@ -1572,6 +1551,21 @@ ${JSON.stringify(opportunities, null, 2)}
       console.error("Error parseando JSON de Gemini para Quick Wins:", responseText, parseErr);
       return { success: false, error: "Error al interpretar la respuesta de la IA." };
     }
+
+    // ── LAYER 1.5: DEDUPLICATE RESPONSE BY URL ──
+    const dedupedParsed: any[] = [];
+    const seenParsedUrls = new Set<string>();
+    for (const item of parsed) {
+      if (!item || !item.page) continue;
+      const normPage = item.page.replace(/\/$/, "").toLowerCase();
+      if (!seenParsedUrls.has(normPage)) {
+        seenParsedUrls.add(normPage);
+        dedupedParsed.push(item);
+      } else {
+        console.warn(`[QuickWins L1.5] Dropping duplicate AI response entry for URL: ${item.page}`);
+      }
+    }
+    parsed = dedupedParsed;
 
     // ── LAYER 2: POST-PROCESS SAFETY NET ────────────────────────────────────
     // Even if the AI ignored every instruction, we detect and correct ANY Home
@@ -1606,6 +1600,26 @@ ${JSON.stringify(opportunities, null, 2)}
     });
     // ────────────────────────────────────────────────────────────────────────
 
+    // ── LAYER 3: TITLE LENGTH SAFETY NET (max 60 chars) ─────────────────────
+    // If the AI still produced an overlong title despite the instruction,
+    // we trim it cleanly at the last word boundary before the 60-char limit.
+    const MAX_TITLE_LENGTH = 60;
+    const trimTitle = (title: string): string => {
+      if (!title || title.length <= MAX_TITLE_LENGTH) return title;
+      // Try to cut at the last space before position 60 to avoid mid-word cuts
+      const cut = title.lastIndexOf(' ', MAX_TITLE_LENGTH - 1);
+      const trimmed = cut > 30 ? title.slice(0, cut) : title.slice(0, MAX_TITLE_LENGTH);
+      console.warn(`[QuickWins L3] Title trimmed from ${title.length} to ${trimmed.length} chars: "${trimmed}"`);
+      return trimmed;
+    };
+    parsed = parsed.map((win: any) => {
+      if (win.suggestedTitle) {
+        win.suggestedTitle = trimTitle(win.suggestedTitle);
+      }
+      return win;
+    });
+    // ────────────────────────────────────────────────────────────────────────
+
     // ── Filtrar Quick Wins ya completados en Supabase ─────────────────────
     // Si el usuario ya verificó una oportunidad en una sesión anterior,
     // no vuelve a aparecer — memoria real entre sesiones.
@@ -1633,7 +1647,9 @@ ${JSON.stringify(opportunities, null, 2)}
     // Build user-friendly error message
     const errMsg = String(error.message || error).toLowerCase();
     let userMessage = "";
-    if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
+    if (errMsg.includes("api key expired") || errMsg.includes("api_key_invalid") || errMsg.includes("key expired") || errMsg.includes("key invalid")) {
+      userMessage = "⚠️ La clave de API de Gemini venció. El administrador debe renovarla en Google AI Studio.";
+    } else if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
       userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
     } else if (errMsg.includes("404") || errMsg.includes("not found")) {
       userMessage = "El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.";
@@ -2035,7 +2051,7 @@ REGLAS ESTRICTAS:
 - El JSON debe ser válido, sin comentarios ni texto extra
 `;
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash:generateContent?key=${apiKey}`;
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -2134,9 +2150,12 @@ export async function fetchCompletedMissions(): Promise<{
 }> {
   const session = await auth();
   if (!session?.user?.email) {
+    console.warn('[Supabase] fetchCompletedMissions: Sin sesión autenticada, devolviendo vacío.');
     return { success: false, missions: [] };
   }
+  console.log(`[Supabase] fetchCompletedMissions: cargando misiones para ${session.user.email}`);
   const missions = await getMissionsByEmail(session.user.email, 'completed');
+  console.log(`[Supabase] fetchCompletedMissions: ${missions.length} misión(es) completada(s) encontradas para ${session.user.email}`);
   return { success: true, missions };
 }
 
@@ -2248,7 +2267,15 @@ export async function getAeoOpportunities(siteUrl: string, goldKeyword?: string,
       cleanGoldKeyword = kwSanit.sanitized;
     }
   }
+  // Hard timeout: never hang more than 25 seconds
+  const timeoutPromise = new Promise<{ success: false; error: string }>((resolve) =>
+    setTimeout(() => resolve({ success: false, error: "El análisis AEO tardó demasiado. Intentá de nuevo." }), 25000)
+  );
 
+  return Promise.race([_getAeoCore(cleanSiteUrl, cleanGoldKeyword, manualUrl), timeoutPromise]);
+}
+
+async function _getAeoCore(cleanSiteUrl: string, cleanGoldKeyword: string, manualUrl?: string): Promise<any> {
   try {
     const session = await auth();
 
@@ -2308,19 +2335,26 @@ export async function getAeoOpportunities(siteUrl: string, goldKeyword?: string,
       pagesToAnalyze.push(homeUrl);
     }
 
-    // ── Scrape heading sections from each page ────────────────────────────
+    // ── Scrape heading sections from each page IN PARALLEL ────────────────
     const allSections: Array<{ pageUrl: string; heading: string; headingTag: string; paragraphText: string }> = [];
 
-    for (const pageUrl of pagesToAnalyze.slice(0, 3)) {
-      const sections = await scrapeHeadingSections(pageUrl);
-      for (const sec of sections) {
-        allSections.push({
-          pageUrl,
-          heading: sec.heading,
-          headingTag: sec.headingTag,
-          paragraphText: sec.paragraphText,
-        });
-      }
+    const scrapeResults = await Promise.all(
+      pagesToAnalyze.slice(0, 3).map(async (pageUrl) => {
+        try {
+          const sections = await scrapeHeadingSections(pageUrl);
+          return sections.map(sec => ({
+            pageUrl,
+            heading: sec.heading,
+            headingTag: sec.headingTag,
+            paragraphText: sec.paragraphText,
+          }));
+        } catch {
+          return [];
+        }
+      })
+    );
+    for (const result of scrapeResults) {
+      allSections.push(...result);
     }
 
     if (allSections.length === 0) {
@@ -2374,47 +2408,9 @@ Palabra clave del negocio: "${cleanGoldKeyword || 'no especificada'}"
 Secciones a analizar:
 ${JSON.stringify(allSections, null, 2)}`;
 
-    console.log("[API Debug AEO] Initializing GoogleGenerativeAI using model: models/gemini-3.5-flash");
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "models/gemini-3.5-flash"
-    });
-
+    console.log("[API Debug AEO] Calling Gemini REST API directly (skipping SDK)...");
     let responseText = "";
-    try {
-      const originalFetch = global.fetch;
-      // @ts-ignore
-      global.fetch = function(input: RequestInfo | URL, init?: RequestInit) {
-        const newInit = { ...init, cache: 'no-store' as RequestCache };
-        console.log("[API Debug AEO] SDK is fetching URL:", input.toString());
-        return originalFetch(input, newInit);
-      };
-
-      try {
-        const result = await model.generateContent(
-          {
-            contents: [
-              { role: 'user', parts: [{ text: systemInstructions + "\n\n" + userPrompt }] }
-            ]
-          },
-          {
-            timeout: 30000
-          }
-        );
-        responseText = await result.response.text();
-      } finally {
-        global.fetch = originalFetch;
-      }
-    } catch (geminiErr: any) {
-      console.warn("[API Debug AEO] SDK call failed. Trying direct REST API fallback...", geminiErr.message || geminiErr);
-      try {
-        responseText = await callGeminiREST(apiKey, systemInstructions + "\n\n" + userPrompt);
-        console.log("[API Debug AEO] Direct REST API fallback succeeded!");
-      } catch (restErr: any) {
-        console.error("[API Debug AEO] REST fallback failed as well:", restErr.message || restErr);
-        throw geminiErr;
-      }
-    }
+    responseText = await callGeminiREST(apiKey, systemInstructions + "\n\n" + userPrompt);
 
     // ── Parse JSON response ──────────────────────────────────────────────
     let parsed: any[] = [];
@@ -2473,7 +2469,9 @@ ${JSON.stringify(allSections, null, 2)}`;
     );
     const errMsg = String(error.message || error).toLowerCase();
     let userMessage = "";
-    if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
+    if (errMsg.includes("api key expired") || errMsg.includes("api_key_invalid") || errMsg.includes("key expired") || errMsg.includes("key invalid")) {
+      userMessage = "⚠️ La clave de API de Gemini venció. El administrador debe renovarla en Google AI Studio.";
+    } else if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
       userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
     } else if (errMsg.includes("404") || errMsg.includes("not found")) {
       userMessage = "El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.";

@@ -15,6 +15,7 @@ async function getVerifiedSiteProperty(accessToken, userInputUrl) {
       headers: {
         Authorization: `Bearer ${accessToken}`,
       },
+      signal: AbortSignal.timeout(5000),
     }
   );
 
@@ -66,6 +67,7 @@ async function querySearchConsole(accessToken, siteUrl, body) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify(body),
+      signal: AbortSignal.timeout(5000),
     }
   );
 

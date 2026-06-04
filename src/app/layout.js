@@ -17,6 +17,7 @@ export default function RootLayout({ children }) {
                 const version = localStorage.getItem("seojump_version");
                 if (version !== "1.1") {
                   localStorage.removeItem("seojump_quick_wins");
+                  localStorage.removeItem("seojump_quick_wins_url");
                   localStorage.setItem("seojump_version", "1.1");
                 }
                 const savedTheme = localStorage.getItem("seojump_theme");

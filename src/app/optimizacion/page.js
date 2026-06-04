@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
+
 import { useRouter } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
@@ -234,6 +235,162 @@ function PistaDeBoxes({ pistas, playClick }) {
   );
 }
 
+// ── SmartWpLocation: detecta el tipo de página y muestra la ruta exacta en WordPress
+function SmartWpLocation({ pageUrl, playClick }) {
+  const [open, setOpen] = React.useState(false);
+
+  if (!pageUrl) return null;
+
+  const url = pageUrl.toLowerCase();
+
+  // Detectar tipo de página según patrones de URL
+  const isProduct     = /\/(producto|product|productos|products)\//.test(url);
+  const isCategory    = /\/(categoria-producto|product-category|categoria|category)\//.test(url);
+  const isBlog        = /\/(blog|entrada|post|articulo|article|news)\//.test(url);
+  const isHome        = /^https?:\/\/[^/]+(\/?)(index\.html?)?$/.test(url.trim());
+
+  let icon, label, path, color;
+  if (isCategory) {
+    icon = '🗂️'; label = 'Categoría de tienda'; color = 'text-purple-300';
+    path = <><strong className="text-white">Productos</strong> → <strong className="text-purple-300">Categorías</strong></>;
+  } else if (isProduct) {
+    icon = '🛍️'; label = 'Producto de WooCommerce'; color = 'text-amber-300';
+    path = <><strong className="text-white">Productos</strong> → <strong className="text-amber-300">Todos los productos</strong></>;
+  } else if (isBlog) {
+    icon = '✍️'; label = 'Entrada de blog'; color = 'text-sky-300';
+    path = <><strong className="text-white">Entradas</strong> → <strong className="text-sky-300">Todas las entradas</strong></>;
+  } else if (isHome) {
+    icon = '🏠'; label = 'Página de inicio'; color = 'text-green-300';
+    path = <><strong className="text-white">Páginas</strong> → <strong className="text-green-300">Todas las páginas</strong> → Inicio</>;
+  } else {
+    icon = '📄'; label = 'Página estática'; color = 'text-slate-300';
+    path = <><strong className="text-white">Páginas</strong> → <strong className="text-slate-300">Todas las páginas</strong></>;
+  }
+
+  return (
+    <div className="mt-2">
+      <button
+        onClick={(e) => { e.stopPropagation(); if (playClick) playClick(); setOpen(o => !o); }}
+        className="text-xs font-black text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors"
+      >
+        {open ? '▲' : '▼'} ¿Dónde aplico esto en WordPress?
+      </button>
+      {open && (
+        <div className="mt-2 bg-slate-800/80 border border-slate-700 rounded-xl p-3 space-y-3">
+          {/* Cartel inteligente de ubicación */}
+          <div className="flex items-center gap-2 bg-slate-900/60 rounded-lg px-3 py-2 border border-slate-600">
+            <span className="text-lg flex-shrink-0">{icon}</span>
+            <div>
+              <p className={`text-xs font-black uppercase tracking-wide ${color}`}>{label}</p>
+              <p className="text-xs text-slate-300 font-bold mt-0.5">📍 En WordPress: {path}</p>
+            </div>
+          </div>
+          {/* Pasos generales */}
+          <ol className="text-xs text-slate-300 space-y-1 list-decimal list-inside">
+            <li>Buscá la entrada usando la ruta indicada arriba.</li>
+            <li>Abrí el editor y bajá hasta <strong className="text-white">Yoast SEO</strong> o <strong className="text-white">Rank Math</strong>.</li>
+            <li>En <strong className="text-amber-300">"Título SEO"</strong> pegá el título sugerido.</li>
+            <li>Hacé clic en <strong className="text-white">Actualizar</strong> y esperá 1-2 días.</li>
+          </ol>
+          {/* Tabs otras plataformas */}
+          <details className="mt-1">
+            <summary className="text-xs text-slate-500 hover:text-slate-300 cursor-pointer font-bold select-none">¿Usás Shopify o Tiendanube? →</summary>
+            <div className="mt-2 space-y-2">
+              <div>
+                <p className="text-xs font-black text-slate-400 mb-1">Shopify</p>
+                <ol className="text-xs text-slate-400 space-y-0.5 list-decimal list-inside">
+                  <li>Tienda → Páginas / Productos.</li>
+                  <li>Bajá hasta <strong className="text-amber-300">"Edición de SEO"</strong>.</li>
+                  <li>Cambiá el Título de la página y guardá.</li>
+                </ol>
+              </div>
+              <div>
+                <p className="text-xs font-black text-slate-400 mb-1">Tiendanube</p>
+                <ol className="text-xs text-slate-400 space-y-0.5 list-decimal list-inside">
+                  <li>Marketing → SEO o abrí el producto.</li>
+                  <li>Buscá <strong className="text-amber-300">"Meta título"</strong> o <strong className="text-amber-300">"Título para Google"</strong>.</li>
+                  <li>Pegá el título sugerido y guardá.</li>
+                </ol>
+              </div>
+            </div>
+          </details>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── QuickWinHelp (legacy — ya no se usa, reemplazado por SmartWpLocation)
+function QuickWinHelp({ playClick }) {
+  const [open, setOpen] = React.useState(false);
+  const [tab, setTab] = React.useState('wordpress');
+  const tabs = [
+    { id: 'wordpress', label: 'WordPress' },
+    { id: 'shopify', label: 'Shopify' },
+    { id: 'tiendanube', label: 'Tiendanube' },
+  ];
+  const content = {
+    wordpress: (
+      <ol className="text-xs text-slate-300 space-y-2 list-decimal list-inside">
+        <li>
+          Buscá la página en tu WordPress según su tipo:
+          <ul className="mt-1 ml-4 space-y-0.5 list-none">
+            <li>📄 <strong className="text-white">Páginas estáticas</strong> → Páginas → Todas las páginas</li>
+            <li>🛍️ <strong className="text-amber-300">Producto de tienda</strong> → Productos → Todos los productos</li>
+            <li>🗂️ <strong className="text-purple-300">Sección del catálogo</strong> → Productos → Categorías</li>
+            <li>✍️ <strong className="text-sky-300">Artículo de blog</strong> → Entradas → Todas las entradas</li>
+          </ul>
+        </li>
+        <li>Abrí el editor y bajá hasta el bloque de <strong className="text-white">Yoast SEO</strong> o <strong className="text-white">Rank Math</strong>.</li>
+        <li>En el campo <strong className="text-amber-300">"Título SEO"</strong> pegá el título sugerido.</li>
+        <li>Hacé clic en <strong className="text-white">Actualizar</strong> y esperá 1-2 días.</li>
+      </ol>
+    ),
+    shopify: (
+      <ol className="text-xs text-slate-300 space-y-1 list-decimal list-inside">
+        <li>Andá a <strong className="text-white">Tienda → Páginas / Productos</strong>.</li>
+        <li>Abrí la página y bajá hasta <strong className="text-amber-300">"Edición de SEO para motores de búsqueda"</strong>.</li>
+        <li>Cambiá el <strong className="text-amber-300">Título de la página</strong>.</li>
+        <li>Hacé clic en <strong className="text-white">Guardar</strong>.</li>
+      </ol>
+    ),
+    tiendanube: (
+      <ol className="text-xs text-slate-300 space-y-1 list-decimal list-inside">
+        <li>Andá a <strong className="text-white">Marketing → SEO</strong> o abrí el producto/página.</li>
+        <li>Buscá el campo <strong className="text-amber-300">"Meta título"</strong> o <strong className="text-amber-300">"Título para Google"</strong>.</li>
+        <li>Pegá el título sugerido y guardá.</li>
+        <li>Esperá 1-3 días para que Google actualice.</li>
+      </ol>
+    ),
+  };
+  return (
+    <div className="mt-2">
+      <button
+        onClick={(e) => { e.stopPropagation(); if (playClick) playClick(); setOpen(o => !o); }}
+        className="text-xs font-black text-amber-400 hover:text-amber-300 flex items-center gap-1 transition-colors"
+      >
+        {open ? '▲' : '▼'} ¿Dónde aplico esto?
+      </button>
+      {open && (
+        <div className="mt-2 bg-slate-800/80 border border-slate-700 rounded-xl p-3 space-y-3">
+          <div className="flex gap-2">
+            {tabs.map(t => (
+              <button
+                key={t.id}
+                onClick={(e) => { e.stopPropagation(); setTab(t.id); }}
+                className={`text-xs font-black px-2.5 py-1 rounded-lg transition-colors ${
+                  tab === t.id ? 'bg-amber-500 text-slate-950' : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >{t.label}</button>
+            ))}
+          </div>
+          {content[tab]}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Optimizacion() {
   const { data: session, status } = useSession();
   const { isMuted, toggleMute, playClick, playThemeToggle, playSuccess, playLevelUp } = useAudio();
@@ -275,6 +432,7 @@ export default function Optimizacion() {
   const [activeTab, setActiveTab] = useState("quickwins");
   const [isPremium, setIsPremium] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const [copyToast, setCopyToast] = useState(false);
 
   // AEO State
   const [aeoOpportunities, setAeoOpportunities] = useState([]);
@@ -299,18 +457,37 @@ export default function Optimizacion() {
     prevXpRef.current = xp;
   }, [xp, playLevelUp]);
 
-  // Pull state from server on mount if logged in, otherwise load from local storage
+  // Guard: only run the heavy init ONCE per mount (prevents re-fetching on tab focus)
+  const hasInitialized = useRef(false);
+  // Pull state from server on mount if logged in, otherwise load from local storage.
+  // The hasInitialized guard prevents this from re-running when NextAuth re-validates
+  // the session token on tab focus (which creates a new session object reference).
   useEffect(() => {
+    if (status === 'loading') return;          // wait for session to resolve
+    if (hasInitialized.current) return;        // already ran — don't re-run on focus
+    hasInitialized.current = true;
+
     const init = async () => {
       setServerLoading(true);
       if (session) {
+        // ✅ FIX amnesia: leer localStorage ANTES de llamar a Supabase
+        // Si Supabase falló en el pasado (sin schema), el usuario no pierde su progreso local.
+        let localQuickWins = [];
+        let localAeo = [];
+        let localCompleted = [];
+        try { localQuickWins = JSON.parse(localStorage.getItem('seojump_completed_quick_wins') || '[]'); } catch(e) {}
+        try { localAeo = JSON.parse(localStorage.getItem('seojump_completed_aeo') || '[]'); } catch(e) {}
+        try { localCompleted = JSON.parse(localStorage.getItem('seojump_completed_missions') || '[]'); } catch(e) {}
+
         // Cargar todo el historial de Supabase (Single Source of Truth para XP y completadas)
         fetchCompletedMissions().then(cwResult => {
+
           if (cwResult.success && cwResult.missions) {
+            console.log(`[Init] Supabase devolvió ${cwResult.missions.length} misiones completadas.`);
             let totalXp = 0;
-            const newCompletedIds = new Set();
-            const newCompletedQuickWins = new Set();
-            const newCompletedAeo = new Set();
+            const newCompletedIds = new Set(localCompleted);        // seed desde localStorage
+            const newCompletedQuickWins = new Set(localQuickWins); // seed desde localStorage
+            const newCompletedAeo = new Set(localAeo);             // seed desde localStorage
 
             cwResult.missions.forEach(m => {
               totalXp += (m.xp_awarded || 0);
@@ -335,40 +512,38 @@ export default function Optimizacion() {
             });
 
             // Combinar con local por si hay algo súper reciente
-            const localXp = parseInt(localStorage.getItem("seojump_xp") || "0", 10);
+            const localXp = parseInt(localStorage.getItem('seojump_xp') || '0', 10);
             setXp(Math.max(totalXp, localXp));
 
-            setCompletedIds(prev => {
-              const merged = new Set([...prev, ...newCompletedIds]);
-              localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(merged)));
-              return merged;
+            setCompletedIds(() => {
+              localStorage.setItem('seojump_completed_missions', JSON.stringify(Array.from(newCompletedIds)));
+              return newCompletedIds;
             });
 
-            setCompletedQuickWins(prev => {
-              const merged = new Set([...prev, ...newCompletedQuickWins]);
-              localStorage.setItem("seojump_completed_quick_wins", JSON.stringify(Array.from(merged)));
-              return merged;
+            setCompletedQuickWins(() => {
+              localStorage.setItem('seojump_completed_quick_wins', JSON.stringify(Array.from(newCompletedQuickWins)));
+              console.log(`[Init] Quick Wins completados (Supabase+local): ${newCompletedQuickWins.size}`, Array.from(newCompletedQuickWins));
+              return newCompletedQuickWins;
             });
 
-            setCompletedAeo(prev => {
-              const merged = new Set([...prev, ...newCompletedAeo]);
-              localStorage.setItem("seojump_completed_aeo", JSON.stringify(Array.from(merged)));
-              return merged;
+            setCompletedAeo(() => {
+              localStorage.setItem('seojump_completed_aeo', JSON.stringify(Array.from(newCompletedAeo)));
+              return newCompletedAeo;
             });
 
             // Fallback load from local storage for other state
-            const savedUrl = localStorage.getItem("seojump_site_url");
+            const savedUrl = localStorage.getItem('seojump_site_url');
             if (savedUrl) setSiteUrl(savedUrl);
 
-            const activeKeyword = localStorage.getItem("gold-tu-busqueda") || "";
+            const activeKeyword = localStorage.getItem('gold-tu-busqueda') || '';
             setHasGoldKeyword(!!activeKeyword);
             setGoldKeyword(activeKeyword);
 
-            const prestige = parseInt(localStorage.getItem("seojump_prestigio_cycles") || "0", 10);
+            const prestige = parseInt(localStorage.getItem('seojump_prestigio_cycles') || '0', 10);
             setPrestigeCycles(prestige);
 
             let missionsList = [];
-            const savedMissions = localStorage.getItem("seojump_missions");
+            const savedMissions = localStorage.getItem('seojump_missions');
             if (savedMissions) {
               try {
                 const parsed = JSON.parse(savedMissions);
@@ -381,28 +556,41 @@ export default function Optimizacion() {
             }
 
             let suggestionsList = [];
-            const savedSuggestions = localStorage.getItem("gold-suggestions");
+            const savedSuggestions = localStorage.getItem('gold-suggestions');
             if (savedSuggestions) {
               try { suggestionsList = JSON.parse(savedSuggestions); } catch (e) {}
             }
 
             // Load Quick Wins from local storage
-            const savedQuickWins = localStorage.getItem("seojump_quick_wins");
+            const savedQuickWins = localStorage.getItem('seojump_quick_wins');
             if (savedQuickWins) {
               try { setQuickWins(JSON.parse(savedQuickWins)); } catch(e) {}
             }
 
             const p = getPhaseProgress(
-              new Set([...newCompletedIds]),
+              newCompletedIds,
               suggestionsList,
               missionsList,
               activeKeyword,
               savedUrl
             );
             setProg(p);
+          } else {
+            // Supabase faló o no hay sesion: usar solo localStorage
+            console.warn('[Init] Supabase no devolvio datos, usando solo localStorage.');
+            setCompletedQuickWins(new Set(localQuickWins));
+            setCompletedAeo(new Set(localAeo));
+            setCompletedIds(new Set(localCompleted));
+            const localXp = parseInt(localStorage.getItem('seojump_xp') || '0', 10);
+            setXp(localXp);
           }
           setServerLoading(false);
         }).catch(() => {
+          // Si Supabase falla completamente, cargar desde localStorage
+          setCompletedQuickWins(new Set(localQuickWins));
+          setCompletedAeo(new Set(localAeo));
+          setCompletedIds(new Set(localCompleted));
+          setXp(parseInt(localStorage.getItem('seojump_xp') || '0', 10));
           setServerLoading(false);
         });
 
@@ -474,7 +662,8 @@ export default function Optimizacion() {
       setServerLoading(false);
     };
     init();
-  }, [session]);
+  }, [session, status]);
+
 
   // Re-calculate progression whenever state changes
   useEffect(() => {
@@ -592,9 +781,12 @@ export default function Optimizacion() {
         setMissionStatus("success");
         setFailedAttempts(0);
         if (!isMissionCompletedBySet(completedIds, selectedMission.id, selectedMission.type, selectedMission.pagePath)) {
-          const newXp = xp + (selectedMission.xp || 50);
-          setXp(newXp);
-          localStorage.setItem("seojump_xp", newXp.toString());
+          // Use functional updater to avoid stale XP closure value
+          setXp(prev => {
+            const newXp = prev + (selectedMission.xp || 50);
+            localStorage.setItem("seojump_xp", newXp.toString());
+            return newXp;
+          });
           setXpPopup({ amount: selectedMission.xp || 50, message: "¡Crecimiento detectado!" });
           setTimeout(() => setXpPopup(null), 4000);
           setCompletedIds(prev => {
@@ -605,6 +797,15 @@ export default function Optimizacion() {
             }, 100);
             return updated;
           });
+          // Persistir en Supabase — log si falla para diagnóstico
+          markMissionComplete(
+            selectedMission.type,        // 'H1' | 'META' | 'ALT'
+            selectedMission.page,        // URL de la página objetivo
+            selectedMission.xp || 50,
+            h1Value.trim() || undefined  // El valor que ingresó el usuario
+          ).then(r => {
+            if (!r.success) console.warn('[markMissionComplete] Supabase save failed for', selectedMission.id);
+          }).catch(err => console.warn('[markMissionComplete] Error:', err));
         }
         setShowConfetti(true);
         playSuccess();
@@ -774,10 +975,10 @@ export default function Optimizacion() {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xl font-black text-duo-yellow">NIVEL {Math.floor(xp / 100) + 1}</span>
-              <span className="text-sm font-bold text-slate-555">{xp % 100} / 100 XP</span>
+              <span className="text-sm font-bold text-slate-555">{xp} XP totales</span>
             </div>
             <div className="w-full h-6 bg-gray-100 dark:bg-slate-700 rounded-full border-2 border-slate-200 dark:border-slate-600 overflow-hidden">
-              <div className="h-full bg-duo-yellow transition-all duration-1000" style={{ width: `${xp % 100}%` }} />
+              <div className="h-full bg-duo-yellow transition-all duration-1000" style={{ width: `${Math.min(xp % 100, 100)}%` }} />
             </div>
           </div>
 
@@ -823,9 +1024,9 @@ export default function Optimizacion() {
                 <div className="pt-1">
                   <button
                     onClick={() => { if (playClick) playClick(); router.push('/'); }}
-                    className="inline-flex items-center gap-1.5 btn-3d btn-white !py-2 !px-4 text-xs font-black text-slate-500 hover:text-red-500 transition-colors uppercase tracking-wider"
+                    className="inline-flex items-center gap-1.5 btn-3d btn-white !py-2 !px-4 text-xs font-black text-slate-500 hover:text-slate-800 dark:hover:text-white transition-colors uppercase tracking-wider"
                   >
-                    ✖ Cancelar y Volver al Dashboard
+                    ⬅️ Volver al Dashboard
                   </button>
                 </div>
                 {prestigeCycles > 0 && (
@@ -928,7 +1129,8 @@ export default function Optimizacion() {
                         </div>
                       )}
                       
-                      {quickWins.map((qw, index) => {
+                      {/* ── Pending Quick Wins ── */}
+                      {quickWins.filter(qw => !completedQuickWins.has(qw.page)).map((qw, index) => {
                         const isUnlocked = isPremium || index < 2;
                         
                         if (!isUnlocked) {
@@ -978,9 +1180,33 @@ export default function Optimizacion() {
                               
                               <div className="bg-slate-900/60 rounded-2xl p-5 border border-slate-700/50 space-y-3">
                                 <p className="text-slate-200 text-base md:text-lg leading-relaxed">
-                                  <span className="text-yellow-400 font-black">El Insight:</span> Estás en posición <strong className="text-white font-bold">{qw.position?.toFixed(0)}</strong>. {qw.explanation} Cambiá el título a <strong className="text-amber-300 font-black">«{qw.suggestedTitle}»</strong> y captarás el clic.
+                                  <span className="text-yellow-400 font-black">El Insight:</span> Estás en posición <strong className="text-white font-bold">{qw.position?.toFixed(0)}</strong>. {qw.explanation} Cambiá el título de tu página para captar el clic.
                                 </p>
-                                <p className="text-xs text-slate-300 bg-slate-950/40 p-3 rounded-xl border border-slate-800 leading-normal">
+
+                                {/* Título Sugerido con botón copiar */}
+                                <div className="bg-amber-955/30 border border-amber-500/30 rounded-2xl p-4 mt-2 text-left">
+                                  <div className="flex items-center justify-between mb-2">
+                                    <p className="text-xs font-black text-amber-400 uppercase tracking-wider">🎯 Título Sugerido:</p>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(qw.suggestedTitle);
+                                        if (playClick) playClick();
+                                        setCopyToast(true);
+                                        setTimeout(() => setCopyToast(false), 7000);
+                                      }}
+                                      className="text-xs font-black text-amber-300 hover:text-white bg-amber-800/50 hover:bg-amber-700/50 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
+                                    >
+                                      📋 COPIAR
+                                    </button>
+                                  </div>
+                                  <p className="text-base font-bold text-amber-200 leading-relaxed">"{qw.suggestedTitle}"</p>
+                                </div>
+
+                                {/* Acordeón de ayuda */}
+                                <SmartWpLocation pageUrl={qw.page} playClick={playClick} />
+
+                                <p className="text-xs text-slate-300 bg-slate-950/40 p-3 rounded-xl border border-slate-800 leading-normal mt-2">
                                   🔒 <strong className="text-purple-300">Aclaración técnica:</strong> Cambiar el título o H1 no modifica la dirección del enlace (URL). **No perderás la antigüedad ni la autoridad de tu página**. Solo optimiza el texto para hacerlo más atractivo en las búsquedas.
                                 </p>
                                 <div className="text-xs md:text-sm text-slate-400 font-bold italic flex items-center gap-2 pt-1">
@@ -1010,6 +1236,27 @@ export default function Optimizacion() {
                           </div>
                         );
                       })}
+
+                      {/* ── Completed Quick Wins — panel colapsable ── */}
+                      {quickWins.filter(qw => completedQuickWins.has(qw.page)).length > 0 && (
+                        <details className="card-3d border border-green-500/30 bg-green-950/20 rounded-2xl overflow-hidden">
+                          <summary className="p-4 cursor-pointer font-black text-green-400 text-sm flex items-center gap-2 select-none list-none">
+                            ✅ {quickWins.filter(qw => completedQuickWins.has(qw.page)).length} misión{quickWins.filter(qw => completedQuickWins.has(qw.page)).length > 1 ? 'es' : ''} completada{quickWins.filter(qw => completedQuickWins.has(qw.page)).length > 1 ? 's' : ''} — <span className="text-green-300 font-bold">Ver historial</span>
+                          </summary>
+                          <div className="px-4 pb-4 space-y-2">
+                            {quickWins.filter(qw => completedQuickWins.has(qw.page)).map((qw, i) => (
+                              <div key={i} className="flex items-start gap-3 py-2 border-t border-green-500/20">
+                                <span className="text-green-400 text-lg flex-shrink-0">🎉</span>
+                                <div className="min-w-0">
+                                  <p className="text-green-300 font-black text-sm truncate">{qw.keyword}</p>
+                                  <p className="text-slate-400 font-bold text-xs truncate">{qw.page}</p>
+                                  <p className="text-slate-500 text-xs mt-0.5">Título aplicado: <span className="text-slate-300">"{qw.suggestedTitle}"</span></p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </details>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center py-12 card-3d">
@@ -1331,7 +1578,17 @@ export default function Optimizacion() {
                     <button onClick={() => { playClick(); closeMission(); }} className="text-2xl text-slate-500 md:hidden">←</button>
                     Misión: {selectedMission.type}
                   </h2>
-                  <p className="text-base lg:text-lg font-bold text-slate-550 dark:text-slate-400 truncate max-w-full md:max-w-md">{selectedMission.pagePath}</p>
+                  <p className="text-base lg:text-lg font-bold text-slate-550 dark:text-slate-400 truncate max-w-full md:max-w-md">
+                    {(() => {
+                      const path = selectedMission.pagePath || '';
+                      const parts = path.replace(/\/$/, '').split('/');
+                      const slug = parts.pop();
+                      const base = parts.length > 0 ? parts.join('/') + '/' : '/';
+                      return slug
+                        ? <>{base}<strong className="text-amber-400 dark:text-amber-300 not-italic">{slug}</strong>/</>
+                        : path;
+                    })()}
+                  </p>
                 </div>
               </div>
 
@@ -1477,6 +1734,17 @@ export default function Optimizacion() {
           )}
         </div>
       </div>
+
+      {/* Copy Toast */}
+      {copyToast && (
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-900 border-2 border-amber-500/60 text-amber-300 font-black rounded-2xl px-6 py-3 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+          <span className="text-xl">📋</span>
+          <div>
+            <p className="text-sm font-black">¡Título copiado!</p>
+            <p className="text-xs font-bold text-slate-400">Pegalo en el campo <span className="text-amber-300">"Título SEO"</span> de Yoast / Rank Math / Shopify — NO en la descripción.</p>
+          </div>
+        </div>
+      )}
 
       {/* Visual XP Popup Feedback */}
       {xpPopup && (

@@ -17,6 +17,28 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ user }) {
+      // ── Beta Whitelist ──────────────────────────────────────────────────────
+      // ALLOWED_EMAILS is a comma-separated list set in Vercel env vars.
+      // Example: "jonasnahuel@gmail.com,tester@example.com"
+      // To add a new tester: update the var in Vercel dashboard → no redeploy needed.
+      const raw = process.env.ALLOWED_EMAILS ?? '';
+      const allowed = raw
+        .split(',')
+        .map((e) => e.trim().toLowerCase())
+        .filter(Boolean);
+
+      // If no whitelist is configured, allow everyone (open mode)
+      if (allowed.length === 0) return true;
+
+      const email = (user.email ?? '').toLowerCase();
+      if (allowed.includes(email)) return true;
+
+      // Unauthorized → redirect to friendly beta page
+      console.warn(`[Auth] Blocked sign-in attempt from: ${email}`);
+      return '/acceso-restringido';
+    },
+
     async jwt({ token, account }) {
       // First login or dynamic elevation of scopes: store/update access token, scope, refresh token and expiry
       if (account) {

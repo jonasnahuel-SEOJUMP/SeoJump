@@ -186,11 +186,18 @@ export async function completeMission(
     p_business_name: null,
   });
 
-  const profile = rpcErr ? null : profileRow;
-  if (!profile) {
-    console.error('[Supabase] No se pudo crear/obtener perfil para:', email, rpcErr?.message);
+  if (rpcErr) {
+    console.error('[Supabase] completeMission: Error en upsert_profile para:', email, '—', rpcErr.message, '| code:', rpcErr.code);
     return null;
   }
+
+  const profile = profileRow as Profile | null;
+  if (!profile?.id) {
+    console.error('[Supabase] completeMission: El RPC upsert_profile no devolvió un profile válido para:', email, '| data recibida:', JSON.stringify(profileRow));
+    return null;
+  }
+
+  console.log(`[Supabase] completeMission: guardando misión ${missionType} para ${email} (profile.id: ${profile.id}), url: ${targetUrl}`);
 
   const { data, error } = await supabaseAdmin
     .from('user_missions')
@@ -213,10 +220,11 @@ export async function completeMission(
     .single();
 
   if (error) {
-    console.error('[Supabase] Error en completeMission:', error.message);
+    console.error('[Supabase] completeMission: Error en upsert user_missions para:', email, '| missionType:', missionType, '| targetUrl:', targetUrl, '| error:', error.message, '| code:', error.code, '| details:', error.details);
     return null;
   }
 
+  console.log(`[Supabase] completeMission: ✅ Misión ${missionType} guardada para ${email}`);
   return data as UserMission;
 }
 

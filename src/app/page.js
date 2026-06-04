@@ -145,8 +145,16 @@ export default function Home() {
   const [prestigeCycles, setPrestigeCycles] = useState(0);
   const [serverLoading, setServerLoading] = useState(true);
 
+  // Guard: only run the heavy init ONCE per mount (prevents re-fetching on tab focus).
+  // Without this, if NextAuth refreshes the session object reference on focus,
+  // the [session] dependency would trigger a full re-fetch from Supabase.
+  const hasInitialized = useRef(false);
+
   // Pull state from server on mount if logged in, otherwise load from local storage
   useEffect(() => {
+    if (status === 'loading') return;  // wait for session to resolve
+    if (hasInitialized.current) return; // already ran — don't re-run on focus
+    hasInitialized.current = true;
     const init = async () => {
       // Filtrar misiones de la página de inicio del caché — la home es de marca, no de producto
       const filterHomeMissions = (list) =>
@@ -318,7 +326,7 @@ export default function Home() {
       setServerLoading(false);
     };
     init();
-  }, [session]);
+  }, [session, status]);
 
   // Recalculate progress when state updates
   useEffect(() => {
@@ -352,12 +360,16 @@ export default function Home() {
   }, [completedQuickWins]);
 
   useEffect(() => {
-    if (step >= 6 && url && quickWins.length === 0 && !quickWinsLoading) {
+    if (step >= 6 && url && quickWins.length === 0 && !quickWinsLoading && !quickWinsError) {
       const saved = localStorage.getItem("seojump_quick_wins");
-      if (saved) {
+      const savedUrl = localStorage.getItem("seojump_quick_wins_url");
+      if (saved && savedUrl === url) {
         try {
-          setQuickWins(JSON.parse(saved));
-          return;
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setQuickWins(parsed);
+            return;
+          }
         } catch (e) {}
       }
       setQuickWinsLoading(true);
@@ -367,6 +379,7 @@ export default function Home() {
           if (res.success && res.quickWins) {
             setQuickWins(res.quickWins);
             localStorage.setItem("seojump_quick_wins", JSON.stringify(res.quickWins));
+            localStorage.setItem("seojump_quick_wins_url", url);
           } else {
             setQuickWinsError(res.error || "No se pudieron obtener oportunidades rápidas.");
           }
@@ -378,7 +391,7 @@ export default function Home() {
           setQuickWinsLoading(false);
         });
     }
-  }, [step, url, quickWins.length, quickWinsLoading]);
+  }, [step, url, quickWins.length, quickWinsLoading, quickWinsError]);
 
   // Protection: Reset to step 1 if session is lost in protected steps
   useEffect(() => {
@@ -415,6 +428,7 @@ export default function Home() {
             if (qwRes.success && qwRes.quickWins) {
               setQuickWins(qwRes.quickWins);
               localStorage.setItem("seojump_quick_wins", JSON.stringify(qwRes.quickWins));
+              localStorage.setItem("seojump_quick_wins_url", url);
             }
           }).catch(err => console.error("Fallo al precargar quick wins:", err));
 
@@ -467,23 +481,30 @@ export default function Home() {
         setMissionStatus("success");
         setFailedAttempts(0);
         if (!completedIds.has(selectedMission.id)) {
+          // Use functional updater to avoid stale closure XP value
           setXp(prev => {
-             const newXp = prev + (selectedMission.xp || 50);
-             localStorage.setItem("seojump_xp", newXp.toString());
-             return newXp;
+            const newXp = prev + (selectedMission.xp || 50);
+            localStorage.setItem("seojump_xp", newXp.toString());
+            return newXp;
           });
+          // Show XP popup toast (same as optimizacion page)
+          setXpPopup({ amount: selectedMission.xp || 50, message: "¡Crecimiento detectado!" });
+          setTimeout(() => setXpPopup(null), 4000);
           setCompletedIds(prev => {
-             const updated = new Set([...prev, selectedMission.id]);
-             localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
-             setTimeout(() => syncStateWithServer(), 100);
-             return updated;
+            const updated = new Set([...prev, selectedMission.id]);
+            localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
+            setTimeout(() => syncStateWithServer(), 100);
+            return updated;
           });
-          // Guardar en Supabase (no esperar respuesta para no bloquear la UI)
+          // Persistir en Supabase — log si falla para diagnóstico
           markMissionComplete(
             selectedMission.type,
             selectedMission.page,
-            selectedMission.xp || 50
-          ).catch(() => {});
+            selectedMission.xp || 50,
+            h1Value.trim() || undefined
+          ).then(r => {
+            if (!r.success) console.warn('[markMissionComplete] Supabase save failed for', selectedMission.id);
+          }).catch(err => console.warn('[markMissionComplete] Error:', err));
         }
         setShowConfetti(true);
         playSuccess();
