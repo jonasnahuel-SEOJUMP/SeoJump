@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -13,7 +13,7 @@ import PaywallModal from "../components/PaywallModal";
 import AICatch from "../components/AICatch";
 import LoginButton from "../components/LoginButton";
 import NotificationBell from "../components/NotificationBell";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions } from "../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, checkIsAdmin } from "../lib/actions";
 import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
@@ -100,16 +100,10 @@ export default function Home() {
   const { isMuted, toggleMute, playClick, playThemeToggle, playSuccess, playLevelUp } = useAudio();
   const { theme, toggleTheme } = useTheme();
 
-  // ── God Mode: bypass de fases para cuentas de administración ─────────────
-  // useMemo garantiza que React detecte el cambio cuando la sesión carga
-  // y el email del usuario resuelve a un admin → dispara el efecto de prog.
-  const isAdmin = useMemo(() => {
-    const raw = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
-    if (!raw) return false;
-    const adminEmails = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-    const userEmail = (session?.user?.email || '').toLowerCase();
-    return userEmail !== '' && adminEmails.includes(userEmail);
-  }, [session?.user?.email]);
+  // ── God Mode: estado reactivo cargado desde server action ──────────────────
+  // checkIsAdmin() lee ALLOWED_EMAILS en el servidor en tiempo de request,
+  // sin depender de NEXT_PUBLIC_ vars que requieren rebuild para activarse.
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [step, setStep] = useState(1);
   const [url, setUrl] = useState("");
@@ -168,6 +162,11 @@ export default function Home() {
     if (hasInitialized.current) return; // already ran — don't re-run on focus
     hasInitialized.current = true;
     const init = async () => {
+      // Resolver estado de administrador antes de calcular fases
+      // checkIsAdmin() lee ALLOWED_EMAILS en el servidor sin necesitar rebuild
+      const adminResult = await checkIsAdmin().catch(() => false);
+      setIsAdmin(adminResult);
+
       // Filtrar misiones de la página de inicio del caché — la home es de marca, no de producto
       const filterHomeMissions = (list) =>
         (list || []).filter(m => m.pagePath !== '/' && m.pagePath !== '');

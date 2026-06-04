@@ -16,6 +16,31 @@ export async function logout() {
 }
 
 /**
+ * Comprueba si el usuario logueado es administrador.
+ * Lee ADMIN_EMAILS (o ALLOWED_EMAILS como fallback) en el servidor en tiempo de request,
+ * sin depender de variables NEXT_PUBLIC_ que se embeben en build-time.
+ * Si la lista está vacía → todos son admin (modo desarrollo abierto).
+ */
+export async function checkIsAdmin(): Promise<boolean> {
+  try {
+    const session = await auth();
+    const userEmail = (session?.user?.email || '').toLowerCase().trim();
+    if (!userEmail) return false;
+
+    // Primero buscar ADMIN_EMAILS, si no existe usar ALLOWED_EMAILS
+    const raw = process.env.ADMIN_EMAILS || process.env.ALLOWED_EMAILS || '';
+    if (!raw.trim()) return true; // sin lista configurada → todos son admin
+
+    const adminList = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    const isAdmin = adminList.includes(userEmail);
+    console.log(`[checkIsAdmin] ${userEmail} → ${isAdmin} (list: ${adminList.join(', ')})`);
+    return isAdmin;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Sanitiza y valida las entradas del usuario (keywords y URLs) antes de ser procesadas.
  */
 function sanitizeInput(text: string, type: 'keyword' | 'url'): { isValid: boolean; sanitized: string; error?: string } {

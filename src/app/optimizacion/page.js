@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 import { useRouter } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, getAeoOpportunities, verifyAeoMission } from "../../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, getAeoOpportunities, verifyAeoMission, checkIsAdmin } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
@@ -397,14 +397,8 @@ export default function Optimizacion() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
 
-  // ── God Mode: bypass de fases para cuentas de administración ─────────────
-  const isAdmin = useMemo(() => {
-    const raw = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
-    if (!raw) return false;
-    const adminEmails = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-    const userEmail = (session?.user?.email || '').toLowerCase();
-    return userEmail !== '' && adminEmails.includes(userEmail);
-  }, [session?.user?.email]);
+  // ── God Mode: estado reactivo cargado desde server action ──────────────────
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const [xp, setXp]                   = useState(0);
   const [siteUrl, setSiteUrl]          = useState("");
@@ -477,6 +471,10 @@ export default function Optimizacion() {
     hasInitialized.current = true;
 
     const init = async () => {
+      // Resolver estado de administrador antes de calcular fases
+      const adminResult = await checkIsAdmin().catch(() => false);
+      setIsAdmin(adminResult);
+
       setServerLoading(true);
       if (session) {
         // ✅ FIX amnesia: leer localStorage ANTES de llamar a Supabase
