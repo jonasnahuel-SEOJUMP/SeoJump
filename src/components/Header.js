@@ -118,7 +118,7 @@ export default function Header({
 
         {/* Phase 2 */}
         {activePhase === 2 ? (
-          <div className="flex-1 btn-3d bg-blue-50 text-blue-650 font-black text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl border-2 border-blue-500 border-b-4 cursor-default">
+          <div className="flex-1 btn-3d bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 font-black text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl border-2 border-blue-500 border-b-4 cursor-default">
             <span className="md:hidden">✍️ F2</span>
             <span className="hidden md:inline">✍️ Fase 2: Contenido</span>
           </div>
@@ -176,7 +176,7 @@ export default function Header({
           <Link
             href="/detective-de-enlaces"
             onClick={handleLinkClick}
-            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-purple-650 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors"
+            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-purple-600 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors"
           >
             <span className="md:hidden">🕵️‍♂️ F4</span>
             <span className="hidden md:inline">🕵️‍♂️ Fase 4: Detective</span>

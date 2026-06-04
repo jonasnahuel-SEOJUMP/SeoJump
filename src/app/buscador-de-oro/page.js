@@ -498,55 +498,7 @@ export default function BuscadorDeOro() {
         {/* Columna Izquierda (Resultados y Consejos) - lg:col-span-8 */}
         <div className="lg:col-span-8 w-full flex flex-col gap-6">
           
-          {/* ── Consejo del Búho — Tutor de SEO Premium ── */}
-          <div className="relative rounded-2xl overflow-hidden border border-amber-500/30 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 shadow-[0_0_30px_rgba(251,191,36,0.08)] mb-2">
-            {/* Glow decorativo */}
-            <div className="absolute top-0 left-0 w-40 h-40 bg-amber-400 opacity-5 rounded-full blur-3xl pointer-events-none" />
-            <div className="absolute bottom-0 right-0 w-32 h-32 bg-orange-500 opacity-5 rounded-full blur-2xl pointer-events-none" />
-
-            {/* Pill de badge superior */}
-            <div className="relative z-10 px-5 pt-5 pb-1 flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 bg-amber-500/15 border border-amber-500/30 text-amber-400 text-xs font-black uppercase tracking-widest rounded-full px-3 py-1">
-                <span className="text-sm">🦉</span> Consejo Premium
-              </span>
-            </div>
-
-            {/* Cuerpo del callout */}
-            <div className="relative z-10 px-5 pb-5 pt-3 flex gap-4 items-start">
-              {/* Búho */}
-              <div className="hidden sm:flex flex-shrink-0 w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 items-center justify-center text-3xl">
-                🦉
-              </div>
-
-              {/* Texto */}
-              <div className="flex-1 min-w-0">
-                <p className="text-amber-300 font-black text-base md:text-lg mb-3 leading-snug">
-                  ¡Atención! Para que Google y mi radar detecten tu palabra clave, debe estar en lugares estratégicos.
-                </p>
-                <p className="text-slate-400 text-sm font-bold mb-3">
-                  Asegurate de incluirla en estos <span className="text-white font-black">4 puntos calientes</span> de tu web:
-                </p>
-                <ol className="space-y-2">
-                  {[
-                    { num: "1️⃣", label: "La URL / Slug", example: "ej: /apc-detailing" },
-                    { num: "2️⃣", label: "El Título Principal (H1)", example: "de la página" },
-                    { num: "3️⃣", label: "El primer párrafo del texto", example: "de forma natural" },
-                    { num: "4️⃣", label: "El Meta Título y Meta Descripción", example: "" },
-                  ].map(({ num, label, example }) => (
-                    <li key={num} className="flex items-start gap-2.5">
-                      <span className="text-base flex-shrink-0 leading-snug">{num}</span>
-                      <span className="text-slate-200 font-bold text-sm md:text-base leading-snug">
-                        {label}
-                        {example && (
-                          <span className="text-slate-500 font-medium ml-1.5">({example})</span>
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-          </div>
+          {/* (Consejo Premium eliminado de Fase 1) */}
 
           {/* Results as Actionable Missions */}
           {loading ? (
@@ -703,11 +655,12 @@ export default function BuscadorDeOro() {
                  </div>
                ) : missions.length > 0 ? (
                   <div className="w-full animate-in fade-in slide-in-from-bottom duration-500">
-                    <div className="flex items-center gap-3 mb-6 bg-purple-50 dark:bg-purple-900/20 p-4 md:p-6 rounded-2xl border-2 border-purple-200 dark:border-purple-800 shadow-sm">
-                      <div className="text-4xl animate-bounce">🤖</div>
-                      <div>
-                        <h3 className="text-xl md:text-2xl font-black text-purple-900 dark:text-purple-300">Oportunidades Automatizadas</h3>
-                        <p className="text-sm md:text-base font-bold text-purple-700 dark:text-purple-400">El Búho escaneó tu sitio y encontró estas palabras clave ganadoras. ¡Elegí una para empezar!</p>
+                    <div className="flex items-center gap-4 mb-6 bg-slate-900 p-4 md:p-6 rounded-2xl border-2 border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.15)] relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-purple-900/20 to-transparent pointer-events-none"></div>
+                      <div className="text-4xl animate-bounce relative z-10">🤖</div>
+                      <div className="relative z-10">
+                        <h3 className="text-xl md:text-2xl font-black text-white">Oportunidades Automatizadas</h3>
+                        <p className="text-sm md:text-base font-bold text-purple-300">El Búho escaneó tu sitio y encontró estas palabras clave ganadoras. ¡Elegí una para empezar!</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
