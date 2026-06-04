@@ -397,6 +397,16 @@ export default function Optimizacion() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
 
+  // ── God Mode: bypass de fases para cuentas de administración ─────────────
+  const isAdmin = (() => {
+    const raw = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
+    if (!raw) return false;
+    const adminEmails = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    const userEmail = (session?.user?.email || '').toLowerCase();
+    return userEmail !== '' && adminEmails.includes(userEmail);
+  })();
+
+
   const [xp, setXp]                   = useState(0);
   const [siteUrl, setSiteUrl]          = useState("");
   const [missions, setMissions]        = useState([]);
@@ -572,7 +582,8 @@ export default function Optimizacion() {
               suggestionsList,
               missionsList,
               activeKeyword,
-              savedUrl
+              savedUrl,
+              isAdmin
             );
             setProg(p);
           } else {
@@ -657,7 +668,7 @@ export default function Optimizacion() {
         try { setCompletedAeo(new Set(JSON.parse(savedCompletedAeo))); } catch(e) {}
       }
 
-      const p = getPhaseProgress(completedSet, suggestions, missionsList, keyword, savedUrl);
+      const p = getPhaseProgress(completedSet, suggestions, missionsList, keyword, savedUrl, isAdmin);
       setProg(p);
       setServerLoading(false);
     };
@@ -671,7 +682,7 @@ export default function Optimizacion() {
     try {
       suggestions = JSON.parse(localStorage.getItem("gold-suggestions") || "[]");
     } catch (e) {}
-    const p = getPhaseProgress(completedIds, suggestions, missions, goldKeyword, siteUrl);
+    const p = getPhaseProgress(completedIds, suggestions, missions, goldKeyword, siteUrl, isAdmin);
     setProg(p);
   }, [completedIds, missions, goldKeyword, siteUrl]);
 

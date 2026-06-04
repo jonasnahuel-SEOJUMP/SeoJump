@@ -2,7 +2,21 @@
  * progression.js - Helper to compute SEO game phase progression, prestigie cycles, and sync state.
  */
 
-export function getPhaseProgress(completedMissionsSet, suggestions, rawMissions, activeKeyword, siteUrl) {
+export function getPhaseProgress(completedMissionsSet, suggestions, rawMissions, activeKeyword, siteUrl, isAdmin = false) {
+  // ── God Mode: admins bypass all phase gates ──────────────────────────────
+  // Controlled via NEXT_PUBLIC_ADMIN_EMAILS env var (comma-separated list).
+  // When active, all phases show as unlocked so the full app can be tested.
+  if (isAdmin) {
+    return {
+      p1: { total: 10, completed: 10, percent: 100, unlocked: true },
+      p2: { total: 1,  completed: 1,  percent: 100, unlocked: true },
+      p3: { total: 10, completed: 10, percent: 100, unlocked: true },
+      p4: { total: 1,  completed: 1,  percent: 100, unlocked: true },
+      cycleCompleted: false, // don't auto-trigger prestige for admins
+      isAdmin: true,
+    };
+  }
+
   // 1. Phase 1 Progress (Buscador de oro)
   // We have suggestions (up to 10). If none, default total is 10.
   const p1Total = suggestions && suggestions.length > 0 ? suggestions.length : 10;

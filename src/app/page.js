@@ -99,6 +99,18 @@ export default function Home() {
   const { data: session, status } = useSession();
   const { isMuted, toggleMute, playClick, playThemeToggle, playSuccess, playLevelUp } = useAudio();
   const { theme, toggleTheme } = useTheme();
+
+  // ── God Mode: bypass de fases para cuentas de administración ─────────────
+  // Configurar en Vercel: NEXT_PUBLIC_ADMIN_EMAILS="email1@gmail.com,email2@gmail.com"
+  // NEXT_PUBLIC_ es necesario para que sea accesible en el cliente sin server action.
+  const isAdmin = (() => {
+    const raw = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
+    if (!raw) return false;
+    const adminEmails = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
+    const userEmail = (session?.user?.email || '').toLowerCase();
+    return userEmail !== '' && adminEmails.includes(userEmail);
+  })();
+
   const [step, setStep] = useState(1);
   const [url, setUrl] = useState("");
   const [goal, setGoal] = useState("");
@@ -253,7 +265,8 @@ export default function Home() {
               suggestionsList,
               missionsList,
               activeKeyword,
-              savedUrl
+              savedUrl,
+              isAdmin
             );
             setProg(p);
 
@@ -321,7 +334,7 @@ export default function Home() {
 
 
 
-      const p = getPhaseProgress(completedSet, suggestions, missionsList, activeKeyword, savedUrl);
+      const p = getPhaseProgress(completedSet, suggestions, missionsList, activeKeyword, savedUrl, isAdmin);
       setProg(p);
       setServerLoading(false);
     };
@@ -334,7 +347,7 @@ export default function Home() {
     try {
       suggestionsList = JSON.parse(localStorage.getItem("gold-suggestions") || "[]");
     } catch (e) {}
-    const p = getPhaseProgress(completedIds, suggestionsList, missions, localStorage.getItem("gold-tu-busqueda"), url);
+    const p = getPhaseProgress(completedIds, suggestionsList, missions, localStorage.getItem("gold-tu-busqueda"), url, isAdmin);
     setProg(p);
   }, [completedIds, missions, url]);
 
@@ -959,13 +972,16 @@ export default function Home() {
                        {theme === "light" ? '🌙' : '☀️'}
                      </button>
                      <NotificationBell />
-                     <Link href="/perfil" onClick={playClick} className="hover:scale-105 transition-transform flex-shrink-0" title="Ver Perfil">
-                       {session?.user?.image ? (
-                         <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow flex-shrink-0" />
-                       ) : (
-                         <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white flex-shrink-0 text-xl">👤</div>
-                       )}
-                     </Link>
+                     <Link href="/perfil" onClick={playClick} className="hover:scale-105 transition-transform flex-shrink-0 relative" title="Ver Perfil">
+                        {session?.user?.image ? (
+                          <img src={session.user.image} alt="Avatar" className="w-12 h-12 rounded-full border-2 border-duo-green-shadow flex-shrink-0" />
+                        ) : (
+                          <div className="w-12 h-12 bg-duo-green rounded-full flex items-center justify-center border-b-4 border-duo-green-shadow text-white flex-shrink-0 text-xl">👤</div>
+                        )}
+                        {isAdmin && (
+                          <span className="absolute -top-1 -right-1 bg-amber-400 text-amber-900 text-[9px] font-black px-1 rounded-full leading-4 shadow-sm" title="God Mode activo — todas las fases desbloqueadas">⚡</span>
+                        )}
+                      </Link>
                    </div>
                  </div>
                </header>
