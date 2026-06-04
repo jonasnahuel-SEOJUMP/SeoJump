@@ -335,25 +335,36 @@ export default function ContenidoFase2() {
       {activeKeyword ? (
         <div className="w-full max-w-4xl mx-auto space-y-8">
           {/* Active Keyword Card */}
-          <div className="card-3d bg-blue-50 dark:bg-blue-950/20 border-2 border-blue-200 dark:border-blue-800/60 p-8 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-              <p className="text-sm lg:text-base font-black text-blue-500 uppercase tracking-wider">Palabra clave activa de la Fase 1</p>
-              <h2 className="text-3xl lg:text-4xl font-black text-blue-900 dark:text-blue-300">"{activeKeyword}"</h2>
+          <div className="relative overflow-hidden card-3d p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 border-2 border-blue-500/40 bg-slate-900 shadow-[0_0_30px_rgba(59,130,246,0.15)] group">
+            {/* Glow effects */}
+            <div className="absolute top-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-blue-500/20 transition-all duration-500" />
+            <div className="absolute bottom-0 right-0 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none group-hover:bg-indigo-500/20 transition-all duration-500" />
+            
+            <div className="relative z-10 w-full md:w-auto">
+              <p className="text-xs md:text-sm font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                <span>🎯</span> Palabra clave activa de Fase 1
+              </p>
+              <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white drop-shadow-md">"{activeKeyword}"</h2>
             </div>
-            <Link href="/buscador-de-oro" onClick={playClick} className="text-base lg:text-lg font-black text-slate-500 hover:text-blue-600 underline">
-              🔄 Cambiar en Fase 1: Búsqueda
-            </Link>
+            
+            <div className="relative z-10 w-full md:w-auto mt-4 md:mt-0">
+              <Link href="/buscador-de-oro" onClick={playClick} className="btn-3d btn-white w-full md:w-auto text-sm md:text-base font-black py-3 px-6 flex items-center justify-center gap-2 border-slate-700 text-slate-300 hover:text-white">
+                <span>🔄</span> Cambiar Palabra
+              </Link>
+            </div>
           </div>
 
           {/* Owl Introduction */}
-          <div className="flex items-start gap-4 bg-white dark:bg-slate-800 p-8 rounded-2xl border-2 border-gray-155 dark:border-slate-700 shadow-sm">
-            <img src="/images/logo-owl.png" alt="SEO Jump" className="w-16 h-16 md:w-20 md:h-20 object-contain animate-bounce flex-shrink-0" />
-            <div className="flex-1 text-left space-y-2">
-              <p className="font-bold text-slate-700 dark:text-slate-200 text-lg lg:text-xl">
-                ¡Tenemos la palabra clave de oro! Ahora necesitamos una página web dedicada en tu sitio.
+          <div className="relative flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6 bg-gradient-to-r from-amber-500/10 to-transparent dark:from-amber-500/5 dark:to-transparent p-6 md:p-8 rounded-3xl border-2 border-amber-200 dark:border-amber-800/40 shadow-sm animate-in fade-in duration-500">
+            <div className="bg-amber-100 dark:bg-amber-900/30 w-20 h-20 md:w-24 md:h-24 rounded-2xl flex items-center justify-center flex-shrink-0 border-2 border-amber-300 dark:border-amber-700/50 shadow-inner">
+               <img src="/images/logo-owl.png" alt="SEO Jump" className="w-14 h-14 md:w-16 md:h-16 object-contain animate-bounce" />
+            </div>
+            <div className="flex-1 text-center md:text-left space-y-2 md:space-y-3 mt-2 md:mt-0">
+              <p className="font-black text-amber-600 dark:text-amber-400 text-xl lg:text-2xl leading-tight">
+                ¡Tenemos la palabra clave de oro!
               </p>
-              <p className="text-base lg:text-lg text-slate-500 dark:text-slate-400 font-bold">
-                ¿Esta página ya existe en tu sitio web o necesitas crearla desde cero? Elige un camino para continuar.
+              <p className="text-base lg:text-lg text-slate-600 dark:text-slate-300 font-bold leading-relaxed">
+                Ahora necesitamos una página web dedicada en tu sitio. ¿Esta página ya existe o necesitas crearla desde cero? Elige un camino para continuar.
               </p>
             </div>
           </div>
@@ -364,47 +375,69 @@ export default function ContenidoFase2() {
             {/* Camino A (Crear) */}
             <div 
               onClick={() => { playClick(); setSelectedPath('A'); }}
-              className={`card-3d cursor-pointer flex flex-col justify-between p-8 transition-all duration-300 ${
+              className={`group card-3d cursor-pointer flex flex-col justify-between p-6 md:p-8 transition-all duration-300 relative overflow-hidden ${
                 selectedPath === 'A' 
-                  ? 'border-blue-500 bg-blue-50/20 dark:bg-slate-800' 
-                  : 'bg-white dark:bg-slate-800 hover:border-blue-300'
+                  ? 'border-emerald-400 bg-slate-900 shadow-[0_0_30px_rgba(16,185,129,0.2)]' 
+                  : 'bg-white dark:bg-slate-800 hover:border-emerald-300 dark:hover:border-emerald-700/50'
               }`}
             >
-              <div className="space-y-4">
-                <div className="text-5xl">📝</div>
-                <h3 className="text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100">Camino A: No tengo esta página</h3>
-                <p className="text-base lg:text-lg text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+              {selectedPath === 'A' && (
+                <div className="absolute inset-0 bg-gradient-to-br from-emerald-900/40 to-transparent pointer-events-none" />
+              )}
+              <div className="space-y-4 relative z-10 text-center md:text-left">
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-4xl mb-4 md:mb-6 shadow-sm mx-auto md:mx-0 ${selectedPath === 'A' ? 'bg-emerald-500/20 border-2 border-emerald-500/50' : 'bg-slate-100 dark:bg-slate-700'}`}>
+                  📝
+                </div>
+                <h3 className={`text-2xl lg:text-3xl font-black ${selectedPath === 'A' ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
+                  Camino A: No tengo esta página
+                </h3>
+                <p className={`text-base lg:text-lg font-bold leading-relaxed ${selectedPath === 'A' ? 'text-emerald-100/80' : 'text-slate-500 dark:text-slate-400'}`}>
                   Quiero crear un nuevo artículo de blog, una página estática o un producto optimizado desde cero en mi WordPress.
                 </p>
               </div>
-              <button className={`mt-6 py-4 w-full rounded-xl border font-black text-lg lg:text-xl transition-all duration-200 ${
-                selectedPath === 'A' ? 'bg-blue-600 border-blue-700 text-white shadow-sm' : 'bg-slate-100 border-slate-200 text-slate-600 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300'
-              }`}>
-                Elegir Crear
-              </button>
+              <div className="mt-8 relative z-10">
+                <button className={`w-full py-3.5 md:py-4 text-base md:text-lg lg:text-xl font-black transition-all duration-300 ${
+                  selectedPath === 'A' 
+                    ? 'btn-3d btn-green shadow-[0_0_20px_rgba(16,185,129,0.4)]' 
+                    : 'btn-3d btn-white w-full group-hover:bg-slate-50 dark:group-hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                }`}>
+                  {selectedPath === 'A' ? '✓ Camino Elegido' : 'Elegir Crear'}
+                </button>
+              </div>
             </div>
 
             {/* Camino B (Mejorar) */}
             <div 
               onClick={() => { playClick(); setSelectedPath('B'); }}
-              className={`card-3d cursor-pointer flex flex-col justify-between p-8 transition-all duration-300 ${
+              className={`group card-3d cursor-pointer flex flex-col justify-between p-6 md:p-8 transition-all duration-300 relative overflow-hidden ${
                 selectedPath === 'B' 
-                  ? 'border-blue-500 bg-blue-50/20 dark:bg-slate-800' 
-                  : 'bg-white dark:bg-slate-800 hover:border-blue-300'
+                  ? 'border-blue-400 bg-slate-900 shadow-[0_0_30px_rgba(59,130,246,0.2)]' 
+                  : 'bg-white dark:bg-slate-800 hover:border-blue-300 dark:hover:border-blue-700/50'
               }`}
             >
-              <div className="space-y-4">
-                <div className="text-5xl">🔧</div>
-                <h3 className="text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100">Camino B: Ya tengo esta página</h3>
-                <p className="text-base lg:text-lg text-slate-500 dark:text-slate-400 font-bold leading-relaxed">
+              {selectedPath === 'B' && (
+                <div className="absolute inset-0 bg-gradient-to-br from-blue-900/40 to-transparent pointer-events-none" />
+              )}
+              <div className="space-y-4 relative z-10 text-center md:text-left">
+                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center text-4xl mb-4 md:mb-6 shadow-sm mx-auto md:mx-0 ${selectedPath === 'B' ? 'bg-blue-500/20 border-2 border-blue-500/50' : 'bg-slate-100 dark:bg-slate-700'}`}>
+                  🔧
+                </div>
+                <h3 className={`text-2xl lg:text-3xl font-black ${selectedPath === 'B' ? 'text-white' : 'text-slate-800 dark:text-slate-100'}`}>
+                  Camino B: Ya tengo esta página
+                </h3>
+                <p className={`text-base lg:text-lg font-bold leading-relaxed ${selectedPath === 'B' ? 'text-blue-100/80' : 'text-slate-500 dark:text-slate-400'}`}>
                   Ya tengo una URL publicada con contenido similar y quiero auditarla para verificar si tiene la palabra clave.
                 </p>
               </div>
-              <button className={`mt-6 py-4 w-full rounded-xl border font-black text-lg lg:text-xl transition-all duration-200 ${
-                selectedPath === 'B' ? 'bg-blue-600 border-blue-700 text-white shadow-sm' : 'bg-slate-100 border-slate-200 text-slate-600 dark:bg-slate-700 dark:border-slate-600 dark:text-slate-300'
-              }`}>
-                Elegir Auditar
-              </button>
+              <div className="mt-8 relative z-10">
+                <button className={`w-full py-3.5 md:py-4 text-base md:text-lg lg:text-xl font-black transition-all duration-300 ${
+                  selectedPath === 'B' 
+                    ? 'btn-3d btn-blue shadow-[0_0_20px_rgba(59,130,246,0.4)]' 
+                    : 'btn-3d btn-white w-full group-hover:bg-slate-50 dark:group-hover:bg-slate-700 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                }`}>
+                  {selectedPath === 'B' ? '✓ Camino Elegido' : 'Elegir Auditar'}
+                </button>
+              </div>
             </div>
 
           </div>
