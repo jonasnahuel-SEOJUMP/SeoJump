@@ -70,85 +70,79 @@ export default function ContenidoFase2() {
   // Load state from server/localStorage on mount
   useEffect(() => {
     const init = async () => {
-      setServerLoading(true);
-      if (session) {
-        const serverState = await pullStateFromServer();
-        if (serverState) {
-          setXp(serverState.xp || 0);
-          setSiteUrl(serverState.site_url || "");
-          setTargetUrl(serverState.site_url || "");
-          setActiveKeyword(purifyText(serverState.gold_query || ""));
-          setCompletedMissions(new Set(serverState.completed_missions || []));
-          setPrestigeCycles(serverState.ciclos_prestigio || 0);
-          setHasMissions((serverState.missions || []).length > 0);
+      try {
+        setServerLoading(true);
+        if (session) {
+          const serverState = await pullStateFromServer();
+          if (serverState) {
+            setXp(serverState.xp || 0);
+            setSiteUrl(serverState.site_url || '');
+            setTargetUrl(serverState.site_url || '');
+            setActiveKeyword(purifyText(serverState.gold_query || ''));
+            setCompletedMissions(new Set(serverState.completed_missions || []));
+            setPrestigeCycles(serverState.ciclos_prestigio || 0);
+            setHasMissions((serverState.missions || []).length > 0);
 
-          const completedSet = new Set(serverState.completed_missions || []);
-          const p = getPhaseProgress(
-            completedSet,
-            serverState.gold_suggestions,
-            serverState.missions,
-            serverState.gold_query,
-            serverState.site_url,
-            isAdmin
-          );
-          setProg(p);
-          setServerLoading(false);
-          return;
+            const completedSet = new Set(serverState.completed_missions || []);
+            const p = getPhaseProgress(
+              completedSet,
+              serverState.gold_suggestions,
+              serverState.missions,
+              serverState.gold_query,
+              serverState.site_url,
+              isAdmin
+            );
+            setProg(p);
+            return;
+          }
         }
+
+        const savedXp = localStorage.getItem('seojump_xp');
+        const currentXp = savedXp ? parseInt(savedXp, 10) : 0;
+        setXp(currentXp);
+
+        const savedUrl = localStorage.getItem('seojump_site_url');
+        if (savedUrl) {
+          setSiteUrl(savedUrl);
+          setTargetUrl(savedUrl);
+        }
+
+        const savedKeyword = localStorage.getItem('gold-tu-busqueda');
+        if (savedKeyword) setActiveKeyword(purifyText(savedKeyword));
+
+        const prestige = parseInt(localStorage.getItem('seojump_prestigio_cycles') || '0', 10);
+        setPrestigeCycles(prestige);
+
+        const savedCompleted = localStorage.getItem('seojump_completed_missions');
+        let completedList = [];
+        if (savedCompleted) {
+          try {
+            const parsed = JSON.parse(savedCompleted);
+            if (Array.isArray(parsed)) { completedList = parsed; setCompletedMissions(new Set(parsed)); }
+          } catch (e) {}
+        }
+        const completedSet = new Set(completedList);
+
+        const savedMissions = localStorage.getItem('seojump_missions');
+        let missionsList = [];
+        if (savedMissions) {
+          try {
+            const parsed = JSON.parse(savedMissions);
+            if (Array.isArray(parsed) && parsed.length > 0) { missionsList = parsed; setHasMissions(true); }
+          } catch (e) {}
+        }
+
+        let suggestions = [];
+        const savedSuggestions = localStorage.getItem('gold-suggestions');
+        if (savedSuggestions) { try { suggestions = JSON.parse(savedSuggestions); } catch (e) {} }
+
+        const p = getPhaseProgress(completedSet, suggestions, missionsList, savedKeyword, savedUrl, isAdmin);
+        setProg(p);
+      } catch (err) {
+        console.error('[contenido] init error:', err);
+      } finally {
+        setServerLoading(false); // SIEMPRE liberamos el spinner
       }
-
-      const savedXp = localStorage.getItem("seojump_xp");
-      const currentXp = savedXp ? parseInt(savedXp, 10) : 0;
-      setXp(currentXp);
-
-      const savedUrl = localStorage.getItem("seojump_site_url");
-      if (savedUrl) {
-        setSiteUrl(savedUrl);
-        setTargetUrl(savedUrl);
-      }
-
-      const savedKeyword = localStorage.getItem("gold-tu-busqueda");
-      if (savedKeyword) {
-        setActiveKeyword(purifyText(savedKeyword));
-      }
-
-      const prestige = parseInt(localStorage.getItem("seojump_prestigio_cycles") || "0", 10);
-      setPrestigeCycles(prestige);
-
-      const savedCompleted = localStorage.getItem("seojump_completed_missions");
-      let completedList = [];
-      if (savedCompleted) {
-        try {
-          const parsed = JSON.parse(savedCompleted);
-          if (Array.isArray(parsed)) {
-            completedList = parsed;
-            setCompletedMissions(new Set(parsed));
-          }
-        } catch (e) {}
-      }
-      const completedSet = new Set(completedList);
-
-      const savedMissions = localStorage.getItem("seojump_missions");
-      let missionsList = [];
-      if (savedMissions) {
-        try {
-          const parsed = JSON.parse(savedMissions);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            missionsList = parsed;
-            setHasMissions(true);
-          }
-        } catch (e) {}
-      }
-
-      let suggestions = [];
-      const savedSuggestions = localStorage.getItem("gold-suggestions");
-      if (savedSuggestions) {
-        try { suggestions = JSON.parse(savedSuggestions); } catch (e) {}
-      }
-
-      const p = getPhaseProgress(completedSet, suggestions, missionsList, savedKeyword, savedUrl, adminResult);
-      setProg(p);
-      setServerLoading(false);
     };
     init();
   }, [session]);
