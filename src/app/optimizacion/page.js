@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 
 import { useRouter } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
@@ -398,14 +398,13 @@ export default function Optimizacion() {
   const router = useRouter();
 
   // ── God Mode: bypass de fases para cuentas de administración ─────────────
-  const isAdmin = (() => {
+  const isAdmin = useMemo(() => {
     const raw = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
     if (!raw) return false;
     const adminEmails = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
     const userEmail = (session?.user?.email || '').toLowerCase();
     return userEmail !== '' && adminEmails.includes(userEmail);
-  })();
-
+  }, [session?.user?.email]);
 
   const [xp, setXp]                   = useState(0);
   const [siteUrl, setSiteUrl]          = useState("");
@@ -684,7 +683,7 @@ export default function Optimizacion() {
     } catch (e) {}
     const p = getPhaseProgress(completedIds, suggestions, missions, goldKeyword, siteUrl, isAdmin);
     setProg(p);
-  }, [completedIds, missions, goldKeyword, siteUrl]);
+  }, [completedIds, missions, goldKeyword, siteUrl, isAdmin]);
 
   // Persist XP
   useEffect(() => {

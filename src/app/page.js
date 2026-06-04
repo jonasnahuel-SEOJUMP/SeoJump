@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -101,15 +101,15 @@ export default function Home() {
   const { theme, toggleTheme } = useTheme();
 
   // ── God Mode: bypass de fases para cuentas de administración ─────────────
-  // Configurar en Vercel: NEXT_PUBLIC_ADMIN_EMAILS="email1@gmail.com,email2@gmail.com"
-  // NEXT_PUBLIC_ es necesario para que sea accesible en el cliente sin server action.
-  const isAdmin = (() => {
+  // useMemo garantiza que React detecte el cambio cuando la sesión carga
+  // y el email del usuario resuelve a un admin → dispara el efecto de prog.
+  const isAdmin = useMemo(() => {
     const raw = process.env.NEXT_PUBLIC_ADMIN_EMAILS || '';
     if (!raw) return false;
     const adminEmails = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
     const userEmail = (session?.user?.email || '').toLowerCase();
     return userEmail !== '' && adminEmails.includes(userEmail);
-  })();
+  }, [session?.user?.email]);
 
   const [step, setStep] = useState(1);
   const [url, setUrl] = useState("");
@@ -349,7 +349,7 @@ export default function Home() {
     } catch (e) {}
     const p = getPhaseProgress(completedIds, suggestionsList, missions, localStorage.getItem("gold-tu-busqueda"), url, isAdmin);
     setProg(p);
-  }, [completedIds, missions, url]);
+  }, [completedIds, missions, url, isAdmin]);
 
   useEffect(() => {
     if (xp > 0) localStorage.setItem("seojump_xp", xp.toString());
