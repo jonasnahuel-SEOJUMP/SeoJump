@@ -749,7 +749,11 @@ export default function Home() {
                  type="text" 
                  placeholder="ej: miweb.com"
                  value={url}
-                 onChange={(e) => setUrl(e.target.value)}
+                 onChange={(e) => setUrl(e.target.value.toLowerCase().trim())}
+                 autoCapitalize="none"
+                 autoCorrect="off"
+                 spellCheck="false"
+                 inputMode="url"
                  className="w-full p-3 md:p-4 text-lg md:text-xl border-2 border-slate-200 rounded-xl focus:border-duo-blue outline-none transition-colors font-black text-slate-750 placeholder-slate-400 dark:bg-slate-800 dark:border-slate-700"
                />
              </div>
