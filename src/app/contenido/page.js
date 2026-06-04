@@ -490,16 +490,50 @@ export default function ContenidoFase2() {
 
         </div>
       ) : (
-        /* Empty state: No active keyword */
-        <div className="w-full max-w-xl mx-auto text-center py-20 px-8 card-3d bg-white dark:bg-slate-800 border-dashed border-2 border-slate-200 dark:border-slate-700 shadow-none space-y-6">
-          <div className="flex justify-center"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-24 h-24 object-contain opacity-50 animate-pulse" /></div>
-          <h2 className="text-3xl lg:text-4xl font-black text-slate-750 dark:text-slate-200">No hay palabras clave activas</h2>
+        /* Empty state replaced by manual keyword input */
+        <div className="w-full max-w-xl mx-auto text-center py-12 px-6 card-3d bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 space-y-6">
+          <div className="flex justify-center"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-20 h-20 object-contain" /></div>
+          <h2 className="text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100">Estrategia de Contenidos</h2>
           <p className="text-slate-600 dark:text-slate-350 text-base lg:text-lg font-bold leading-relaxed">
-            Primero tenés que detectar una oportunidad de búsqueda en la Fase 1. El Búho usará esa palabra clave de oro para guiarte en tu estrategia de contenidos.
+            Ingresá la palabra clave que querés conquistar en Google para armar tu estrategia. Podés usar el Buscador de Oro (Fase 1) para obtener ideas, o escribirla directamente aquí.
           </p>
-          <Link href="/buscador-de-oro" onClick={playClick} className="btn-3d btn-green w-full py-5 text-lg lg:text-xl font-black block rounded-xl">
-            ¡Ir a Fase 1: Búsqueda de Oro! 👑
-          </Link>
+          <div className="space-y-4 pt-2">
+            <input 
+              type="text" 
+              placeholder="Ej: limpieza de tapizados..."
+              id="manual-keyword-input"
+              className="w-full p-4 text-lg border-2 border-slate-200 dark:border-slate-700 rounded-xl focus:border-blue-500 outline-none font-black text-slate-800 dark:text-slate-100 dark:bg-slate-900/50"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  const val = e.currentTarget.value.trim();
+                  if (val) {
+                    if (playClick) playClick();
+                    localStorage.setItem('gold-tu-busqueda', val);
+                    setActiveKeyword(val);
+                  }
+                }
+              }}
+            />
+            <button 
+              onClick={() => {
+                const input = document.getElementById('manual-keyword-input');
+                const val = input ? input.value.trim() : '';
+                if (val) {
+                  if (playClick) playClick();
+                  localStorage.setItem('gold-tu-busqueda', val);
+                  setActiveKeyword(val);
+                }
+              }}
+              className="btn-3d btn-blue w-full py-4 text-lg lg:text-xl font-black block rounded-xl"
+            >
+              Comenzar Estrategia 🚀
+            </button>
+          </div>
+          <div className="pt-4 border-t-2 border-slate-100 dark:border-slate-700">
+             <Link href="/buscador-de-oro" onClick={playClick} className="text-blue-500 hover:text-blue-600 font-bold underline">
+               🔍 Ir a Fase 1 para buscar ideas de palabras clave
+             </Link>
+          </div>
         </div>
       )}
 

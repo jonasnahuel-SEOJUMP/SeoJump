@@ -745,7 +745,7 @@ export default function Home() {
               <div className="flex-1 min-w-[65px] btn-3d bg-blue-50 text-blue-600 text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-blue-500 font-black">
                 ✍️ F2
               </div>
-              <div className="flex-1 min-w-[65px] btn-3d bg-white text-slate-800 text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-duo-green font-black">
+              <div className="flex-1 min-w-[65px] btn-3d bg-green-50 text-duo-green text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-duo-green font-black">
                 🛠️ F3
               </div>
               <div className="flex-1 min-w-[65px] btn-3d bg-purple-50 text-purple-600 text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-purple-600 font-black">
