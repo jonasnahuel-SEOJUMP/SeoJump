@@ -800,8 +800,24 @@ export default function Home() {
 
                <div className="flex justify-center w-full">
                  {session ? (
-                   <div className="flex items-center gap-2 text-duo-green font-bold">
-                     <span>✅ Sesión iniciada: {session.user?.name}</span>
+                   <div className="flex flex-col items-center gap-2 text-center">
+                     <span className="text-duo-green font-bold">✅ Sesión iniciada: {session.user?.name}</span>
+                     <button
+                       onClick={() => {
+                         playClick();
+                         // Limpiar el estado local para que el próximo usuario empiece limpio
+                         try {
+                           localStorage.removeItem("seojump_site_url");
+                           localStorage.removeItem("seojump_missions");
+                           localStorage.removeItem("seojump_quick_wins");
+                           localStorage.removeItem("seojump_quick_wins_url");
+                         } catch (e) {}
+                         signOut({ callbackUrl: "/" });
+                       }}
+                       className="text-xs font-bold text-slate-400 hover:text-red-400 transition-colors underline underline-offset-2"
+                     >
+                       Cambiar cuenta / Cerrar sesión
+                     </button>
                    </div>
                  ) : (
                    <LoginButton text="CONECTAR CON GOOGLE" />
