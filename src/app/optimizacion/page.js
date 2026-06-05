@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, getAeoOpportunities, verifyAeoMission, checkIsAdmin } from "../../lib/actions";
+import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked } from "../../lib/missionMemory";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
@@ -51,68 +52,6 @@ function readAeoCache(siteUrl) {
     return null;
   }
 }
-
-/**
- * Extrae el prefijo "tipo-pagePath" de un mission ID, ignorando el sufijo de keyword.
- * IDs viejos: "h1-/producto/balde-xyz-baldedetailing"  → "h1-/producto/balde-xyz"
- * IDs nuevos: "h1-/producto/balde-xyz"                 → "h1-/producto/balde-xyz"
- *
- * Lógica: el tipo es todo antes del primer "-", el pagePath empieza en el primer "/".
- * Todo lo que sigue después del pagePath (que no empiece con "/") es keyword → se ignora.
- */
-const extractMissionKey = (id) => {
-  if (!id) return '';
-  // Formato: "type-/path/to/page" o "type-/path/to/page-keywordstuff"
-  const dashIdx = id.indexOf('-');
-  if (dashIdx === -1) return id;
-  const type = id.substring(0, dashIdx); // "h1", "meta", "alt", "aeo"
-  const rest = id.substring(dashIdx + 1); // "/path/to/page-keyword" or "/path/to/page"
-  
-  // El pagePath empieza con "/" y se extiende hasta el final de la parte que tiene "/"
-  // Buscamos el último "/" y cortamos después del siguiente segmento de path
-  if (!rest.startsWith('/')) return id;
-  
-  // Encontrar dónde termina el path: después del último "/" hay un segmento,
-  // y si después de ese segmento hay un "-" seguido de texto sin "/", eso es la keyword.
-  // Estrategia simple: buscar el patrón del path completo (todo hasta el último segmento con "/")
-  const pathParts = rest.split('/');
-  // El último segmento del path puede tener "-keyword" pegado.
-  // En URLs de WooCommerce: /producto/balde-para-lavar-autos-black-line-20l/
-  // El keyword viejo estaba pegado sin "/": /producto/balde-xyz-baldedetailing
-  // Pero no podemos distinguir dashes del path vs dashes de la keyword de forma confiable.
-  // Solución: simplemente usar type + el path tal cual viene de la misión actual.
-  return `${type}-${rest}`;
-};
-
-/**
- * Compara si una misión ya fue completada, basándose en tipo+página.
- * Soporta tanto IDs viejos (con keyword) como nuevos (sin keyword).
- */
-const isMissionCompletedBySet = (completedSet, missionId, missionType, missionPagePath) => {
-  // 1. Chequeo directo por ID exacto (funciona con IDs nuevos)
-  if (completedSet.has(missionId)) return true;
-  
-  // 2. Chequeo por tipo+pagePath: buscar si algún ID completado empieza con "tipo-pagePath"
-  // Esto matchea tanto "h1-/producto/balde" como "h1-/producto/balde-baldedetailing"
-  if (missionType && missionPagePath) {
-    const prefix = `${missionType.toLowerCase()}-${missionPagePath}`;
-    for (const completedId of completedSet) {
-      if (completedId === prefix || completedId.startsWith(prefix + '-') || completedId.startsWith(prefix)) {
-        // Verificar que realmente es el mismo tipo (no confundir "h1" con "h1x")
-        const completedType = completedId.substring(0, completedId.indexOf('-'));
-        if (completedType === missionType.toLowerCase()) {
-          // Verificar que el path matchea
-          const completedRest = completedId.substring(completedId.indexOf('-') + 1);
-          if (completedRest === missionPagePath || completedRest.startsWith(missionPagePath)) {
-            return true;
-          }
-        }
-      }
-    }
-  }
-  
-  return false;
-};
 
 // Mapa de tipos de página para badges
 const getBadgeInfo = (url) => {
@@ -523,44 +462,29 @@ export default function Optimizacion() {
         // Si Supabase falló en el pasado (sin schema), el usuario no pierde su progreso local.
         let localQuickWins = [];
         let localAeo = [];
-        let localCompleted = [];
+        const localCompleted = loadLocalCompletedIds();
         try { localQuickWins = JSON.parse(localStorage.getItem('seojump_completed_quick_wins') || '[]'); } catch(e) {}
         try { localAeo = JSON.parse(localStorage.getItem('seojump_completed_aeo') || '[]'); } catch(e) {}
-        try { localCompleted = JSON.parse(localStorage.getItem('seojump_completed_missions') || '[]'); } catch(e) {}
 
-        // Cargar todo el historial de Supabase (Single Source of Truth para XP y completadas)
+        // Mostrar progreso local de inmediato (no esperar a Supabase)
+        setCompletedIds(localCompleted);
+
+        // Combinar con Supabase cuando responda
         fetchCompletedMissions().then(cwResult => {
 
           if (cwResult.success && cwResult.missions) {
             console.log(`[Init] Supabase devolvió ${cwResult.missions.length} misiones completadas.`);
-            let totalXp = 0;
-            const newCompletedIds = new Set(localCompleted);        // seed desde localStorage
-            const newCompletedQuickWins = new Set(localQuickWins); // seed desde localStorage
-            const newCompletedAeo = new Set(localAeo);             // seed desde localStorage
+            const {
+              completedIds: fromSupabase,
+              completedQuickWins: fromSupabaseQw,
+              completedAeo: fromSupabaseAeo,
+              totalXp,
+            } = idsFromSupabaseMissions(cwResult.missions);
 
-            cwResult.missions.forEach(m => {
-              totalXp += (m.xp_awarded || 0);
+            const newCompletedIds = new Set([...localCompleted, ...fromSupabase]);
+            const newCompletedQuickWins = new Set([...localQuickWins, ...fromSupabaseQw]);
+            const newCompletedAeo = new Set([...localAeo, ...fromSupabaseAeo]);
 
-              if (m.mission_type === 'QUICK_WIN') {
-                newCompletedQuickWins.add(m.target_url);
-              } else if (m.mission_type === 'AEO_OPP') {
-                newCompletedAeo.add(m.target_url + '::' + (m.suggested_value || ''));
-              } else {
-                // Reconstruir ID para H1, META, ALT
-                let path = '/';
-                try {
-                  if (m.target_url.startsWith('http')) {
-                    path = new URL(m.target_url).pathname;
-                  } else {
-                    path = m.target_url;
-                  }
-                } catch (e) {}
-                path = path.replace(/\/+$/, '') || '/';
-                newCompletedIds.add(`${m.mission_type.toLowerCase()}-${path}`);
-              }
-            });
-
-            // Combinar con local por si hay algo súper reciente
             const localXp = parseInt(localStorage.getItem('seojump_xp') || '0', 10);
             setXp(Math.max(totalXp, localXp));
 
@@ -597,9 +521,9 @@ export default function Optimizacion() {
               try {
                 const parsed = JSON.parse(savedMissions);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                  missionsList = parsed;
-                  setMissions(parsed);
-                  setHasMissions(true);
+                  missionsList = filterPendingMissions(parsed, newCompletedIds);
+                  setMissions(missionsList);
+                  setHasMissions(missionsList.length > 0);
                 }
               } catch (e) {}
             }
@@ -660,18 +584,8 @@ export default function Optimizacion() {
       const prestige = parseInt(localStorage.getItem("seojump_prestigio_cycles") || "0", 10);
       setPrestigeCycles(prestige);
 
-      const savedCompleted = localStorage.getItem("seojump_completed_missions");
-      let completedList = [];
-      if (savedCompleted) {
-        try {
-          const parsed = JSON.parse(savedCompleted);
-          if (Array.isArray(parsed)) {
-            completedList = parsed;
-            setCompletedIds(new Set(parsed));
-          }
-        } catch (e) {}
-      }
-      const completedSet = new Set(completedList);
+      const completedSet = loadLocalCompletedIds();
+      setCompletedIds(completedSet);
 
       const savedMissions = localStorage.getItem("seojump_missions");
       let missionsList = [];
@@ -679,9 +593,9 @@ export default function Optimizacion() {
         try {
           const parsed = JSON.parse(savedMissions);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            missionsList = parsed;
-            setMissions(parsed);
-            setHasMissions(true);
+            missionsList = filterPendingMissions(parsed, completedSet);
+            setMissions(missionsList);
+            setHasMissions(missionsList.length > 0);
           }
         } catch (e) {}
       }
@@ -875,7 +789,7 @@ export default function Optimizacion() {
       if (result.success) {
         setMissionStatus("success");
         setFailedAttempts(0);
-        if (!isMissionCompletedBySet(completedIds, selectedMission.id, selectedMission.type, selectedMission.pagePath)) {
+        if (!isMissionCompleted(completedIds, selectedMission)) {
           // Use functional updater to avoid stale XP closure value
           setXp(prev => {
             const newXp = prev + (selectedMission.xp || 50);
@@ -1037,7 +951,7 @@ export default function Optimizacion() {
     );
   }
 
-  const pendingMissions = missions.filter(m => !isMissionCompletedBySet(completedIds, m.id, m.type, m.pagePath)).slice(0, 10);
+  const pendingMissions = filterPendingMissions(missions, completedIds).slice(0, 10);
 
   return (
     <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-screen-lg mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka px-4">
@@ -1247,7 +1161,7 @@ export default function Optimizacion() {
                       )}
                       
                       {/* ── Pending Quick Wins ── */}
-                      {quickWins.filter(qw => !completedQuickWins.has(qw.page)).map((qw, index) => {
+                      {quickWins.filter(qw => !completedQuickWins.has(qw.page) && !isPageAlreadyWorked(completedIds, qw.page)).map((qw, index) => {
                         const isUnlocked = isPremium || index < 2;
                         
                         if (!isUnlocked) {

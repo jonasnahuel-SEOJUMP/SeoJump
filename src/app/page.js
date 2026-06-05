@@ -14,6 +14,7 @@ import AICatch from "../components/AICatch";
 import LoginButton from "../components/LoginButton";
 import NotificationBell from "../components/NotificationBell";
 import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, checkIsAdmin } from "../lib/actions";
+import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked } from "../lib/missionMemory";
 import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
@@ -184,44 +185,27 @@ export default function Home() {
       }
 
       if (session) {
-        // Cargar todo el historial de Supabase (Single Source of Truth para XP y completadas)
+        // Cargar progreso local de inmediato (no esperar a Supabase)
+        const localCompleted = loadLocalCompletedIds();
+        setCompletedIds(localCompleted);
+
+        // Combinar con Supabase cuando responda
         fetchCompletedMissions().then(cwResult => {
           if (cwResult.success && cwResult.missions) {
-            let totalXp = 0;
-            const newCompletedIds = new Set();
-            const newCompletedQuickWins = new Set();
-            const newCompletedAeo = new Set();
+            const {
+              completedIds: fromSupabase,
+              completedQuickWins: newCompletedQuickWins,
+              completedAeo: newCompletedAeo,
+              totalXp,
+            } = idsFromSupabaseMissions(cwResult.missions);
 
-            cwResult.missions.forEach(m => {
-              totalXp += (m.xp_awarded || 0);
-
-              if (m.mission_type === 'QUICK_WIN') {
-                newCompletedQuickWins.add(m.target_url);
-              } else if (m.mission_type === 'AEO_OPP') {
-                newCompletedAeo.add(m.target_url + '::' + (m.suggested_value || ''));
-              } else {
-                // Reconstruir ID para H1, META, ALT
-                let path = '/';
-                try {
-                  if (m.target_url.startsWith('http')) {
-                    path = new URL(m.target_url).pathname;
-                  } else {
-                    path = m.target_url;
-                  }
-                } catch (e) {}
-                path = path.replace(/\/+$/, '') || '/';
-                newCompletedIds.add(`${m.mission_type.toLowerCase()}-${path}`);
-              }
-            });
-
-            // Combinar con local por si hay algo súper reciente
+            const mergedCompleted = new Set([...localCompleted, ...fromSupabase]);
             const localXp = parseInt(localStorage.getItem("seojump_xp") || "0", 10);
             setXp(Math.max(totalXp, localXp));
 
-            setCompletedIds(prev => {
-              const merged = new Set([...prev, ...newCompletedIds]);
-              localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(merged)));
-              return merged;
+            setCompletedIds(() => {
+              localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(mergedCompleted)));
+              return mergedCompleted;
             });
 
             setCompletedQuickWins(prev => {
@@ -246,7 +230,7 @@ export default function Home() {
               try {
                 const parsed = JSON.parse(savedMissions);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                  missionsList = filterHomeMissions(parsed);
+                  missionsList = filterPendingMissions(filterHomeMissions(parsed), mergedCompleted);
                   setMissions(missionsList);
                   if (savedUrl) setStep(6);
                 }
@@ -260,7 +244,7 @@ export default function Home() {
             }
 
             const p = getPhaseProgress(
-              new Set([...newCompletedIds]),
+              mergedCompleted,
               suggestionsList,
               missionsList,
               activeKeyword,
@@ -277,6 +261,7 @@ export default function Home() {
           }
           setServerLoading(false);
         }).catch(() => {
+          // Si Supabase falla, conservar lo que ya cargamos desde localStorage
           setServerLoading(false);
         });
 
@@ -295,20 +280,8 @@ export default function Home() {
       const prestige = parseInt(localStorage.getItem("seojump_prestigio_cycles") || "0", 10);
       setPrestigeCycles(prestige);
 
-      const savedCompleted = localStorage.getItem("seojump_completed_missions");
-      let completedList = [];
-      if (savedCompleted) {
-        try {
-          const parsed = JSON.parse(savedCompleted);
-          if (Array.isArray(parsed)) {
-            completedList = parsed;
-            setCompletedIds(new Set(parsed));
-          }
-        } catch (e) {
-          console.error("Error parsing completed missions", e);
-        }
-      }
-      const completedSet = new Set(completedList);
+      const completedSet = loadLocalCompletedIds();
+      setCompletedIds(completedSet);
 
       const savedMissions = localStorage.getItem("seojump_missions");
       let missionsList = [];
@@ -316,7 +289,7 @@ export default function Home() {
         try {
           const parsed = JSON.parse(savedMissions);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            missionsList = filterHomeMissions(parsed);
+            missionsList = filterPendingMissions(filterHomeMissions(parsed), completedSet);
             setMissions(missionsList);
             if (savedUrl) {
               setStep(6);
@@ -448,7 +421,7 @@ export default function Home() {
             if (!res.success) {
               throw new Error(res.error);
             }
-            const realMissions = res.data;
+            const realMissions = filterPendingMissions(res.data, loadLocalCompletedIds());
             if (!realMissions || realMissions.length === 0) {
               throw new Error("EMPTY_MISSIONS");
             }
@@ -492,7 +465,7 @@ export default function Home() {
       if (result.success) {
         setMissionStatus("success");
         setFailedAttempts(0);
-        if (!completedIds.has(selectedMission.id)) {
+        if (!isMissionCompleted(completedIds, selectedMission)) {
           // Use functional updater to avoid stale closure XP value
           setXp(prev => {
             const newXp = prev + (selectedMission.xp || 50);
@@ -1063,7 +1036,7 @@ export default function Home() {
 
                     <div className="space-y-4">
                       {missions.length > 0 ? (() => {
-                           const pendingMissions = missions.filter(m => !completedIds.has(m.id)).slice(0, 10);
+                           const pendingMissions = filterPendingMissions(missions, completedIds).slice(0, 10);
                            if (pendingMissions.length === 0) {
                              return (
                                <div className="text-center py-4 bg-white dark:bg-slate-800 rounded-2xl border-2 border-slate-200 dark:border-slate-700">

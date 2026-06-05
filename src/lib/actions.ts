@@ -6,6 +6,7 @@ import { signIn, signOut, auth } from "../auth"
 import { getSearchConsoleData, submitGoogleIndexing } from "./google"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { completeMission, getMissionsByEmail, type MissionType } from './supabase'
+import { normalizePagePath } from './missionMemory'
 
 export async function login() {
   await signIn("google")
@@ -461,92 +462,81 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
     };
     // ─────────────────────────────────────────────────────────────────────
 
-    const generatedTypesPerPage = new Map<string, Set<string>>();
+    // Páginas ya optimizadas — no volver a pedir tareas en la misma URL
+    const completedPagePaths = new Set<string>();
+    if (session?.user?.email) {
+      try {
+        const doneMissions = await getMissionsByEmail(session.user.email, 'completed');
+        for (const m of doneMissions) {
+          if (['H1', 'META', 'ALT', 'AEO'].includes(m.mission_type)) {
+            completedPagePaths.add(normalizePagePath(m.target_url));
+          }
+        }
+      } catch (err) {
+        console.warn('[getRealMissions] No se pudieron cargar misiones completadas:', err);
+      }
+    }
+
+    // Una sola misión por página: quedarse con la fila GSC de más clics
+    const bestRowPerPage = new Map<string, typeof missionRows[0]>();
+    for (const row of missionRows) {
+      const pagePath = normalizePagePath(row.keys[0]);
+      if (completedPagePaths.has(pagePath)) continue;
+
+      const existing = bestRowPerPage.get(pagePath);
+      if (!existing || (row.clicks || 0) > (existing.clicks || 0)) {
+        bestRowPerPage.set(pagePath, row);
+      }
+    }
+
     const missions: any[] = [];
 
-    for (const row of missionRows) {
+    for (const [pagePath, row] of bestRowPerPage) {
       const fullPageUrl = row.keys[0];
       const rawKeyword = row.keys[1] || "";
       const cleanKeyword = rawKeyword.replace(/\$/g, '').replace(/^[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+/g, '').trim();
-
-      // Keyword que realmente va a usar la misión (coherente con la página)
       const effectiveKeyword = resolveKeyword(cleanKeyword, fullPageUrl, cleanGoldKeyword);
-      
-      let pagePath = fullPageUrl;
-      try {
-        if (fullPageUrl.startsWith('http')) {
-          pagePath = new URL(fullPageUrl).pathname;
-        }
-      } catch (e) {
-        // keep fullPageUrl as fallback
-      }
 
-      // Normalize path: remove trailing slash so the same page always gets the
-      // same mission ID regardless of whether GSC returns the URL with or without
-      // a trailing slash. Without this, "h1-/producto/balde/" and
-      // "h1-/producto/balde" are treated as two different (never-completed) missions.
-      pagePath = pagePath.replace(/\/+$/, '') || '/';
-
-      if (!generatedTypesPerPage.has(pagePath)) {
-        generatedTypesPerPage.set(pagePath, new Set());
-      }
-      const usedTypes = generatedTypesPerPage.get(pagePath)!;
-      
-      // Format path for display: human readable
       let displayPath = pagePath;
       if (displayPath === '/') {
         displayPath = 'Página de Inicio (Portada)';
       } else {
-        // Remove leading/trailing slashes, replace dashes/slashes with spaces
         displayPath = displayPath.replace(/^\/+|\/+$/g, '').replace(/[-/]/g, ' ');
-        // Capitalize first letter
         if (displayPath.length > 0) {
           displayPath = displayPath.charAt(0).toUpperCase() + displayPath.slice(1);
         }
-        // Truncate if still too long
         if (displayPath.length > 40) {
           displayPath = displayPath.slice(0, 37) + '...';
         }
       }
 
-      // Rotación de tipo de misión sin repetir H1, META o ALT para la misma página
       const MISSION_TYPES = buildMissionTypes(effectiveKeyword);
       const isQuestion = isQuestionQuery(effectiveKeyword);
-      const aeoType = MISSION_TYPES.find(m => m.type === 'AEO')!;
-      const classicTypes = MISSION_TYPES.filter(m => m.type !== 'AEO');
-      
-      let missionDef;
-      if (isQuestion && !usedTypes.has('AEO')) {
-        missionDef = aeoType;
-      } else {
-        missionDef = classicTypes.find(m => !usedTypes.has(m.type));
-      }
-
-      if (!missionDef) {
-        continue; // Ya generamos todas las misiones posibles para esta página
-      }
-
-      usedTypes.add(missionDef.type);
+      // Una misión por página: H1 (título) o AEO si la búsqueda es una pregunta
+      const missionDef = isQuestion
+        ? MISSION_TYPES.find(m => m.type === 'AEO')!
+        : MISSION_TYPES.find(m => m.type === 'H1')!;
 
       missions.push({
         id: `${missionDef.type.toLowerCase()}-${pagePath}`,
         title: missionDef.title,
         description: missionDef.descriptionTemplate(displayPath),
         xp: missionDef.xp,
-        page: fullPageUrl,       // Full URL for linking
-        pagePath: pagePath,       // Path for display in modal
+        page: fullPageUrl,
+        pagePath: pagePath,
         type: missionDef.type,
         icon: missionDef.icon,
         color: missionDef.color,
         pistas: missionDef.pistas,
         keyword: effectiveKeyword,
-        // Real metrics from Search Console
         clicks: row.clicks,
         impressions: row.impressions,
         ctr: row.ctr,
         position: row.position,
       });
     }
+
+    missions.sort((a, b) => (b.clicks || 0) - (a.clicks || 0));
 
     return { success: true, data: missions }
   } catch (error: any) {
@@ -1683,14 +1673,23 @@ ${JSON.stringify(opportunities, null, 2)}
     if (session?.user?.email) {
       try {
         const doneMissions = await getMissionsByEmail(session.user.email, 'completed');
-        const doneUrls = new Set(
+        const doneQuickWinUrls = new Set(
           doneMissions
             .filter(m => m.mission_type === 'QUICK_WIN')
             .map(m => m.target_url)
         );
-        if (doneUrls.size > 0) {
-          parsed = parsed.filter((win: any) => !doneUrls.has(win.page));
-          console.log(`[QuickWins] Filtradas ${doneUrls.size} oportunidad(es) ya completada(s) para ${session.user.email}`);
+        const workedPagePaths = new Set(
+          doneMissions
+            .filter(m => ['H1', 'META', 'ALT'].includes(m.mission_type))
+            .map(m => normalizePagePath(m.target_url))
+        );
+        if (doneQuickWinUrls.size > 0 || workedPagePaths.size > 0) {
+          parsed = parsed.filter((win: any) => {
+            if (doneQuickWinUrls.has(win.page)) return false;
+            if (workedPagePaths.has(normalizePagePath(win.page))) return false;
+            return true;
+          });
+          console.log(`[QuickWins] Filtradas oportunidades ya trabajadas para ${session.user.email}`);
         }
       } catch (filterErr) {
         console.warn('[QuickWins] No se pudieron filtrar misiones completadas:', filterErr);
