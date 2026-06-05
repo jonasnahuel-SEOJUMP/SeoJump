@@ -992,10 +992,10 @@ export default function Optimizacion() {
       />
 
       {/* Main Layout: 3 columns on desktop */}
-      <div className="w-full flex flex-wrap lg:flex-nowrap gap-8 items-start mt-4">
+      <div className="w-full flex flex-wrap lg:flex-nowrap gap-8 items-start mt-4 overflow-x-hidden">
 
-        {/* ─── LEFT SIDEBAR ─── */}
-        <div className="w-full lg:w-[300px] flex-shrink-0 flex flex-col gap-6 lg:sticky lg:top-44">
+        {/* ─── LEFT SIDEBAR ─── — oculto en móvil al abrir una misión */}
+        <div className={`w-full lg:w-[300px] flex-shrink-0 flex-col gap-6 lg:sticky lg:top-44 min-w-0 ${selectedMission ? 'hidden lg:flex' : 'flex'}`}>
           {/* Site & Level */}
           <div className="card-3d bg-white dark:bg-slate-800 p-5 space-y-4">
             <div className="flex items-center gap-3">
@@ -1600,38 +1600,30 @@ export default function Optimizacion() {
 
           {/* Mission Detail */}
           {selectedMission && (
-            <div className="w-full space-y-8 animate-in zoom-in duration-300">
-              <div className="flex items-start md:items-center flex-col md:flex-row gap-4 mb-4">
+            <div className="w-full max-w-full min-w-0 space-y-6 md:space-y-8 animate-in fade-in duration-300">
+              <div className="flex items-start md:items-center flex-col md:flex-row gap-4 mb-4 min-w-0 w-full">
                 <button onClick={() => { playClick(); closeMission(); }} className="text-5xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 hidden md:block">✕</button>
-                <div>
-                  <h2 className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-3">
-                    <button onClick={() => { playClick(); closeMission(); }} className="text-2xl text-slate-500 md:hidden">←</button>
+                <div className="min-w-0 w-full">
+                  <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-3">
+                    <button onClick={() => { playClick(); closeMission(); }} className="text-2xl text-slate-500 md:hidden flex-shrink-0">←</button>
                     Misión: {selectedMission.type}
                   </h2>
-                  <p className="text-base lg:text-lg font-bold text-slate-550 dark:text-slate-400 truncate max-w-full md:max-w-md">
-                    {(() => {
-                      const path = selectedMission.pagePath || '';
-                      const parts = path.replace(/\/$/, '').split('/');
-                      const slug = parts.pop();
-                      const base = parts.length > 0 ? parts.join('/') + '/' : '/';
-                      return slug
-                        ? <>{base}<strong className="text-amber-400 dark:text-amber-300 not-italic">{slug}</strong>/</>
-                        : path;
-                    })()}
+                  <p className="mission-path text-sm md:text-base lg:text-lg font-bold text-slate-550 dark:text-slate-400 mt-1" title={selectedMission.pagePath}>
+                    {selectedMission.pagePath}
                   </p>
                 </div>
               </div>
 
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-3 gap-2 md:gap-4 min-w-0 w-full">
                 {[
                   { label: "Oportunidades de Venta", value: selectedMission.clicks,              color: "text-duo-blue" },
                   { label: "Dinero sobre la mesa",   value: selectedMission.impressions,          color: "text-duo-yellow" },
                   { label: "Posición",               value: `#${selectedMission.position?.toFixed(0)}`, color: "text-duo-green" },
                 ].map(({ label, value, color }) => (
-                  <div key={label} className="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm">
-                    <div className={`text-2xl md:text-3xl lg:text-4xl font-black ${color}`}>{value}</div>
-                    <div className="text-xs md:text-sm font-bold text-slate-550 dark:text-slate-400">{label}</div>
+                  <div key={label} className="bg-white dark:bg-slate-800 rounded-2xl p-2 md:p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm min-w-0">
+                    <div className={`text-xl md:text-3xl lg:text-4xl font-black ${color}`}>{value}</div>
+                    <div className="text-[10px] md:text-sm font-bold text-slate-550 dark:text-slate-400 leading-tight">{label}</div>
                   </div>
                 ))}
               </div>
@@ -1664,8 +1656,8 @@ export default function Optimizacion() {
               )}
 
               {/* Mission Input */}
-              <div className="card-3d bg-white dark:bg-slate-800 space-y-6 p-6 md:p-8">
-                <p className="font-bold text-slate-655 dark:text-slate-300 text-base md:text-lg lg:text-xl">
+              <div className="card-3d bg-white dark:bg-slate-800 space-y-6 p-4 md:p-8 min-w-0 w-full overflow-hidden">
+                <p className="font-bold text-slate-655 dark:text-slate-300 text-base md:text-lg lg:text-xl break-words">
                   {selectedMission.type === 'H1'  && <>
                     Hacé el cambio en tu web, después escribí acá el nuevo <span className="text-duo-green">H1</span> que pusiste
                     {goldKeyword && <> (que debe incluir <span className="text-amber-400 font-black">«{goldKeyword}»</span>)</>}:
@@ -1696,7 +1688,7 @@ export default function Optimizacion() {
                   }
                   value={h1Value}
                   onChange={(e) => setH1Value(e.target.value)}
-                  className="w-full p-5 text-xl md:text-2xl border-2 border-slate-200 dark:border-slate-600 rounded-xl focus:border-duo-green outline-none font-black text-slate-800 dark:text-slate-100 dark:bg-slate-700"
+                  className="w-full max-w-full p-4 md:p-5 text-base md:text-xl border-2 border-slate-200 dark:border-slate-600 rounded-xl focus:border-duo-green outline-none font-black text-slate-800 dark:text-slate-100 dark:bg-slate-700"
                 />
                 <p className="text-sm text-slate-555 font-bold">{h1Value.length} / {selectedMission.type === 'META' ? '160' : '70'} caracteres</p>
 

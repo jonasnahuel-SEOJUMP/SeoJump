@@ -939,9 +939,9 @@ export default function Home() {
         )}
 
         {step >= 6 && (
-          <div className="w-full max-w-7xl mx-auto flex flex-wrap lg:flex-nowrap gap-8 animate-in slide-in-from-bottom duration-500 items-start px-4">
-             {/* PANEL IZQUIERDO (Lateral de Control) */}
-             <div className="w-full lg:w-[380px] flex-shrink-0 flex flex-col gap-6 lg:sticky lg:top-8 z-10">
+          <div className="w-full max-w-7xl mx-auto flex flex-wrap lg:flex-nowrap gap-8 animate-in slide-in-from-bottom duration-500 items-start px-4 overflow-x-hidden">
+             {/* PANEL IZQUIERDO (Lateral de Control) — oculto en móvil al abrir una misión */}
+             <div className={`w-full lg:w-[380px] flex-shrink-0 flex-col gap-6 lg:sticky lg:top-8 z-10 min-w-0 ${step === 7 ? 'hidden lg:flex' : 'flex'}`}>
                {/* Dashboard Header */}
                <header className="w-full flex flex-col gap-6 items-stretch justify-between bg-white dark:bg-slate-800 p-4 md:p-5 rounded-2xl border-2 border-duo-white-shadow dark:border-slate-700 transition-colors duration-300">
                  <div className="flex items-center gap-4 w-full justify-between">
@@ -1215,32 +1215,34 @@ export default function Home() {
 
               {/* STEP 7: MISSION MODAL - Dynamic based on selectedMission */}
               {step === 7 && selectedMission && (
-                <div className="w-full space-y-8 animate-in zoom-in duration-300">
+                <div className="w-full max-w-full min-w-0 space-y-6 md:space-y-8 animate-in fade-in duration-300">
                   {/* Mission Header */}
-                  <div className="flex items-start md:items-center flex-col md:flex-row gap-4 mb-4">
+                  <div className="flex items-start md:items-center flex-col md:flex-row gap-4 mb-4 min-w-0 w-full">
                     <button onClick={() => { playClick(); setStep(6); }} className="text-5xl text-slate-500 hover:text-slate-800 dark:hover:text-slate-300 hidden md:block">✕</button>
-                    <div>
-                      <h2 className="text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-3">
-                        <button onClick={() => { playClick(); setStep(6); }} className="text-2xl text-slate-500 md:hidden">←</button>
+                    <div className="min-w-0 w-full">
+                      <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-3">
+                        <button onClick={() => { playClick(); setStep(6); }} className="text-2xl text-slate-500 md:hidden flex-shrink-0">←</button>
                         Misión: {selectedMission.type}
                       </h2>
-                      <p className="text-base lg:text-lg font-bold text-slate-550 dark:text-slate-400 truncate max-w-full md:max-w-md">{selectedMission.pagePath}</p>
+                      <p className="mission-path text-sm md:text-base lg:text-lg font-bold text-slate-550 dark:text-slate-400 mt-1" title={selectedMission.pagePath}>
+                        {selectedMission.pagePath}
+                      </p>
                     </div>
                   </div>
 
                   {/* Search Console Data Card */}
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm">
-                      <div className="text-2xl md:text-3xl lg:text-4xl font-black text-duo-blue">{selectedMission.clicks}</div>
-                      <div className="text-xs md:text-sm lg:text-base font-bold text-slate-555 dark:text-slate-400">Oportunidades de Venta</div>
+                  <div className="grid grid-cols-3 gap-2 md:gap-4 min-w-0 w-full">
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-2 md:p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm min-w-0">
+                      <div className="text-xl md:text-3xl lg:text-4xl font-black text-duo-blue">{selectedMission.clicks}</div>
+                      <div className="text-[10px] md:text-sm lg:text-base font-bold text-slate-555 dark:text-slate-400 leading-tight">Oportunidades de Venta</div>
                     </div>
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm">
-                      <div className="text-2xl md:text-3xl lg:text-4xl font-black text-duo-yellow">{selectedMission.impressions}</div>
-                      <div className="text-xs md:text-sm lg:text-base font-bold text-slate-555 dark:text-slate-400">Dinero sobre la mesa</div>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-2 md:p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm min-w-0">
+                      <div className="text-xl md:text-3xl lg:text-4xl font-black text-duo-yellow">{selectedMission.impressions}</div>
+                      <div className="text-[10px] md:text-sm lg:text-base font-bold text-slate-555 dark:text-slate-400 leading-tight">Dinero sobre la mesa</div>
                     </div>
-                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm">
-                      <div className="text-2xl md:text-3xl lg:text-4xl font-black text-duo-green">#{selectedMission.position?.toFixed(0)}</div>
-                      <div className="text-xs md:text-sm lg:text-base font-bold text-slate-500 dark:text-slate-400">Posición</div>
+                    <div className="bg-white dark:bg-slate-800 rounded-2xl p-2 md:p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm min-w-0">
+                      <div className="text-xl md:text-3xl lg:text-4xl font-black text-duo-green">#{selectedMission.position?.toFixed(0)}</div>
+                      <div className="text-[10px] md:text-sm lg:text-base font-bold text-slate-500 dark:text-slate-400 leading-tight">Posición</div>
                     </div>
                   </div>
 
@@ -1309,8 +1311,8 @@ export default function Home() {
                   </div>
 
                   {/* Mission Input */}
-                  <div className="card-3d bg-white dark:bg-slate-800 space-y-6 p-6 md:p-8">
-                    <p className="font-bold text-slate-650 dark:text-slate-300 text-base md:text-lg lg:text-xl">
+                  <div className="card-3d bg-white dark:bg-slate-800 space-y-6 p-4 md:p-8 min-w-0 w-full overflow-hidden">
+                    <p className="font-bold text-slate-650 dark:text-slate-300 text-base md:text-lg lg:text-xl break-words">
                       {selectedMission.type === 'H1' && <>Hacé el cambio en tu web, después <span className="text-duo-green">copiá el texto del H1</span> que escribiste en <span className="text-duo-blue break-all">{selectedMission.pagePath === '/' ? 'tu página de inicio' : selectedMission.pagePath}</span> y pegalo acá <span className="text-slate-400 text-sm font-semibold">(el texto, no la URL)</span>:</>}
                       {selectedMission.type === 'META' && <>Actualizá la <span className="text-duo-yellow">Meta Descripción</span> en tu sitio, después <span className="text-duo-yellow">copiá el texto</span> que pusiste y pegalo acá <span className="text-slate-400 text-sm font-semibold">(el texto, no la URL)</span>:</>}
                       {selectedMission.type === 'ALT' && <>Agregá el texto <span className="text-duo-blue">ALT</span> a una imagen en <span className="text-duo-blue break-all">{selectedMission.pagePath === '/' ? 'tu página de inicio' : selectedMission.pagePath}</span>, después <span className="text-duo-blue">copiá ese mismo texto</span> y pegalo acá <span className="text-slate-400 text-sm font-semibold">(el texto, no la URL)</span>:</>}
@@ -1325,7 +1327,7 @@ export default function Home() {
                       }
                       value={h1Value}
                       onChange={(e) => setH1Value(e.target.value)}
-                      className="w-full p-5 text-xl md:text-2xl border-2 border-slate-200 dark:border-slate-600 rounded-xl focus:border-duo-green outline-none font-black text-slate-800 dark:text-slate-100 dark:bg-slate-700"
+                      className="w-full max-w-full p-4 md:p-5 text-base md:text-xl border-2 border-slate-200 dark:border-slate-600 rounded-xl focus:border-duo-green outline-none font-black text-slate-800 dark:text-slate-100 dark:bg-slate-700"
                     />
                     <p className="text-sm lg:text-base text-slate-500 dark:text-slate-400 font-bold">
                       {h1Value.length} / {selectedMission.type === 'META' ? '160' : '70'} caracteres
