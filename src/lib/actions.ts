@@ -158,7 +158,7 @@ async function callGeminiREST(apiKey: string, promptText: string): Promise<strin
             contents: [{ role: "user", parts: [{ text: promptText }] }],
             generationConfig: { responseMimeType: "application/json" }
           }),
-          signal: AbortSignal.timeout(15000)
+          signal: AbortSignal.timeout(10000)
         });
 
         if (response.status === 429 || response.status === 503) {
@@ -1301,9 +1301,9 @@ export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
     }
   }
 
-  // Hard timeout: never hang more than 25 seconds on Vercel
+  // Hard timeout: never hang more than 20 seconds on Vercel
   const timeoutPromise = new Promise<{ success: false; error: string }>((resolve) =>
-    setTimeout(() => resolve({ success: false, error: "El análisis tardó demasiado. Intentá de nuevo en unos segundos." }), 25000)
+    setTimeout(() => resolve({ success: false, error: "El análisis tardó demasiado. Intentá de nuevo en unos segundos." }), 20000)
   );
 
   return Promise.race([_getQuickWinsCore(cleanSiteUrl, cleanGoldKeyword), timeoutPromise]);
@@ -2324,9 +2324,9 @@ export async function getAeoOpportunities(siteUrl: string, goldKeyword?: string,
       cleanGoldKeyword = kwSanit.sanitized;
     }
   }
-  // Hard timeout: never hang more than 25 seconds
+  // Hard timeout: never hang more than 20 seconds
   const timeoutPromise = new Promise<{ success: false; error: string }>((resolve) =>
-    setTimeout(() => resolve({ success: false, error: "El análisis AEO tardó demasiado. Intentá de nuevo." }), 25000)
+    setTimeout(() => resolve({ success: false, error: "El análisis AEO tardó demasiado. Intentá de nuevo." }), 20000)
   );
 
   return Promise.race([_getAeoCore(cleanSiteUrl, cleanGoldKeyword, manualUrl), timeoutPromise]);

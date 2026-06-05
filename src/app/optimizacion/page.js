@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-
 import { useRouter } from "next/navigation";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
@@ -11,6 +10,47 @@ import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissi
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
+
+const CLIENT_FETCH_TIMEOUT_MS = 28000;
+
+/** Evita que la UI quede en "cargando" si la server action no responde (común en móvil/Vercel). */
+function callWithTimeout(promise, label = "La solicitud") {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      setTimeout(
+        () => reject(new Error(`${label} tardó demasiado. Tocá Reintentar.`)),
+        CLIENT_FETCH_TIMEOUT_MS
+      );
+    }),
+  ]);
+}
+
+function readQuickWinsCache(siteUrl) {
+  try {
+    const savedUrl = localStorage.getItem("seojump_quick_wins_url");
+    if (savedUrl && siteUrl && savedUrl !== siteUrl) return null;
+    const saved = localStorage.getItem("seojump_quick_wins");
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
+function readAeoCache(siteUrl) {
+  try {
+    const savedUrl = localStorage.getItem("seojump_aeo_opportunities_url");
+    if (savedUrl && siteUrl && savedUrl !== siteUrl) return null;
+    const saved = localStorage.getItem("seojump_aeo_opportunities");
+    if (!saved) return null;
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Extrae el prefijo "tipo-pagePath" de un mission ID, ignorando el sufijo de keyword.
@@ -705,75 +745,107 @@ export default function Optimizacion() {
   // Eliminamos la protección global para permitir el acceso a Quick Wins (Gancho inicial)
   // Las misiones de Fase 3 seguirán bloqueadas visualmente en la pestaña correspondiente.
 
+  const quickWinsFetchRef = useRef(false);
+
+  // Red de seguridad: nunca dejar el spinner colgado más de 30s
+  useEffect(() => {
+    if (!quickWinsLoading) return;
+    const timer = setTimeout(() => {
+      setQuickWinsLoading(false);
+      setHasFetchedQuickWins(true);
+      quickWinsFetchRef.current = false;
+      setQuickWinsError("El análisis tardó demasiado. Tocá Reintentar.");
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [quickWinsLoading]);
+
+  useEffect(() => {
+    if (!aeoLoading) return;
+    const timer = setTimeout(() => {
+      setAeoLoading(false);
+      setHasFetchedAeo(true);
+      setAeoError("El análisis AEO tardó demasiado. Tocá Reintentar.");
+    }, 30000);
+    return () => clearTimeout(timer);
+  }, [aeoLoading]);
+
   // Load Quick Wins when siteUrl is available
   useEffect(() => {
-    if (siteUrl && quickWins.length === 0 && !quickWinsLoading && !hasFetchedQuickWins) {
-      const saved = localStorage.getItem("seojump_quick_wins");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          if (parsed && parsed.length > 0) {
-            setQuickWins(parsed);
-            return;
-          }
-        } catch(e) {}
-      }
-      setQuickWinsLoading(true);
-      getQuickWins(siteUrl, goldKeyword || undefined)
-        .then(res => {
-          if (res.success && res.quickWins) {
-            setQuickWins(res.quickWins);
-            setIsQuickWinsMock(!!res.isMockData);
-            localStorage.setItem("seojump_quick_wins", JSON.stringify(res.quickWins));
-          } else {
-            setQuickWinsError(res.error || "No se pudieron obtener oportunidades rápidas.");
-          }
-        })
-        .catch(err => {
-          setQuickWinsError("Error de conexión al cargar oportunidades rápidas.");
-        })
-        .finally(() => {
-          setQuickWinsLoading(false);
-          setHasFetchedQuickWins(true);
-        });
+    if (!siteUrl || quickWinsLoading || hasFetchedQuickWins || quickWinsFetchRef.current) return;
+
+    const cached = readQuickWinsCache(siteUrl);
+    if (cached && cached.length > 0) {
+      setQuickWins(cached);
+      setHasFetchedQuickWins(true);
+      return;
     }
-  }, [siteUrl, quickWins.length, quickWinsLoading, hasFetchedQuickWins, goldKeyword]);
+
+    quickWinsFetchRef.current = true;
+    setQuickWinsLoading(true);
+    setQuickWinsError(null);
+
+    callWithTimeout(getQuickWins(siteUrl, goldKeyword || undefined), "El análisis de oportunidades")
+      .then(res => {
+        if (res.success && Array.isArray(res.quickWins)) {
+          setQuickWins(res.quickWins);
+          setIsQuickWinsMock(!!res.isMockData);
+          localStorage.setItem("seojump_quick_wins", JSON.stringify(res.quickWins));
+          localStorage.setItem("seojump_quick_wins_url", siteUrl);
+        } else {
+          setQuickWinsError(res.error || "No se pudieron obtener oportunidades rápidas.");
+        }
+      })
+      .catch(err => {
+        setQuickWinsError(err?.message || "Error de conexión al cargar oportunidades rápidas.");
+      })
+      .finally(() => {
+        setQuickWinsLoading(false);
+        setHasFetchedQuickWins(true);
+        quickWinsFetchRef.current = false;
+      });
+  }, [siteUrl, quickWinsLoading, hasFetchedQuickWins, goldKeyword]);
 
   // Persist completed Quick Wins
   useEffect(() => {
     localStorage.setItem("seojump_completed_quick_wins", JSON.stringify(Array.from(completedQuickWins)));
   }, [completedQuickWins]);
 
+  const aeoFetchRef = useRef(false);
+
   // Load AEO opportunities when tab is active and siteUrl is available
   useEffect(() => {
-    if (activeTab === 'aeo' && siteUrl && aeoOpportunities.length === 0 && !aeoLoading && !hasFetchedAeo) {
-      const saved = localStorage.getItem('seojump_aeo_opportunities');
-      if (saved) {
-        try { 
-          const parsed = JSON.parse(saved);
-          if (parsed && parsed.length > 0) {
-            setAeoOpportunities(parsed); 
-            return; 
-          }
-        } catch(e) {}
-      }
-      setAeoLoading(true);
-      getAeoOpportunities(siteUrl, goldKeyword || undefined)
-        .then(res => {
-          if (res.success && res.data) {
-            setAeoOpportunities(res.data);
-            localStorage.setItem('seojump_aeo_opportunities', JSON.stringify(res.data));
-          } else {
-            setAeoError(res.error || 'No se pudieron obtener oportunidades AEO.');
-          }
-        })
-        .catch(() => setAeoError('Error de conexión al cargar oportunidades AEO.'))
-        .finally(() => {
-          setAeoLoading(false);
-          setHasFetchedAeo(true);
-        });
+    if (activeTab !== "aeo" || !siteUrl || aeoLoading || hasFetchedAeo || aeoFetchRef.current) return;
+
+    const cached = readAeoCache(siteUrl);
+    if (cached && cached.length > 0) {
+      setAeoOpportunities(cached);
+      setHasFetchedAeo(true);
+      return;
     }
-  }, [activeTab, siteUrl, aeoOpportunities.length, aeoLoading, hasFetchedAeo, goldKeyword]);
+
+    aeoFetchRef.current = true;
+    setAeoLoading(true);
+    setAeoError(null);
+
+    callWithTimeout(getAeoOpportunities(siteUrl, goldKeyword || undefined), "El análisis AEO")
+      .then(res => {
+        if (res.success && Array.isArray(res.data)) {
+          setAeoOpportunities(res.data);
+          localStorage.setItem("seojump_aeo_opportunities", JSON.stringify(res.data));
+          localStorage.setItem("seojump_aeo_opportunities_url", siteUrl);
+        } else {
+          setAeoError(res.error || "No se pudieron obtener oportunidades AEO.");
+        }
+      })
+      .catch(err => {
+        setAeoError(err?.message || "Error de conexión al cargar oportunidades AEO.");
+      })
+      .finally(() => {
+        setAeoLoading(false);
+        setHasFetchedAeo(true);
+        aeoFetchRef.current = false;
+      });
+  }, [activeTab, siteUrl, aeoLoading, hasFetchedAeo, goldKeyword]);
 
   // Persist completed AEO
   useEffect(() => {
@@ -925,20 +997,28 @@ export default function Optimizacion() {
     setAeoError(null);
     setAeoLoading(true);
     setHasFetchedAeo(false);
-    localStorage.removeItem('seojump_aeo_opportunities');
-    getAeoOpportunities(siteUrl, goldKeyword || undefined, customUrl || undefined)
+    aeoFetchRef.current = true;
+    localStorage.removeItem("seojump_aeo_opportunities");
+    localStorage.removeItem("seojump_aeo_opportunities_url");
+
+    callWithTimeout(
+      getAeoOpportunities(siteUrl, goldKeyword || undefined, customUrl || undefined),
+      "El análisis AEO"
+    )
       .then(res => {
-        if (res.success && res.data) {
+        if (res.success && Array.isArray(res.data)) {
           setAeoOpportunities(res.data);
-          localStorage.setItem('seojump_aeo_opportunities', JSON.stringify(res.data));
+          localStorage.setItem("seojump_aeo_opportunities", JSON.stringify(res.data));
+          localStorage.setItem("seojump_aeo_opportunities_url", siteUrl);
         } else {
-          setAeoError(res.error || 'No se pudieron obtener oportunidades AEO.');
+          setAeoError(res.error || "No se pudieron obtener oportunidades AEO.");
         }
       })
-      .catch(() => setAeoError('Error de conexión.'))
+      .catch(err => setAeoError(err?.message || "Error de conexión."))
       .finally(() => {
         setAeoLoading(false);
         setHasFetchedAeo(true);
+        aeoFetchRef.current = false;
       });
   };
 
@@ -1128,7 +1208,14 @@ export default function Optimizacion() {
                       <div className="text-6xl">⚠️</div>
                       <p className="text-red-400 font-bold text-lg">{quickWinsError}</p>
                       <button 
-                        onClick={() => { setQuickWinsError(null); setQuickWins([]); setHasFetchedQuickWins(false); }} 
+                        onClick={() => {
+                          setQuickWinsError(null);
+                          setQuickWins([]);
+                          setHasFetchedQuickWins(false);
+                          quickWinsFetchRef.current = false;
+                          localStorage.removeItem("seojump_quick_wins");
+                          localStorage.removeItem("seojump_quick_wins_url");
+                        }} 
                         className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4"
                       >
                         REINTENTAR
@@ -1332,7 +1419,19 @@ export default function Optimizacion() {
                     <div className="text-center py-12 card-3d space-y-4">
                       <div className="text-6xl">⚠️</div>
                       <p className="text-red-400 font-bold text-lg">{aeoError}</p>
-                      <button onClick={() => { setAeoError(null); setAeoOpportunities([]); setHasFetchedAeo(false); }} className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4">REINTENTAR</button>
+                      <button
+                        onClick={() => {
+                          setAeoError(null);
+                          setAeoOpportunities([]);
+                          setHasFetchedAeo(false);
+                          aeoFetchRef.current = false;
+                          localStorage.removeItem("seojump_aeo_opportunities");
+                          localStorage.removeItem("seojump_aeo_opportunities_url");
+                        }}
+                        className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4"
+                      >
+                        REINTENTAR
+                      </button>
                     </div>
                   ) : aeoOpportunities.length > 0 ? (
                     <div className="space-y-6">
