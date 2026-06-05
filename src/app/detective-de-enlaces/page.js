@@ -480,7 +480,7 @@ export default function DetectiveDeEnlaces() {
                     <span className="text-slate-400">PROGRESO</span>
                     <span className="text-emerald-400">{getFixedCount()}/{getTotalIssues()} resueltos</span>
                   </div>
-                  <div className="w-full h-4 bg-slate-200 dark:bg-slate-900 rounded-full overflow-hidden border border-slate-300 dark:border-slate-700">
+                  <div className="w-full h-4 bg-slate-900 rounded-full overflow-hidden border border-slate-700">
                     <div
                       className="h-full bg-gradient-to-r from-emerald-500 to-teal-500 transition-all duration-700"
                       style={{ width: `${getTotalIssues() > 0 ? (getFixedCount() / getTotalIssues()) * 100 : 0}%` }}
@@ -531,7 +531,7 @@ export default function DetectiveDeEnlaces() {
               <p className="text-lg md:text-xl font-bold leading-relaxed max-w-xl mx-auto text-slate-950">
                 ¡Felicitaciones! Has completado todas las fases. Tu sitio web ahora tiene la estructura de los profesionales del marketing digital.
               </p>
-              <div className="bg-slate-100 dark:bg-slate-900/10 border border-slate-200 dark:border-slate-900/20 rounded-2xl p-4 max-w-md mx-auto">
+              <div className="bg-slate-900/10 border border-slate-900/20 rounded-2xl p-4 max-w-md mx-auto">
                 <p className="text-sm font-black uppercase tracking-wider mb-1 text-slate-800">
                   Ciclos Completados (Prestigio)
                 </p>
@@ -554,7 +554,7 @@ export default function DetectiveDeEnlaces() {
 
           /* ═══ STATE: IDLE (No scan yet) ═══ */
           ) : scanState === "idle" ? (
-            <div className="w-full bg-white dark:bg-slate-900 rounded-3xl border-2 border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden relative p-8 md:p-12 space-y-8">
+            <div className="w-full bg-slate-900 rounded-3xl border-2 border-slate-700 shadow-2xl overflow-hidden relative p-8 md:p-12 space-y-8">
               {/* Glow */}
               <div className="absolute top-0 right-0 w-96 h-96 bg-purple-700 opacity-10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
               <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-700 opacity-10 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none" />
@@ -603,7 +603,7 @@ export default function DetectiveDeEnlaces() {
 
           /* ═══ STATE: SCANNING ═══ */
           ) : scanState === "scanning" ? (
-            <div className="text-center py-20 px-6 card-3d bg-white dark:bg-slate-900 border-2 border-purple-500/30 rounded-3xl shadow-[0_0_40px_rgba(168,85,247,0.15)] relative overflow-hidden">
+            <div className="text-center py-20 px-6 card-3d bg-slate-900 border-2 border-purple-500/30 rounded-3xl shadow-[0_0_40px_rgba(168,85,247,0.15)] relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent animate-pulse" />
               <div className="flex justify-center mb-6">
                 <svg className="animate-spin h-16 w-16 text-purple-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -668,7 +668,7 @@ export default function DetectiveDeEnlaces() {
                             <span className="text-3xl">{completed ? '✅' : '🔗'}</span>
                             <h3 className="text-lg font-black text-white">Crear puente de tráfico</h3>
                           </div>
-                          <div className="bg-slate-100 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-xl p-4">
+                          <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
                             <p className="text-slate-300 font-bold text-sm leading-relaxed">{item.reason}</p>
                           </div>
                           <div className="space-y-2 text-xs font-mono">
@@ -723,7 +723,7 @@ export default function DetectiveDeEnlaces() {
                             <span className="text-3xl">{completed ? '✅' : '💀'}</span>
                             <h3 className="text-lg font-black text-white">Fuga de clientes detectada</h3>
                           </div>
-                          <div className="bg-slate-100 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-xl p-4">
+                          <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
                             <p className="text-slate-300 font-bold text-sm leading-relaxed">{item.suggestion}</p>
                           </div>
                           <div className="space-y-2 text-xs font-mono">
@@ -776,7 +776,7 @@ export default function DetectiveDeEnlaces() {
                             <span className="text-3xl">{completed ? '✅' : '✍️'}</span>
                             <h3 className="text-lg font-black text-white">Texto de enlace mejorable</h3>
                           </div>
-                          <div className="bg-slate-100 dark:bg-slate-900/50 border border-slate-300 dark:border-slate-700 rounded-xl p-4">
+                          <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
                             <p className="text-slate-300 font-bold text-sm leading-relaxed">{item.reason}</p>
                           </div>
                           <div className="text-xs font-mono text-slate-500">
@@ -812,7 +812,7 @@ export default function DetectiveDeEnlaces() {
               )}
 
               {/* ═══ INDEXATION STEP (Final) ═══ */}
-              <div className="w-full bg-white dark:bg-slate-900 rounded-3xl border-2 border-slate-200 dark:border-slate-700 p-6 md:p-8 space-y-6 mt-8">
+              <div className="w-full bg-slate-900 rounded-3xl border-2 border-slate-700 p-6 md:p-8 space-y-6 mt-8">
                 <div className="flex flex-col md:flex-row items-center gap-4 border-b border-slate-800 pb-6 justify-between">
                   <div>
                     <h2 className="text-xl md:text-2xl font-black text-white flex items-center gap-3">
@@ -846,7 +846,7 @@ export default function DetectiveDeEnlaces() {
                         <label className="flex items-start gap-4 cursor-pointer select-none group">
                           <input type="checkbox" checked={h1Checked}
                             onChange={(e) => { playClick(); setH1Checked(e.target.checked); }}
-                            className="w-6 h-6 rounded-md border-2 border-slate-300 dark:border-slate-650 bg-white dark:bg-slate-900 checked:bg-green-500 checked:border-green-600 accent-green-500 mt-0.5"
+                            className="w-6 h-6 rounded-md border-2 border-slate-650 bg-slate-900 checked:bg-green-500 checked:border-green-600 accent-green-500 mt-0.5"
                           />
                           <span className="text-base font-bold text-slate-400 group-hover:text-white transition-colors leading-snug">
                             Ya actualicé los títulos y textos de mis páginas.
@@ -855,7 +855,7 @@ export default function DetectiveDeEnlaces() {
                         <label className="flex items-start gap-4 cursor-pointer select-none group">
                           <input type="checkbox" checked={keywordChecked}
                             onChange={(e) => { playClick(); setKeywordChecked(e.target.checked); }}
-                            className="w-6 h-6 rounded-md border-2 border-slate-300 dark:border-slate-650 bg-white dark:bg-slate-900 checked:bg-green-500 checked:border-green-600 accent-green-500 mt-0.5"
+                            className="w-6 h-6 rounded-md border-2 border-slate-650 bg-slate-900 checked:bg-green-500 checked:border-green-600 accent-green-500 mt-0.5"
                           />
                           <span className="text-base font-bold text-slate-400 group-hover:text-white transition-colors leading-snug">
                             Ya arreglé los enlaces rotos o genéricos que detectó el Detective.
@@ -864,7 +864,7 @@ export default function DetectiveDeEnlaces() {
                         <label className="flex items-start gap-4 cursor-pointer select-none group">
                           <input type="checkbox" checked={savedChecked}
                             onChange={(e) => { playClick(); setSavedChecked(e.target.checked); }}
-                            className="w-6 h-6 rounded-md border-2 border-slate-300 dark:border-slate-650 bg-white dark:bg-slate-900 checked:bg-green-500 checked:border-green-600 accent-green-500 mt-0.5"
+                            className="w-6 h-6 rounded-md border-2 border-slate-650 bg-slate-900 checked:bg-green-500 checked:border-green-600 accent-green-500 mt-0.5"
                           />
                           <span className="text-base font-bold text-slate-400 group-hover:text-white transition-colors leading-snug">
                             Guardé y publiqué todos los cambios en mi plataforma.

@@ -502,7 +502,7 @@ export default function BuscadorDeOro() {
 
           {/* Results as Actionable Missions */}
           {loading ? (
-            <div className="text-center py-20 px-6 card-3d bg-white dark:bg-slate-900 border-2 border-amber-500/30 rounded-3xl shadow-[0_0_40px_rgba(251,191,36,0.15)] relative overflow-hidden">
+            <div className="text-center py-20 px-6 card-3d bg-slate-900 border-2 border-amber-500/30 rounded-3xl shadow-[0_0_40px_rgba(251,191,36,0.15)] relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500 to-transparent animate-infinite duration-2000" />
               <div className="flex justify-center mb-6">
                 <svg className="animate-spin h-16 w-16 text-amber-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -523,7 +523,7 @@ export default function BuscadorDeOro() {
 
               {/* Todas descartadas — mensaje del Búho */}
               {suggestions.every((_, i) => discardedSuggestions.has(i)) ? (
-                <div className="text-center py-14 px-6 bg-white dark:bg-slate-900 rounded-3xl border-2 border-slate-700 shadow-xl animate-in fade-in duration-300">
+                <div className="text-center py-14 px-6 bg-slate-900 rounded-3xl border-2 border-slate-700 shadow-xl animate-in fade-in duration-300">
                   <div className="flex justify-center mb-5"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-20 h-20 object-contain animate-bounce" /></div>
                   <h3 className="text-2xl md:text-3xl font-black text-amber-400 mb-3">¡Pista despejada!</h3>
                   <p className="text-base md:text-lg font-bold text-slate-300 leading-relaxed max-w-sm mx-auto">
@@ -605,7 +605,7 @@ export default function BuscadorDeOro() {
                               type="text"
                               defaultValue={siteUrl}
                               id={`url-input-${index}`}
-                              className="w-full p-4 text-base md:text-lg border-2 border-slate-700 rounded-xl focus:border-cyan-500 outline-none font-bold text-white bg-white dark:bg-slate-900 transition-colors placeholder:text-slate-500"
+                              className="w-full p-4 text-base md:text-lg border-2 border-slate-700 rounded-xl focus:border-cyan-500 outline-none font-bold text-white bg-slate-900 transition-colors placeholder:text-slate-500"
                               placeholder="Ej: https://miweb.com/blog/nota"
                             />
                             <button
@@ -655,7 +655,7 @@ export default function BuscadorDeOro() {
                  </div>
                ) : missions.length > 0 ? (
                   <div className="w-full animate-in fade-in slide-in-from-bottom duration-500">
-                    <div className="flex items-center gap-4 mb-6 bg-white dark:bg-slate-900 p-4 md:p-6 rounded-2xl border-2 border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.15)] relative overflow-hidden">
+                    <div className="flex items-center gap-4 mb-6 bg-slate-900 p-4 md:p-6 rounded-2xl border-2 border-purple-500/40 shadow-[0_0_20px_rgba(168,85,247,0.15)] relative overflow-hidden">
                       <div className="absolute inset-0 bg-gradient-to-r from-purple-900/20 to-transparent pointer-events-none"></div>
                       <div className="text-4xl animate-bounce relative z-10">🤖</div>
                       <div className="relative z-10">
@@ -871,7 +871,7 @@ export default function BuscadorDeOro() {
                 </button>
                 
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out mt-2 ${showOwl ? 'max-h-96 opacity-100' : 'max-h-0 opacity-0'}`}>
-                  <div className="bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-700 shadow-xl flex gap-3 items-start relative">
+                  <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 shadow-xl flex gap-3 items-start relative">
                      <img src="/images/logo-owl.png" alt="SEO Jump" className="w-10 h-10 object-contain animate-bounce flex-shrink-0 drop-shadow-lg z-10" />
                      <div className="flex-1">
                         <div className="bg-slate-800 text-slate-200 p-4 rounded-xl rounded-tl-none font-bold text-xs leading-relaxed shadow-lg border border-slate-700 relative">
@@ -905,7 +905,7 @@ export default function BuscadorDeOro() {
 
       {/* Premium Limit Modal */}
       {showPremiumModal && (
-        <div className="fixed inset-0 bg-white dark:bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
           <div className="bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-200 dark:border-slate-700 shadow-2xl p-6 md:p-8 max-w-md w-full relative space-y-6 text-center animate-in zoom-in-95 duration-300">
             <button
               onClick={() => {

@@ -29,7 +29,7 @@ export default function RootLayout({ children }) {
           }}
         />
       </head>
-      <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 dark:bg-[#07070d] dark:text-slate-100 transition-colors duration-300">
+      <body className="min-h-full flex flex-col bg-[#07070d] text-slate-100 transition-colors duration-300">
         <AuthProvider>
           {children}
         </AuthProvider>
