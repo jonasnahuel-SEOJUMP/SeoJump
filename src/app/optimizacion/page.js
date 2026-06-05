@@ -278,7 +278,7 @@ function SmartWpLocation({ pageUrl, playClick }) {
       {open && (
         <div className="mt-2 bg-slate-800/80 border border-slate-700 rounded-xl p-3 space-y-3">
           {/* Cartel inteligente de ubicación */}
-          <div className="flex items-center gap-2 bg-slate-900/60 rounded-lg px-3 py-2 border border-slate-600">
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-900/60 rounded-lg px-3 py-2 border border-slate-300 dark:border-slate-600">
             <span className="text-lg flex-shrink-0">{icon}</span>
             <div>
               <p className={`text-xs font-black uppercase tracking-wide ${color}`}>{label}</p>
@@ -996,15 +996,15 @@ export default function Optimizacion() {
             <div className="flex justify-center mb-2"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-14 h-14 object-contain animate-bounce" /></div>
             <h3 className="text-xl font-black text-yellow-400 text-center mb-4">Panel de Boxes</h3>
             <div className="space-y-3">
-              <div className="bg-slate-900 rounded-xl p-3 border-2 border-slate-700">
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-3 border-2 border-slate-200 dark:border-slate-700">
                 <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Oportunidades de Venta</p>
                 <p className="text-2xl font-black text-duo-blue">{missions.reduce((a,m) => a+(m.clicks||0), 0).toLocaleString()}+</p>
               </div>
-              <div className="bg-slate-900 rounded-xl p-3 border-2 border-slate-700">
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-3 border-2 border-slate-200 dark:border-slate-700">
                 <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Dinero sobre la mesa</p>
                 <p className="text-2xl font-black text-duo-yellow">{missions.reduce((a,m) => a+(m.impressions||0), 0).toLocaleString()}</p>
               </div>
-              <div className="bg-slate-900 rounded-xl p-3 border-2 border-slate-700">
+              <div className="bg-slate-50 dark:bg-slate-900 rounded-xl p-3 border-2 border-slate-200 dark:border-slate-700">
                 <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Keywords Ganadoras</p>
                 <p className="text-2xl font-black text-orange-500">{xp} XP</p>
               </div>
@@ -1187,7 +1187,7 @@ export default function Optimizacion() {
                                 🚀 Subir posición para: <span className="text-amber-400 font-black">«{qw.keyword}»</span>
                               </h3>
                               
-                              <div className="bg-slate-900/60 rounded-2xl p-5 border border-slate-700/50 space-y-3">
+                              <div className="bg-slate-100 dark:bg-slate-900/60 rounded-2xl p-5 border border-slate-300 dark:border-slate-700/50 space-y-3">
                                 <p className="text-slate-200 text-base md:text-lg leading-relaxed">
                                   <span className="text-yellow-400 font-black">El Insight:</span> Estás en posición <strong className="text-white font-bold">{qw.position?.toFixed(0)}</strong>. {qw.explanation} Cambiá el título de tu página para captar el clic.
                                 </p>
@@ -1286,7 +1286,7 @@ export default function Optimizacion() {
                         value={manualAeoUrl}
                         onChange={e => setManualAeoUrl(e.target.value)}
                         placeholder="https://tusitio.com/pagina-a-analizar"
-                        className="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-sm focus:border-purple-500 focus:outline-none transition-colors"
+                        className="w-full px-4 py-3 rounded-xl bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 text-slate-800 dark:text-white font-bold text-sm focus:border-purple-500 focus:outline-none transition-colors"
                       />
                     </div>
                     <button
@@ -1324,7 +1324,7 @@ export default function Optimizacion() {
                         if (!isUnlocked) {
                           return (
                             <div key={index} onClick={() => { playClick(); setShowPaywallModal(true); }}
-                              className="card-3d relative overflow-hidden p-6 md:p-8 flex flex-col gap-4 transition-all duration-300 border-dashed border-2 border-slate-700 bg-slate-900/60 hover:border-purple-500/50 cursor-pointer group">
+                              className="card-3d relative overflow-hidden p-6 md:p-8 flex flex-col gap-4 transition-all duration-300 border-dashed border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900/60 hover:border-purple-500/50 cursor-pointer group">
                               <div className="absolute inset-0 backdrop-blur-[2px] bg-slate-950/10 pointer-events-none rounded-3xl" />
                               <div className="relative z-10 flex flex-col md:flex-row items-center gap-4 opacity-70 group-hover:opacity-100 transition-opacity">
                                 <div className="w-16 h-16 rounded-2xl flex-shrink-0 flex items-center justify-center bg-slate-800 border-2 border-slate-700 text-3xl font-black text-slate-400 group-hover:text-purple-500 group-hover:bg-purple-500/10 transition-colors shadow-inner">🔒</div>
@@ -1362,7 +1362,7 @@ export default function Optimizacion() {
                               </div>
 
                               {/* Current text */}
-                              <div className="bg-slate-900/60 border border-slate-700/50 rounded-2xl p-4">
+                              <div className="bg-slate-100 dark:bg-slate-900/60 border border-slate-300 dark:border-slate-700/50 rounded-2xl p-4">
                                 <p className="text-xs font-black text-slate-500 uppercase tracking-wider mb-2">📝 Texto actual en tu web:</p>
                                 <p className="text-sm font-bold text-slate-400 italic leading-relaxed">"{opp.current_text_snippet}"</p>
                               </div>
@@ -1623,7 +1623,7 @@ export default function Optimizacion() {
                   <span className="text-3xl">{showOwl ? '−' : '+'}</span>
                 </button>
                 <div className={`overflow-hidden transition-all duration-300 ease-in-out mt-2 ${showOwl ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0'}`}>
-                  <div className="bg-slate-900 p-6 rounded-2xl border-2 border-slate-700 shadow-xl flex gap-4 items-start">
+                  <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border-2 border-slate-200 dark:border-slate-700 shadow-xl flex gap-4 items-start">
                     <img src="/images/logo-owl.png" alt="SEO Jump" className="w-16 h-16 md:w-20 md:h-20 object-contain animate-bounce flex-shrink-0" />
                     <div className="flex-1">
                       <div className="bg-slate-800 text-slate-200 p-6 rounded-2xl rounded-tl-none font-bold text-base md:text-lg lg:text-xl leading-relaxed shadow-lg border border-slate-600 relative">
@@ -1746,7 +1746,7 @@ export default function Optimizacion() {
 
       {/* Copy Toast */}
       {copyToast && (
-        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 bg-slate-900 border-2 border-amber-500/60 text-amber-300 font-black rounded-2xl px-6 py-3 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50 flex items-center gap-3 bg-white dark:bg-slate-900 border-2 border-amber-500/60 text-amber-600 dark:text-amber-300 font-black rounded-2xl px-6 py-3 shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
           <span className="text-xl">📋</span>
           <div>
             <p className="text-sm font-black">¡Título copiado!</p>
