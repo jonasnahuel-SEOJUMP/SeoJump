@@ -280,6 +280,7 @@ export default function ContenidoFase2() {
 
   return (
     <div className="flex-1 flex flex-col items-center p-4 md:p-8 overflow-y-auto animate-in slide-in-from-bottom duration-500 w-full max-w-7xl mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka">
+      <div className="fixed inset-0 pointer-events-none bg-glow-sapphire opacity-60 z-[-1]"></div>
       
       {/* Confetti Effect */}
       {showConfetti && (
@@ -317,9 +318,12 @@ export default function ContenidoFase2() {
       />
 
       {/* Main Content */}
-      <div className="w-full text-center space-y-4 max-w-3xl mx-auto mt-4">
-        <h1 className="text-4xl lg:text-5xl font-black text-blue-600 dark:text-blue-400">Fase 2: Estrategia de Contenido ✍️</h1>
-        <p className="text-xl lg:text-2xl font-bold text-slate-655 dark:text-slate-400">
+      <div className="w-full text-center space-y-4 max-w-3xl mx-auto mt-4 relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-blue-500/20 blur-3xl rounded-full pointer-events-none"></div>
+        <h1 className="text-4xl lg:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-blue-300 to-blue-600 drop-shadow-md">
+          Fase 2: Estrategia de Contenido ✍️
+        </h1>
+        <p className="text-xl lg:text-2xl font-bold text-blue-100 drop-shadow-sm">
           Decidí el mejor camino para conquistar Google utilizando tu palabra clave de oro.
         </p>
         <div className="pt-2">

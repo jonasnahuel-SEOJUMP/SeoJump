@@ -101,7 +101,7 @@ export default function Header({
       <nav className="flex flex-wrap md:flex-nowrap gap-2 md:gap-4 w-full mt-2">
         {/* Phase 1 */}
         {activePhase === 1 ? (
-          <div className="flex-1 btn-3d bg-yellow-50 text-duo-yellow font-black text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl border-2 border-duo-yellow border-b-4 cursor-default">
+          <div className="flex-1 btn-3d btn-yellow font-black text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl cursor-default">
             <span className="md:hidden">🔍 F1</span>
             <span className="hidden md:inline">🔍 Fase 1: Búsqueda</span>
           </div>
@@ -109,7 +109,7 @@ export default function Header({
           <Link
             href="/buscador-de-oro"
             onClick={handleLinkClick}
-            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors"
+            className="flex-1 btn-3d phase-idle-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all"
           >
             <span className="md:hidden">🔍 F1</span>
             <span className="hidden md:inline">🔍 Fase 1: Búsqueda</span>
@@ -118,7 +118,7 @@ export default function Header({
 
         {/* Phase 2 */}
         {activePhase === 2 ? (
-          <div className="flex-1 btn-3d bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300 font-black text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl border-2 border-blue-500 border-b-4 cursor-default">
+          <div className="flex-1 btn-3d btn-blue font-black text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl cursor-default">
             <span className="md:hidden">✍️ F2</span>
             <span className="hidden md:inline">✍️ Fase 2: Contenido</span>
           </div>
@@ -126,14 +126,14 @@ export default function Header({
           <Link
             href="/contenido"
             onClick={handleLinkClick}
-            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-blue-500 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors"
+            className="flex-1 btn-3d phase-idle-blue text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all"
           >
             <span className="md:hidden">✍️ F2</span>
             <span className="hidden md:inline">✍️ Fase 2: Contenido</span>
           </Link>
         ) : (
           <div
-            className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
+            className="flex-1 btn-3d btn-white phase-locked text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
             title="🔒 Completá el 70% de la Fase 1 para avanzar"
           >
             <span className="md:hidden">🔒 F2</span>
@@ -143,7 +143,7 @@ export default function Header({
 
         {/* Phase 3 */}
         {activePhase === 3 ? (
-          <div className="flex-1 btn-3d bg-white text-slate-800 dark:bg-slate-800 dark:text-slate-100 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black border-b-4 border-duo-green cursor-default">
+          <div className="flex-1 btn-3d btn-green font-black text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl cursor-default">
             <span className="md:hidden">🛠️ F3</span>
             <span className="hidden md:inline">🛠️ Fase 3: Optimización</span>
           </div>
@@ -151,14 +151,14 @@ export default function Header({
           <Link
             href="/optimizacion"
             onClick={handleLinkClick}
-            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-green text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors"
+            className="flex-1 btn-3d phase-idle-green text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all"
           >
             <span className="md:hidden">🛠️ F3</span>
             <span className="hidden md:inline">🛠️ Fase 3: Optimización</span>
           </Link>
         ) : (
           <div
-            className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
+            className="flex-1 btn-3d btn-white phase-locked text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
             title="🔒 Completá el 70% de la Fase 2 para avanzar"
           >
             <span className="md:hidden">🔒 F3</span>
@@ -168,7 +168,7 @@ export default function Header({
 
         {/* Phase 4 */}
         {activePhase === 4 ? (
-          <div className="flex-1 btn-3d bg-purple-50 dark:bg-purple-950/30 text-purple-700 dark:text-purple-300 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black border-2 border-purple-400 border-b-4 cursor-default">
+          <div className="flex-1 btn-3d btn-purple font-black text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl cursor-default">
             <span className="md:hidden">🕵️‍♂️ F4</span>
             <span className="hidden md:inline">🕵️‍♂️ Fase 4: Detective</span>
           </div>
@@ -176,14 +176,14 @@ export default function Header({
           <Link
             href="/detective-de-enlaces"
             onClick={handleLinkClick}
-            className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-355 hover:text-purple-600 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors"
+            className="flex-1 btn-3d phase-idle-purple text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all"
           >
             <span className="md:hidden">🕵️‍♂️ F4</span>
             <span className="hidden md:inline">🕵️‍♂️ Fase 4: Detective</span>
           </Link>
         ) : (
           <div
-            className="flex-1 btn-3d btn-white text-slate-400 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
+            className="flex-1 btn-3d btn-white phase-locked text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
             title="🔒 Completá el 70% de la Fase 3 para avanzar"
           >
             <span className="md:hidden">🔒 F4</span>

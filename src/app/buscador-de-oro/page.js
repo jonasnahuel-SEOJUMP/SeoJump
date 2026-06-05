@@ -437,6 +437,7 @@ export default function BuscadorDeOro() {
 
   return (
     <div className="flex-1 flex flex-col items-center p-4 md:p-6 overflow-y-auto animate-in slide-in-from-bottom duration-500 w-full max-w-5xl mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative">
+      <div className="fixed inset-0 pointer-events-none bg-glow-amber opacity-60 z-[-1]"></div>
       
       {/* Confetti Effect */}
       {showConfetti && (
@@ -474,12 +475,13 @@ export default function BuscadorDeOro() {
       />
 
       {/* Header y Tipografía Centrados Arriba */}
-      <div className="text-center space-y-2 py-4 mt-2">
-        <img src="/images/logo-owl.png" alt="SEO Jump" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
-        <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
+      <div className="text-center space-y-2 py-4 mt-2 relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 bg-amber-500/20 blur-3xl rounded-full pointer-events-none"></div>
+        <div className="flex justify-center mb-2"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-[0_0_15px_rgba(245,158,11,0.5)]" /></div>
+        <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-amber-300 to-amber-600 drop-shadow-md">
           ¡Atención, Jugador!
         </h1>
-        <p className="text-base md:text-lg font-bold text-slate-600 dark:text-slate-400">
+        <p className="text-lg md:text-2xl font-black text-amber-500 uppercase tracking-widest drop-shadow-sm mt-2">
           Fase 1: Buscador de Oro 👑
         </p>
         <div className="pt-2">

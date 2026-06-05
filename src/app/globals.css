@@ -210,6 +210,156 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom-width: 0 !important;
 }
 
+/* Amatista (Fase 4 — Detective) */
+.btn-purple, .bg-purple-600 {
+  background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%) !important;
+  border-color: #5b21b6 !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4),
+              inset 0 -3px 6px rgba(0, 0, 0, 0.3),
+              0 6px 20px rgba(168, 85, 247, 0.35),
+              0 0 0 1px rgba(168, 85, 247, 0.2) !important;
+  color: #ffffff !important;
+}
+.btn-purple:hover, .bg-purple-600:hover {
+  background: linear-gradient(135deg, #c084fc 0%, #a855f7 100%) !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.5),
+              inset 0 -3px 6px rgba(0, 0, 0, 0.3),
+              0 8px 25px rgba(168, 85, 247, 0.55),
+              0 0 0 2px rgba(192, 132, 252, 0.3) !important;
+  transform: scale(1.02) translateY(-1px);
+}
+.btn-purple:active, .bg-purple-600:active {
+  background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%) !important;
+  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.5),
+              0 2px 5px rgba(168, 85, 247, 0.2) !important;
+  transform: translateY(4px);
+  border-bottom-width: 0 !important;
+}
+
+/* Cian (Academia SEO) */
+.btn-cyan {
+  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%) !important;
+  border-color: #155e75 !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.4),
+              inset 0 -3px 6px rgba(0, 0, 0, 0.3),
+              0 6px 20px rgba(6, 182, 212, 0.35),
+              0 0 0 1px rgba(6, 182, 212, 0.2) !important;
+  color: #ffffff !important;
+}
+.btn-cyan:hover {
+  background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%) !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.5),
+              inset 0 -3px 6px rgba(0, 0, 0, 0.3),
+              0 8px 25px rgba(6, 182, 212, 0.55),
+              0 0 0 2px rgba(34, 211, 238, 0.3) !important;
+  transform: scale(1.02) translateY(-1px);
+}
+.btn-cyan:active {
+  background: linear-gradient(135deg, #0891b2 0%, #0e7490 100%) !important;
+  box-shadow: inset 0 3px 5px rgba(0, 0, 0, 0.5),
+              0 2px 5px rgba(6, 182, 212, 0.2) !important;
+  transform: translateY(4px);
+  border-bottom-width: 0 !important;
+}
+
+/* Fases — botones inactivos (joya tenue, coherente con el dashboard) */
+.phase-idle-yellow {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.32) 0%, rgba(180, 83, 9, 0.22) 100%) !important;
+  border-color: #92400e !important;
+  color: #fde68a !important;
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.25),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.35),
+              0 4px 14px rgba(245, 158, 11, 0.18) !important;
+}
+.phase-idle-yellow:hover {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.5) 0%, rgba(217, 119, 6, 0.38) 100%) !important;
+  border-color: #b45309 !important;
+  color: #fffbeb !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.35),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+              0 6px 20px rgba(245, 158, 11, 0.35) !important;
+  transform: scale(1.02) translateY(-1px);
+}
+
+.phase-idle-blue {
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.32) 0%, rgba(29, 78, 216, 0.22) 100%) !important;
+  border-color: #1e3a8a !important;
+  color: #bfdbfe !important;
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.25),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.35),
+              0 4px 14px rgba(59, 130, 246, 0.18) !important;
+}
+.phase-idle-blue:hover {
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.5) 0%, rgba(37, 99, 235, 0.38) 100%) !important;
+  border-color: #1d4ed8 !important;
+  color: #eff6ff !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.35),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+              0 6px 20px rgba(59, 130, 246, 0.35) !important;
+  transform: scale(1.02) translateY(-1px);
+}
+
+.phase-idle-green {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.32) 0%, rgba(4, 120, 87, 0.22) 100%) !important;
+  border-color: #065f46 !important;
+  color: #a7f3d0 !important;
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.25),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.35),
+              0 4px 14px rgba(16, 185, 129, 0.18) !important;
+}
+.phase-idle-green:hover {
+  background: linear-gradient(135deg, rgba(52, 211, 153, 0.5) 0%, rgba(5, 150, 105, 0.38) 100%) !important;
+  border-color: #047857 !important;
+  color: #ecfdf5 !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.35),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+              0 6px 20px rgba(16, 185, 129, 0.35) !important;
+  transform: scale(1.02) translateY(-1px);
+}
+
+.phase-idle-purple {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.32) 0%, rgba(109, 40, 217, 0.22) 100%) !important;
+  border-color: #5b21b6 !important;
+  color: #e9d5ff !important;
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.25),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.35),
+              0 4px 14px rgba(168, 85, 247, 0.18) !important;
+}
+.phase-idle-purple:hover {
+  background: linear-gradient(135deg, rgba(192, 132, 252, 0.5) 0%, rgba(124, 58, 237, 0.38) 100%) !important;
+  border-color: #6d28d9 !important;
+  color: #faf5ff !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.35),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+              0 6px 20px rgba(168, 85, 247, 0.35) !important;
+  transform: scale(1.02) translateY(-1px);
+}
+
+.phase-idle-cyan {
+  background: linear-gradient(135deg, rgba(6, 182, 212, 0.32) 0%, rgba(8, 145, 178, 0.22) 100%) !important;
+  border-color: #155e75 !important;
+  color: #a5f3fc !important;
+  box-shadow: inset 0 1px 3px rgba(255, 255, 255, 0.25),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.35),
+              0 4px 14px rgba(6, 182, 212, 0.18) !important;
+}
+.phase-idle-cyan:hover {
+  background: linear-gradient(135deg, rgba(34, 211, 238, 0.5) 0%, rgba(6, 182, 212, 0.38) 100%) !important;
+  border-color: #0e7490 !important;
+  color: #ecfeff !important;
+  box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.35),
+              inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+              0 6px 20px rgba(6, 182, 212, 0.35) !important;
+  transform: scale(1.02) translateY(-1px);
+}
+
+/* Fases bloqueadas */
+.phase-locked {
+  opacity: 0.55 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(0.35);
+}
+
 /* Cristal Translúcido (Blanco) */
 .btn-white {
   background: rgba(255, 255, 255, 0.08) !important;
@@ -275,6 +425,9 @@ h1, h2, h3, h4, h5, h6 {
 }
 .bg-glow-ruby {
   background: radial-gradient(circle at 50% 50%, rgba(239, 68, 68, 0.12) 0%, transparent 70%);
+}
+.bg-glow-amber {
+  background: radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.15) 0%, transparent 70%);
 }
 
 /* Custom inputs styling */

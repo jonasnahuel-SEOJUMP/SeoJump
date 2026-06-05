@@ -738,17 +738,17 @@ export default function Home() {
         {step === 2 && (
           <div className="w-full max-w-md mx-auto px-4 flex flex-col items-center justify-center text-center space-y-6 animate-in slide-in-from-right duration-300">
             {/* Colorful Tabs Preview */}
-            <nav className="flex gap-2 w-full opacity-85 pointer-events-none mb-6">
-              <div className="flex-1 min-w-[65px] btn-3d bg-yellow-50 text-duo-yellow text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-duo-yellow font-black">
+            <nav className="flex gap-2 w-full opacity-90 pointer-events-none mb-6">
+              <div className="flex-1 min-w-[65px] btn-3d btn-yellow text-center py-1.5 px-1 text-xs md:text-sm font-black">
                 🔍 F1
               </div>
-              <div className="flex-1 min-w-[65px] btn-3d bg-blue-50 text-blue-600 text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-blue-500 font-black">
+              <div className="flex-1 min-w-[65px] btn-3d btn-blue text-center py-1.5 px-1 text-xs md:text-sm font-black">
                 ✍️ F2
               </div>
-              <div className="flex-1 min-w-[65px] btn-3d bg-green-50 text-duo-green text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-duo-green font-black">
+              <div className="flex-1 min-w-[65px] btn-3d btn-green text-center py-1.5 px-1 text-xs md:text-sm font-black">
                 🛠️ F3
               </div>
-              <div className="flex-1 min-w-[65px] btn-3d bg-purple-50 text-purple-600 text-center py-1.5 px-1 text-xs md:text-sm border-b-4 border-purple-600 font-black">
+              <div className="flex-1 min-w-[65px] btn-3d btn-purple text-center py-1.5 px-1 text-xs md:text-sm font-black">
                 🕵️‍♂️ F4
               </div>
             </nav>
@@ -1005,41 +1005,41 @@ export default function Home() {
  
                {/* Navigation Menu */}
                <nav className="flex flex-wrap lg:flex-col gap-2 lg:gap-4 w-full">
-                 <Link href="/buscador-de-oro" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-duo-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+                 <Link href="/buscador-de-oro" onClick={playClick} className="flex-1 btn-3d phase-idle-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all">
                    <span className="md:hidden">🔍 F1</span><span className="hidden md:inline">🔍 Fase 1: Búsqueda</span>
                  </Link>
                  {prog?.p2?.unlocked ? (
-                   <Link href="/contenido" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-blue-500 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+                   <Link href="/contenido" onClick={playClick} className="flex-1 btn-3d phase-idle-blue text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all">
                      <span className="md:hidden">✍️ F2</span><span className="hidden md:inline">✍️ Fase 2: Contenido</span>
                    </Link>
                  ) : (
-                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
+                   <div className="flex-1 btn-3d btn-white phase-locked text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
                      title="🔒 Completá el 70% de la Fase 1 para avanzar">
                      <span className="md:hidden">🔒 F2</span><span className="hidden md:inline">🔒 Fase 2: Contenido</span>
                    </div>
                  )}
                  {prog?.p3?.unlocked ? (
                    <Link href="/optimizacion" onClick={playClick}
-                     className="flex-1 btn-3d text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors btn-white text-slate-655 dark:text-slate-350 hover:text-duo-green">
+                     className="flex-1 btn-3d phase-idle-green text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all">
                      <span className="md:hidden">🛠️ F3</span><span className="hidden md:inline">🛠️ Fase 3: Optimización</span>
                    </Link>
                  ) : (
-                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
+                   <div className="flex-1 btn-3d btn-white phase-locked text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
                      title="🔒 Completá el 70% de la Fase 2 para avanzar">
                      <span className="md:hidden">🔒 F3</span><span className="hidden md:inline">🔒 Fase 3: Optimización</span>
                    </div>
                  )}
                  {prog?.p4?.unlocked ? (
-                   <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-purple-650 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+                   <Link href="/detective-de-enlaces" onClick={playClick} className="flex-1 btn-3d phase-idle-purple text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all">
                      <span className="md:hidden">🕵️‍♂️ F4</span><span className="hidden md:inline">🕵️‍♂️ Fase 4: Detective</span>
                    </Link>
                  ) : (
-                   <div className="flex-1 btn-3d btn-white text-slate-400 bg-gray-50 dark:bg-slate-800 dark:border-slate-700 opacity-70 cursor-not-allowed text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
+                   <div className="flex-1 btn-3d btn-white phase-locked text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black flex items-center justify-center gap-1"
                      title="🔒 Completá el 70% de la Fase 3 para avanzar">
                      <span className="md:hidden">🔒 F4</span><span className="hidden md:inline">🔒 Fase 4: Detective</span>
                    </div>
                  )}
-                 <Link href="/blog" onClick={playClick} className="flex-1 btn-3d btn-white text-slate-655 dark:text-slate-350 hover:text-cyan-500 text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-colors">
+                 <Link href="/blog" onClick={playClick} className="flex-1 btn-3d phase-idle-cyan text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all">
                    <span className="md:hidden">📖 Academia</span><span className="hidden md:inline">📖 Academia SEO</span>
                  </Link>
                </nav>

@@ -362,6 +362,7 @@ export default function DetectiveDeEnlaces() {
 
   return (
     <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-screen-lg mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka px-4">
+      <div className="fixed inset-0 pointer-events-none bg-glow-purple opacity-60 z-[-1]"></div>
 
       {/* Confetti */}
       {showConfetti && (
@@ -406,9 +407,10 @@ export default function DetectiveDeEnlaces() {
       />
 
       {/* Title */}
-      <div className="text-center space-y-2 py-4 mt-2">
-        <div className="text-4xl md:text-5xl">🕵️‍♂️</div>
-        <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
+      <div className="text-center space-y-2 py-4 mt-2 relative">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-purple-500/20 blur-3xl rounded-full pointer-events-none"></div>
+        <div className="text-5xl md:text-6xl drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">🕵️‍♂️</div>
+        <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-purple-300 to-purple-600 drop-shadow-md">
           Detective de Enlaces
         </h1>
         <p className="text-base md:text-lg font-bold text-slate-600 dark:text-slate-400">

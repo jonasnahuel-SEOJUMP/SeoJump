@@ -427,6 +427,7 @@ export default function Optimizacion() {
   const [quickWins, setQuickWins] = useState([]);
   const [quickWinsLoading, setQuickWinsLoading] = useState(false);
   const [quickWinsError, setQuickWinsError] = useState(null);
+  const [hasFetchedQuickWins, setHasFetchedQuickWins] = useState(false);
   const [verifyingQuickWinIndex, setVerifyingQuickWinIndex] = useState(null);
   const [verifyQuickWinResult, setVerifyQuickWinResult] = useState({});
   const [completedQuickWins, setCompletedQuickWins] = useState(new Set());
@@ -441,6 +442,7 @@ export default function Optimizacion() {
   const [aeoOpportunities, setAeoOpportunities] = useState([]);
   const [aeoLoading, setAeoLoading] = useState(false);
   const [aeoError, setAeoError] = useState(null);
+  const [hasFetchedAeo, setHasFetchedAeo] = useState(false);
   const [completedAeo, setCompletedAeo] = useState(new Set());
   const [verifyingAeoIndex, setVerifyingAeoIndex] = useState(null);
   const [verifyAeoResult, setVerifyAeoResult] = useState({});
@@ -705,12 +707,15 @@ export default function Optimizacion() {
 
   // Load Quick Wins when siteUrl is available
   useEffect(() => {
-    if (siteUrl && quickWins.length === 0 && !quickWinsLoading) {
+    if (siteUrl && quickWins.length === 0 && !quickWinsLoading && !hasFetchedQuickWins) {
       const saved = localStorage.getItem("seojump_quick_wins");
       if (saved) {
         try {
-          setQuickWins(JSON.parse(saved));
-          return;
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.length > 0) {
+            setQuickWins(parsed);
+            return;
+          }
         } catch(e) {}
       }
       setQuickWinsLoading(true);
@@ -729,9 +734,10 @@ export default function Optimizacion() {
         })
         .finally(() => {
           setQuickWinsLoading(false);
+          setHasFetchedQuickWins(true);
         });
     }
-  }, [siteUrl, quickWins.length, quickWinsLoading]);
+  }, [siteUrl, quickWins.length, quickWinsLoading, hasFetchedQuickWins, goldKeyword]);
 
   // Persist completed Quick Wins
   useEffect(() => {
@@ -740,10 +746,16 @@ export default function Optimizacion() {
 
   // Load AEO opportunities when tab is active and siteUrl is available
   useEffect(() => {
-    if (activeTab === 'aeo' && siteUrl && aeoOpportunities.length === 0 && !aeoLoading) {
+    if (activeTab === 'aeo' && siteUrl && aeoOpportunities.length === 0 && !aeoLoading && !hasFetchedAeo) {
       const saved = localStorage.getItem('seojump_aeo_opportunities');
       if (saved) {
-        try { setAeoOpportunities(JSON.parse(saved)); return; } catch(e) {}
+        try { 
+          const parsed = JSON.parse(saved);
+          if (parsed && parsed.length > 0) {
+            setAeoOpportunities(parsed); 
+            return; 
+          }
+        } catch(e) {}
       }
       setAeoLoading(true);
       getAeoOpportunities(siteUrl, goldKeyword || undefined)
@@ -756,9 +768,12 @@ export default function Optimizacion() {
           }
         })
         .catch(() => setAeoError('Error de conexión al cargar oportunidades AEO.'))
-        .finally(() => setAeoLoading(false));
+        .finally(() => {
+          setAeoLoading(false);
+          setHasFetchedAeo(true);
+        });
     }
-  }, [activeTab, siteUrl, aeoOpportunities.length, aeoLoading]);
+  }, [activeTab, siteUrl, aeoOpportunities.length, aeoLoading, hasFetchedAeo, goldKeyword]);
 
   // Persist completed AEO
   useEffect(() => {
@@ -909,6 +924,7 @@ export default function Optimizacion() {
     setAeoOpportunities([]);
     setAeoError(null);
     setAeoLoading(true);
+    setHasFetchedAeo(false);
     localStorage.removeItem('seojump_aeo_opportunities');
     getAeoOpportunities(siteUrl, goldKeyword || undefined, customUrl || undefined)
       .then(res => {
@@ -920,7 +936,10 @@ export default function Optimizacion() {
         }
       })
       .catch(() => setAeoError('Error de conexión.'))
-      .finally(() => setAeoLoading(false));
+      .finally(() => {
+        setAeoLoading(false);
+        setHasFetchedAeo(true);
+      });
   };
 
   if (status === "loading" || !session || serverLoading) {
@@ -942,6 +961,7 @@ export default function Optimizacion() {
 
   return (
     <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-screen-lg mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka px-4">
+      <div className="fixed inset-0 pointer-events-none bg-glow-emerald opacity-60 z-[-1]"></div>
 
       {/* Confetti Effect */}
       {showConfetti && (
@@ -1025,9 +1045,10 @@ export default function Optimizacion() {
             <div className="w-full space-y-6 animate-in fade-in duration-300">
               
               {/* Header y Tipografía Centrados Arriba */}
-              <div className="text-center space-y-3 py-4 w-full max-w-xl mx-auto mt-4">
-                <img src="/images/logo-owl.png" alt="SEO Jump" className="w-12 h-12 md:w-16 md:h-16 object-contain" />
-                <h1 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100">
+              <div className="text-center space-y-3 py-4 w-full max-w-xl mx-auto mt-4 relative">
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-emerald-500/20 blur-3xl rounded-full pointer-events-none"></div>
+                <div className="flex justify-center mb-2"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" /></div>
+                <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-emerald-300 to-emerald-600 drop-shadow-md">
                   {activeTab === 'quickwins' ? 'Tu Plan de Acción 🚀' : activeTab === 'aeo' ? 'Auditoría AEO 🤖' : 'Fase 3: Optimización On-Page 🛠️'}
                 </h1>
                 <div className="pt-1">
@@ -1107,7 +1128,7 @@ export default function Optimizacion() {
                       <div className="text-6xl">⚠️</div>
                       <p className="text-red-400 font-bold text-lg">{quickWinsError}</p>
                       <button 
-                        onClick={() => { setQuickWinsError(null); setQuickWins([]); }} 
+                        onClick={() => { setQuickWinsError(null); setQuickWins([]); setHasFetchedQuickWins(false); }} 
                         className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4"
                       >
                         REINTENTAR
@@ -1311,7 +1332,7 @@ export default function Optimizacion() {
                     <div className="text-center py-12 card-3d space-y-4">
                       <div className="text-6xl">⚠️</div>
                       <p className="text-red-400 font-bold text-lg">{aeoError}</p>
-                      <button onClick={() => { setAeoError(null); setAeoOpportunities([]); }} className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4">REINTENTAR</button>
+                      <button onClick={() => { setAeoError(null); setAeoOpportunities([]); setHasFetchedAeo(false); }} className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4">REINTENTAR</button>
                     </div>
                   ) : aeoOpportunities.length > 0 ? (
                     <div className="space-y-6">
