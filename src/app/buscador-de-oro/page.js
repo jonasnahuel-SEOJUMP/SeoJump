@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useAudio } from "../../hooks/useAudio";
@@ -9,6 +10,9 @@ import { verifyContentMission } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import AICatch from "../../components/AICatch";
 import Header from "../../components/Header";
+import UpgradeModal from "../../components/UpgradeModal";
+import AiCreditsBadge from "../../components/AiCreditsBadge";
+import { getAiCreditsStatusForSession } from "../../lib/actions";
 
 // Filtro Purificador Universal (UI-safe and encoding-safe parser)
 const purifyText = (text) => {
@@ -55,7 +59,7 @@ export default function BuscadorDeOro() {
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
   
-  const DAILY_LIMIT = 2;
+  const DAILY_LIMIT = 2; // fallback visual si Supabase no responde
 
   // ── Truco de Dueño: bypass VIP ───────────────────────────────────────────
   // Emails con acceso ilimitado (separa varios con coma en .env.local)
@@ -90,6 +94,9 @@ export default function BuscadorDeOro() {
   const [showOwl, setShowOwl] = useState(false);
   const [dailyCredits, setDailyCredits] = useState(0);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [aiCredits, setAiCredits] = useState(null);
+  const [creditsLoading, setCreditsLoading] = useState(true);
+  const [upgradeMessage, setUpgradeMessage] = useState("");
   const [discardedSuggestions, setDiscardedSuggestions] = useState(new Set());
   const [dismissingIndex, setDismissingIndex] = useState(null);
   const [hasMissions, setHasMissions] = useState(false);
@@ -117,7 +124,24 @@ export default function BuscadorDeOro() {
     return `${year}-${month}-${day}`;
   };
 
+  const refreshCredits = () => {
+    if (!session?.user?.email || isVip()) {
+      setAiCredits(null);
+      setCreditsLoading(false);
+      return;
+    }
+    setCreditsLoading(true);
+    getAiCreditsStatusForSession()
+      .then((status) => {
+        setAiCredits(status);
+        if (status) setDailyCredits(status.usedToday);
+      })
+      .catch(() => setAiCredits(null))
+      .finally(() => setCreditsLoading(false));
+  };
+
   const readCredits = () => {
+    if (aiCredits && !aiCredits.isUnlimited) return aiCredits.usedToday;
     // VIPs siempre tienen créditos disponibles
     if (isVip()) return 0;
     try {
@@ -251,6 +275,7 @@ export default function BuscadorDeOro() {
       setServerLoading(false);
     };
     init();
+    refreshCredits();
   }, [session]);
 
   // Recalculate progress when state updates
@@ -278,9 +303,14 @@ export default function BuscadorDeOro() {
     if (e && e.preventDefault) e.preventDefault();
     if (!searchInput.trim() || loading || cooldown > 0) return;
 
-    // Verificar límite diario ANTES de la búsqueda
+    const limit = aiCredits?.limitDay ?? DAILY_LIMIT;
     const currentCredits = readCredits();
-    if (currentCredits >= DAILY_LIMIT) {
+    if (!isVip() && currentCredits >= limit) {
+      setUpgradeMessage(
+        aiCredits?.plan === "free"
+          ? `Usaste tus ${limit} consultas IA gratis de hoy. Volvé mañana o pasate a PRO.`
+          : `Llegaste al límite de hoy (${limit} consultas IA).`
+      );
       setShowPremiumModal(true);
       return;
     }
@@ -312,6 +342,12 @@ export default function BuscadorDeOro() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         console.error("[BUSCADOR DE ORO] Server returned error details:", data);
+        if (response.status === 402 || data.upgrade) {
+          setUpgradeMessage(data.message || data.error || "Límite de consultas IA alcanzado.");
+          setShowPremiumModal(true);
+          if (data.credits) setAiCredits(data.credits);
+          return;
+        }
         const errMsg = data.message || data.error || "Error al buscar oportunidades.";
         const errorToThrow = new Error(errMsg);
         if (data.stack) {
@@ -339,8 +375,7 @@ export default function BuscadorDeOro() {
       setTimeout(() => {
         syncStateWithServer();
       }, 100);
-      const used = consumeCredit();
-      if (used >= DAILY_LIMIT) setShowPremiumModal(false); // ya se mostrará en el form
+      refreshCredits();
     } catch (err) {
       console.error("[BUSCADOR DE ORO] Caught exception during search:", err);
       if (err.name === 'TimeoutError') {
@@ -751,28 +786,12 @@ export default function BuscadorDeOro() {
               </div>
             </div>
 
-            {/* Contador de fichas diarias */}
+            {/* Contador consultas IA */}
             {!isVip() ? (
-              <div className="flex items-center justify-between bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2">
-                <span className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-wider">Fichas de hoy</span>
-                <div className="flex items-center gap-1.5">
-                  {[...Array(DAILY_LIMIT)].map((_, i) => (
-                    <div
-                      key={i}
-                      className={`w-4 h-4 rounded-full border-2 transition-all ${
-                        i < dailyCredits
-                          ? "bg-amber-500 border-amber-400 shadow-[0_0_8px_rgba(251,191,36,0.5)]"
-                          : "bg-slate-200 border-slate-350 dark:bg-slate-700 dark:border-slate-600"
-                      }`}
-                    />
-                  ))}
-                  <span className={`text-xs font-black ml-1 ${
-                    dailyCredits >= DAILY_LIMIT ? "text-red-500 dark:text-red-400" : "text-amber-500 dark:text-amber-400"
-                  }`}>
-                    {dailyCredits}/{DAILY_LIMIT}
-                  </span>
-                </div>
-              </div>
+              <AiCreditsBadge
+                credits={aiCredits || { usedToday: dailyCredits, limitDay: DAILY_LIMIT, remainingToday: Math.max(0, DAILY_LIMIT - dailyCredits), planLabel: "Gratis", plan: "free", usedMonth: 0, limitMonth: 20, remainingMonth: 20, isUnlimited: false }}
+                loading={creditsLoading}
+              />
             ) : (
               <div className="flex items-center justify-between bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/40 rounded-xl px-3.5 py-2">
                 <span className="text-xs font-black text-green-700 dark:text-green-400 uppercase tracking-wider">🔑 Modo Admin</span>
@@ -781,7 +800,7 @@ export default function BuscadorDeOro() {
             )}
 
             {/* Search Form / Bloqueo */}
-            {!isVip() && dailyCredits >= DAILY_LIMIT ? (
+            {!isVip() && dailyCredits >= (aiCredits?.limitDay ?? DAILY_LIMIT) ? (
               <div className="w-full space-y-4 animate-in fade-in duration-300 border-t border-slate-100 dark:border-slate-700 pt-3">
                 <div className="text-5xl text-center animate-bounce">🏁</div>
                 <div className="space-y-1.5 text-center">
@@ -790,15 +809,13 @@ export default function BuscadorDeOro() {
                     Usaste tus turnos gratuitos por hoy. No dejes que tu web pierda velocidad. Pasate a Premium para obtener misiones ilimitadas, tomar el control de tu SEO y superar a tu competencia.
                   </p>
                 </div>
-                <button
-                  onClick={() => {
-                    playClick();
-                    alert("🚀 Próximamente disponible. ¡Gracias por tu interés en el Plan Premium!");
-                  }}
+                <Link
+                  href="/precios"
+                  onClick={() => playClick()}
                   className="w-full btn-3d bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white text-base font-black py-3.5 flex items-center justify-center gap-2"
                 >
-                  Desbloquear Premium
-                </button>
+                  Ver planes PRO
+                </Link>
               </div>
             ) : (
               <form onSubmit={handleSearch} className="w-full space-y-3 border-t border-slate-100 dark:border-slate-700 pt-3">
@@ -905,51 +922,12 @@ export default function BuscadorDeOro() {
 
       </div>
 
-      {/* Premium Limit Modal */}
-      {showPremiumModal && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl border-2 border-slate-200 dark:border-slate-700 shadow-2xl p-6 md:p-8 max-w-md w-full relative space-y-6 text-center animate-in zoom-in-95 duration-300">
-            <button
-              onClick={() => {
-                playClick();
-                setShowPremiumModal(false);
-              }}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-650 dark:hover:text-white text-xl font-bold transition-colors"
-            >
-              ✕
-            </button>
-            <div className="text-6xl animate-bounce">🏁</div>
-            <div className="space-y-3">
-              <h2 className="text-2xl md:text-3xl font-black text-slate-800 dark:text-slate-100 leading-tight">
-                ¡Excelente trabajo estratégico! 🏁
-              </h2>
-              <p className="text-base font-bold text-slate-600 dark:text-slate-300 leading-relaxed">
-                Usaste tus turnos gratuitos por hoy. No dejes que tu web pierda velocidad. Pasate a Premium para obtener misiones ilimitadas, tomar el control de tu SEO y superar a tu competencia.
-              </p>
-            </div>
-            <div className="flex flex-col gap-3">
-              <button
-                onClick={() => {
-                  playClick();
-                  alert("🚀 Próximamente disponible. ¡Gracias por tu interés en el Plan Premium!");
-                }}
-                className="w-full btn-3d bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white text-lg font-black py-4 flex items-center justify-center gap-2 shadow-lg hover:shadow-amber-500/20"
-              >
-                Desbloquear Premium
-              </button>
-              <button
-                onClick={() => {
-                  playClick();
-                  setShowPremiumModal(false);
-                }}
-                className="text-slate-550 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-bold transition-colors py-2 text-sm uppercase tracking-wider"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <UpgradeModal
+        open={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        playClick={playClick}
+        message={upgradeMessage}
+      />
     </div>
   );
 

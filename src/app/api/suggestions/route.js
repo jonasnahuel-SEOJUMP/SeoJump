@@ -21,12 +21,16 @@ export async function GET(request) {
 
     if (!result.success) {
       console.error("[ROUTE SUGGESTIONS ERROR] getAIPredictiveSuggestions failed:", result.error);
+      const isCreditLimit = result.code === 'AI_CREDIT_DAILY' || result.code === 'AI_CREDIT_MONTHLY';
       return NextResponse.json({ 
         error: true,
         message: result.error || 'Error al buscar oportunidades con IA.',
+        code: result.code,
+        upgrade: result.upgrade,
+        credits: result.credits,
         stack: result.stack 
       }, { 
-        status: 500,
+        status: isCreditLimit ? 402 : 500,
         headers: {
           'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
           'Pragma': 'no-cache',

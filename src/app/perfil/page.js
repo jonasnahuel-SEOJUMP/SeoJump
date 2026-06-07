@@ -5,6 +5,8 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
+import { deleteUserAccount } from "../../lib/actions";
+import { clearLocalUserData } from "../../lib/clearUserData";
 import Link from "next/link";
 
 export default function Perfil() {
@@ -16,13 +18,9 @@ export default function Perfil() {
   const [xp, setXp] = useState(0);
   const [siteUrl, setSiteUrl] = useState("");
   const [hasMissions, setHasMissions] = useState(false);
-
-  useEffect(() => {
-    // Auth protection
-    if (!session && status !== "loading") {
-      router.push("/");
-    }
-  }, [session, status, router]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [deleteError, setDeleteError] = useState(null);
 
   useEffect(() => {
     const savedXp = localStorage.getItem("seojump_xp");
@@ -42,7 +40,7 @@ export default function Perfil() {
     }
   }, []);
 
-  if (status === "loading" || !session) {
+  if (status === "loading") {
     return (
       <div className="h-screen flex items-center justify-center font-fredoka font-bold text-slate-400 text-xl bg-[#07070d] transition-colors duration-300">
         Cargando...
@@ -50,8 +48,62 @@ export default function Perfil() {
     );
   }
 
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-[#07070d] font-fredoka text-slate-200 px-4 py-16 flex flex-col items-center">
+        <div className="max-w-lg w-full space-y-8 text-center">
+          <Link href="/" className="text-emerald-400 hover:underline text-sm font-bold inline-block">
+            ← Volver al inicio
+          </Link>
+          <div className="space-y-4">
+            <div className="text-6xl">👤</div>
+            <h1 className="text-3xl font-black text-white">Tu Perfil</h1>
+            <p className="text-sm font-bold text-slate-400 leading-relaxed">
+              Acá podés ver tu progreso, gestionar la conexión con Search Console y{" "}
+              <strong className="text-white">eliminar tu cuenta y borrar tus datos</strong>.
+              Para acceder, primero tenés que iniciar sesión con la misma cuenta de Google que usaste en SEO Jump.
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              playClick();
+              signIn("google", { callbackUrl: "/perfil" });
+            }}
+            className="btn-3d btn-green w-full text-lg font-black py-4"
+          >
+            Iniciar sesión con Google
+          </button>
+          <p className="text-xs font-bold text-slate-500">
+            Si no podés entrar, escribinos a{" "}
+            <a href="mailto:contacto@seojump.ai" className="text-emerald-400 underline">contacto@seojump.ai</a>
+            {" "}para solicitar el borrado de tus datos.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   const level = Math.floor(xp / 100) + 1;
   const xpInLevel = xp % 100;
+
+  const handleDeleteAccount = async () => {
+    setDeleteLoading(true);
+    setDeleteError(null);
+    try {
+      const result = await deleteUserAccount();
+      if (!result.success) {
+        setDeleteError(result.error || "No se pudieron borrar los datos. Escribinos a contacto@seojump.ai");
+        return;
+      }
+      clearLocalUserData();
+      setShowDeleteModal(false);
+      await signOut({ callbackUrl: "/" });
+    } catch (e) {
+      setDeleteError("Ocurrió un error. Intentá de nuevo o escribinos a contacto@seojump.ai");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   return (
     <div className="flex-1 flex flex-col items-center p-4 md:p-8 w-full max-w-4xl mx-auto space-y-8 bg-transparent transition-colors duration-300 text-slate-100 min-h-screen relative font-fredoka">
@@ -184,6 +236,40 @@ export default function Perfil() {
           )}
         </div>
 
+        {/* Zona de privacidad */}
+        <div className="bg-red-50 dark:bg-red-950/20 rounded-2xl border-2 border-red-200 dark:border-red-900/50 p-6 space-y-4">
+          <h3 className="text-lg font-black text-red-700 dark:text-red-400 flex items-center gap-2">
+            🔒 Privacidad y datos
+          </h3>
+          <p className="text-sm font-bold text-slate-600 dark:text-slate-400 leading-relaxed">
+            Podés revocar el acceso a Google Search Console desde{" "}
+            <a
+              href="https://myaccount.google.com/permissions"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-red-600 dark:text-red-400 underline"
+            >
+              tu cuenta de Google
+            </a>
+            . Si querés que borremos también tu progreso guardado en SEO Jump (misiones, XP, sitio vinculado), usá el botón de abajo.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Link
+              href="/privacidad"
+              onClick={playClick}
+              className="text-sm font-black text-slate-600 dark:text-slate-300 underline hover:text-slate-800 dark:hover:text-white"
+            >
+              Leer Política de Privacidad
+            </Link>
+            <button
+              onClick={() => { playClick(); setDeleteError(null); setShowDeleteModal(true); }}
+              className="text-sm font-black text-red-600 dark:text-red-400 underline hover:text-red-700 dark:hover:text-red-300 text-left"
+            >
+              Eliminar mi cuenta y borrar mis datos
+            </button>
+          </div>
+        </div>
+
         {/* Action button row */}
         <div className="flex flex-col sm:flex-row gap-4 pt-4 border-t border-slate-200 dark:border-slate-700">
           <button
@@ -207,6 +293,44 @@ export default function Perfil() {
         </div>
 
       </div>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl border-2 border-red-300 dark:border-red-800 p-6 md:p-8 max-w-md w-full shadow-2xl space-y-5">
+            <h2 className="text-2xl font-black text-red-600 dark:text-red-400">¿Eliminar tu cuenta?</h2>
+            <p className="text-sm font-bold text-slate-600 dark:text-slate-300 leading-relaxed">
+              Se borrarán de forma permanente:
+            </p>
+            <ul className="text-sm font-bold text-slate-500 dark:text-slate-400 list-disc pl-5 space-y-1">
+              <li>Tu perfil y misiones completadas en nuestros servidores</li>
+              <li>Tu progreso, XP y sitio guardado en este navegador</li>
+            </ul>
+            <p className="text-xs font-bold text-slate-500 dark:text-slate-450">
+              Esto no cancela una suscripción de Mercado Pago si la tuvieras activa — hacelo aparte. Para revocar el acceso a Google, andá a{" "}
+              <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-red-500 underline">myaccount.google.com/permissions</a>.
+            </p>
+            {deleteError && (
+              <p className="text-sm font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/30 rounded-xl p-3">{deleteError}</p>
+            )}
+            <div className="flex flex-col gap-3 pt-2">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleteLoading}
+                className="btn-3d bg-red-600 border-red-800 border-b-4 hover:bg-red-550 text-white font-black py-3 disabled:opacity-60"
+              >
+                {deleteLoading ? "Borrando..." : "Sí, eliminar mis datos"}
+              </button>
+              <button
+                onClick={() => { playClick(); setShowDeleteModal(false); setDeleteError(null); }}
+                disabled={deleteLoading}
+                className="btn-3d btn-white text-slate-700 font-black py-3"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

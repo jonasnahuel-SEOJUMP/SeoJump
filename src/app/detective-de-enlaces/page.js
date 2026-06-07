@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { auditSiteLinks, requestGoogleIndexing, checkIsAdmin } from "../../lib/actions";
+import UpgradeModal from "../../components/UpgradeModal";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 
@@ -31,6 +32,8 @@ export default function DetectiveDeEnlaces() {
   const [scanState, setScanState] = useState("idle"); // idle | scanning | results | complete
   const [auditResults, setAuditResults] = useState(null);
   const [auditError, setAuditError] = useState(null);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState("");
   const [activeTab, setActiveTab] = useState("internalLinking");
   const [completedFixes, setCompletedFixes] = useState(new Set());
   const [showConfetti, setShowConfetti] = useState(false);
@@ -214,6 +217,10 @@ export default function DetectiveDeEnlaces() {
         setScanState("results");
         localStorage.setItem("seojump_detective_audit", JSON.stringify(res));
       } else {
+        if (res.upgrade) {
+          setUpgradeMessage(res.error || "");
+          setShowUpgradeModal(true);
+        }
         setAuditError(res.error || "Error al escanear el sitio. Intentá de nuevo en unos segundos.");
         setScanState("idle");
       }
@@ -928,6 +935,13 @@ export default function DetectiveDeEnlaces() {
 
         </div>
       </div>
+
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        playClick={playClick}
+        message={upgradeMessage}
+      />
     </div>
   );
 }

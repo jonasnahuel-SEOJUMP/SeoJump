@@ -13,11 +13,14 @@ import PaywallModal from "../components/PaywallModal";
 import AICatch from "../components/AICatch";
 import LoginButton from "../components/LoginButton";
 import NotificationBell from "../components/NotificationBell";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, checkIsAdmin } from "../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, checkIsAdmin, getPageLivePreview } from "../lib/actions";
+import PlatformSelector from "../components/PlatformSelector";
+import MissionEditorGuide from "../components/MissionEditorGuide";
 import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked } from "../lib/missionMemory";
 import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
+import { getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getStoredPlatform } from "../lib/cmsGuide";
 
 const getBadgeInfo = (url) => {
   const staticResponse = { text: "Página Estática", color: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300", wpPath: "🗺️ Ruta en WP: Páginas" };
@@ -120,6 +123,7 @@ export default function Home() {
   useEffect(() => {
     const premiumStatus = localStorage.getItem("isPremium") === "true";
     setIsPremium(premiumStatus);
+    setCmsPlatform(getStoredPlatform());
   }, []);
   
   // Mission interaction state
@@ -136,6 +140,42 @@ export default function Home() {
   const [showIntroModal, setShowIntroModal] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
+  const [cmsPlatform, setCmsPlatform] = useState("wp_woo");
+  const [pagePreview, setPagePreview] = useState(null);
+  const [pagePreviewLoading, setPagePreviewLoading] = useState(false);
+  const [missionsLoading, setMissionsLoading] = useState(false);
+  const missionsAutoFetchDone = useRef(false);
+
+  const filterHomeMissions = (list) =>
+    (list || []).filter(m => m.pagePath !== '/' && m.pagePath !== '');
+
+  const loadMissionsFromServer = async (siteUrl, keyword) => {
+    if (!siteUrl || !session) return;
+    setMissionsLoading(true);
+    setMissionError(null);
+    try {
+      const res = await getRealMissions(siteUrl, keyword || undefined);
+      if (!res.success) throw new Error(res.error || "Error al cargar misiones");
+      const pending = filterPendingMissions(filterHomeMissions(res.data || []), loadLocalCompletedIds());
+      setMissions(pending);
+      if (pending.length > 0) {
+        localStorage.setItem("seojump_missions", JSON.stringify(pending));
+        localStorage.setItem("seojump_site_url", siteUrl);
+      } else {
+        localStorage.removeItem("seojump_missions");
+      }
+    } catch (err) {
+      const msg = err?.message || "Error al obtener misiones";
+      if (msg === "MISSING_SEARCH_CONSOLE_SCOPE") {
+        setMissionError("MISSING_SEARCH_CONSOLE_SCOPE");
+      } else {
+        setMissionError(msg);
+      }
+      setMissions([]);
+    } finally {
+      setMissionsLoading(false);
+    }
+  };
 
   // Quick Wins State
   const [quickWins, setQuickWins] = useState([]);
@@ -167,10 +207,6 @@ export default function Home() {
       // checkIsAdmin() lee ALLOWED_EMAILS en el servidor sin necesitar rebuild
       const adminResult = await checkIsAdmin().catch(() => false);
       setIsAdmin(adminResult);
-
-      // Filtrar misiones de la página de inicio del caché — la home es de marca, no de producto
-      const filterHomeMissions = (list) =>
-        (list || []).filter(m => m.pagePath !== '/' && m.pagePath !== '');
 
       setServerLoading(true);
 
@@ -232,7 +268,7 @@ export default function Home() {
                 if (Array.isArray(parsed) && parsed.length > 0) {
                   missionsList = filterPendingMissions(filterHomeMissions(parsed), mergedCompleted);
                   setMissions(missionsList);
-                  if (savedUrl) setStep(6);
+                  if (savedUrl && missionsList.length > 0) setStep(6);
                 }
               } catch (e) {}
             }
@@ -291,7 +327,7 @@ export default function Home() {
           if (Array.isArray(parsed) && parsed.length > 0) {
             missionsList = filterPendingMissions(filterHomeMissions(parsed), completedSet);
             setMissions(missionsList);
-            if (savedUrl) {
+            if (savedUrl && missionsList.length > 0) {
               setStep(6);
             }
           }
@@ -377,6 +413,18 @@ export default function Home() {
         });
     }
   }, [step, url, quickWins.length, quickWinsLoading, quickWinsError]);
+
+  useEffect(() => {
+    missionsAutoFetchDone.current = false;
+  }, [url]);
+
+  // Si llegás al tablero sin misiones en caché, recargar una vez desde Search Console
+  useEffect(() => {
+    if (step !== 6 || !session || !url || missions.length > 0 || missionsLoading || missionsAutoFetchDone.current) return;
+    missionsAutoFetchDone.current = true;
+    const kw = typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : null;
+    loadMissionsFromServer(url, kw);
+  }, [step, session, url, missions.length, missionsLoading]);
 
   // Protection: Reset to step 1 if session is lost in protected steps
   useEffect(() => {
@@ -557,7 +605,18 @@ export default function Home() {
     setShowHelp(false);
     setShowOwl(false);
     setFailedAttempts(0);
+    setPagePreview(null);
+    setPagePreviewLoading(true);
     setStep(7);
+    if (mission.page) {
+      getPageLivePreview(mission.page)
+        .then((res) => {
+          if (res.success) setPagePreview(res.preview);
+        })
+        .finally(() => setPagePreviewLoading(false));
+    } else {
+      setPagePreviewLoading(false);
+    }
   };
 
    const clearAnalysisCache = () => {
@@ -1076,13 +1135,13 @@ export default function Home() {
                                         return (
                                           <>
                                             <div className="flex items-center gap-3 flex-wrap mb-1.5">
-                                              <h3 className="text-xl md:text-2xl lg:text-3xl font-black transition-colors text-slate-800 dark:text-slate-100 group-hover:text-duo-green">{mission.title}</h3>
+                                              <h3 className="text-xl md:text-2xl lg:text-3xl font-black transition-colors text-slate-800 dark:text-slate-100 group-hover:text-duo-green">{getMissionDisplayPlain(mission, mission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '') || '', url).title}</h3>
                                               <span className={`text-sm lg:text-base font-black px-3 py-1 rounded-md ${badge.color}`}>
                                                 {badge.text}
                                               </span>
                                               {mission.type === 'AEO' && (
                                                 <span className="text-xs font-black px-2 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-400">
-                                                  🤖 AEO
+                                                  🤖 Para la IA
                                                 </span>
                                               )}
                                             </div>
@@ -1104,7 +1163,7 @@ export default function Home() {
                                           </>
                                         );
                                       })()}
-                                     <p className="font-bold text-slate-650 dark:text-slate-350 text-base lg:text-lg mb-2">{mission.description}</p>
+                                     <p className="font-bold text-slate-650 dark:text-slate-350 text-base lg:text-lg mb-2">{getMissionDisplayPlain(mission, mission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '') || '', url).description}</p>
                                      <div className="flex flex-wrap gap-4 mt-3 text-sm lg:text-base font-bold text-slate-550 dark:text-slate-400">
                                        <span>👆 {mission.clicks} oportunidades de venta</span>
                                        <span>👁️ {mission.impressions} dinero sobre la mesa</span>
@@ -1177,8 +1236,30 @@ export default function Home() {
                               </button>
                             </>
                           )
+                        ) : missionsLoading ? (
+                          <p className="text-slate-400 font-bold animate-pulse">Buscando misiones en Search Console...</p>
                         ) : (
-                          <p className="text-slate-500 font-bold">No encontramos misiones para este sitio.</p>
+                          <div className="text-center space-y-4 py-4">
+                            <p className="text-slate-500 font-bold">No encontramos misiones para este sitio todavía.</p>
+                            <p className="text-sm text-slate-400 font-bold max-w-md mx-auto">
+                              Puede pasar si todavía no elegiste palabra clave en el Buscador de Oro, o si Google solo tiene datos de tu página de inicio.
+                            </p>
+                            {session && url && (
+                              <button
+                                onClick={() => {
+                                  playClick();
+                                  const kw = localStorage.getItem("gold-tu-busqueda");
+                                  loadMissionsFromServer(url, kw);
+                                }}
+                                className="btn-3d btn-green text-sm py-3 px-6 font-black"
+                              >
+                                🔄 BUSCAR MISIONES DE NUEVO
+                              </button>
+                            )}
+                            <Link href="/buscador-de-oro" onClick={playClick} className="block text-sm font-black text-duo-yellow hover:underline">
+                              Ir al Buscador de Oro para elegir palabra clave →
+                            </Link>
+                          </div>
                         )}
                       </div>
                     )}
@@ -1195,13 +1276,25 @@ export default function Home() {
                     <div className="min-w-0 w-full">
                       <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-3">
                         <button onClick={() => { playClick(); setStep(6); }} className="text-2xl text-slate-500 md:hidden flex-shrink-0">←</button>
-                        Misión: {selectedMission.type}
+                        {getPlainMissionLabels(selectedMission.type).shortTitle}
                       </h2>
-                      <p className="mission-path text-sm md:text-base lg:text-lg font-bold text-slate-550 dark:text-slate-400 mt-1" title={selectedMission.pagePath}>
-                        {selectedMission.pagePath}
+                      <p className="mission-path text-sm md:text-base lg:text-lg font-bold text-slate-550 dark:text-slate-400 mt-1 break-all" title={selectedMission.page}>
+                        {selectedMission.page}
                       </p>
                     </div>
                   </div>
+
+                  <PlatformSelector value={cmsPlatform} onChange={setCmsPlatform} playClick={playClick} />
+
+                  <MissionEditorGuide
+                    mission={selectedMission}
+                    siteUrl={url || (typeof window !== 'undefined' ? localStorage.getItem("seojump_site_url") : '') || ''}
+                    platformId={cmsPlatform}
+                    goldKeyword={selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '') || ''}
+                    pagePreview={pagePreview}
+                    previewLoading={pagePreviewLoading}
+                    playClick={playClick}
+                  />
 
                   {/* Search Console Data Card */}
                   <div className="grid grid-cols-3 gap-2 md:gap-4 min-w-0 w-full">
@@ -1237,15 +1330,7 @@ export default function Home() {
                          <div className="text-6xl md:text-7xl animate-bounce flex-shrink-0 drop-shadow-lg z-10">🦉</div>
                          <div className="flex-1">
                             <div className="bg-slate-800 text-slate-200 p-6 rounded-2xl rounded-tl-none font-bold text-base md:text-lg lg:text-xl leading-relaxed shadow-lg border border-slate-600 relative">
-                               {selectedMission.type === 'H1' && (
-                                 <p>El <strong className="text-duo-green">H1</strong> es el título principal de tu local. Google lo lee primero para saber EXACTAMENTE de qué se trata tu página. Tiene que ser claro, contener tu palabra clave y convencer al usuario.</p>
-                               )}
-                               {selectedMission.type === 'META' && (
-                                 <p>La <strong className="text-duo-yellow">Meta Descripción</strong> es el cartel que ve la gente en la vereda de Google antes de entrar. No te hace subir puestos directamente, pero un buen gancho comercial define si te dan el clic a vos o siguen de largo al taller de al lado.</p>
-                               )}
-                               {selectedMission.type === 'ALT' && (
-                                 <p>Google es ciego para los ojos pero lee como los dioses. Si subís la foto de un producto sin <strong className="text-duo-blue">ALT</strong>, el robot no sabe qué es. Al ponerle una descripción con tu palabra clave, empezás a indexar en Google Imágenes y capturás clientes que buscan para comprar.</p>
-                               )}
+                               <p>{getOwlExplanation(selectedMission.type, selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '') || '')}</p>
                                <div className="absolute top-0 -left-2 w-0 h-0 border-t-[10px] border-t-slate-800 border-l-[10px] border-l-transparent"></div>
                             </div>
                          </div>
@@ -1286,18 +1371,15 @@ export default function Home() {
                   {/* Mission Input */}
                   <div className="card-3d bg-white dark:bg-slate-800 space-y-6 p-4 md:p-8 min-w-0 w-full overflow-hidden">
                     <p className="font-bold text-slate-650 dark:text-slate-300 text-base md:text-lg lg:text-xl break-words">
-                      {selectedMission.type === 'H1' && <>Hacé el cambio en tu web, después <span className="text-duo-green">copiá el texto del H1</span> que escribiste en <span className="text-duo-blue break-all">{selectedMission.pagePath === '/' ? 'tu página de inicio' : selectedMission.pagePath}</span> y pegalo acá <span className="text-slate-400 text-sm font-semibold">(el texto, no la URL)</span>:</>}
-                      {selectedMission.type === 'META' && <>Actualizá la <span className="text-duo-yellow">Meta Descripción</span> en tu sitio, después <span className="text-duo-yellow">copiá el texto</span> que pusiste y pegalo acá <span className="text-slate-400 text-sm font-semibold">(el texto, no la URL)</span>:</>}
-                      {selectedMission.type === 'ALT' && <>Agregá el texto <span className="text-duo-blue">ALT</span> a una imagen en <span className="text-duo-blue break-all">{selectedMission.pagePath === '/' ? 'tu página de inicio' : selectedMission.pagePath}</span>, después <span className="text-duo-blue">copiá ese mismo texto</span> y pegalo acá <span className="text-slate-400 text-sm font-semibold">(el texto, no la URL)</span>:</>}
+                      {getPlainMissionLabels(selectedMission.type).verifyLabel}
+                      {(selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '')) && (
+                        <> — debe incluir <span className="text-amber-400 font-black">«{selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '')}»</span></>
+                      )}:
                     </p>
 
                     <input 
                       type="text"
-                      placeholder={
-                        selectedMission.type === 'H1' ? 'ej: Detailing Profesional en Buenos Aires' :
-                        selectedMission.type === 'META' ? 'ej: Los mejores productos de detailing. Envío gratis.' :
-                        'ej: Auto rojo siendo encerado con cera carnauba'
-                      }
+                      placeholder={getMissionDisplayPlain(selectedMission, selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '') || '', url).suggestedText.split('\n').find((l) => l.startsWith('¿Para') || (l.length > 25 && !l.startsWith('['))) || 'Pegá acá el texto que escribiste'}
                       value={h1Value}
                       onChange={(e) => setH1Value(e.target.value)}
                       className="w-full max-w-full p-4 md:p-5 text-base md:text-xl border-2 border-slate-200 dark:border-slate-600 rounded-xl focus:border-duo-green outline-none font-black text-slate-800 dark:text-slate-100 dark:bg-slate-700"
@@ -1323,25 +1405,6 @@ export default function Home() {
                             💡 ¿Tu web no se actualiza? Si usás plugins de velocidad (WP Rocket, LiteSpeed, SG Optimizer), recordá tocar 'Borrar Caché' en tu barra de WordPress para que el Búho pueda leer tu cambio fresco.
                           </p>
                         )}
-                      </div>
-                    )}
-
-                    {/* Chivatazo de Boxes: pista de dónde editar en WP */}
-                    {missionStatus === 'error' && selectedMission?.page && (
-                      <div className="bg-slate-800 border-2 border-slate-600 rounded-2xl p-5 text-base lg:text-lg font-bold text-slate-350 flex items-start gap-4">
-                        <span className="text-2xl flex-shrink-0">🏎️</span>
-                        <div>
-                          <p className="font-black text-slate-100 mb-1.5">Pista de Boxes:</p>
-                          {selectedMission.page.includes('/producto/') || selectedMission.page.includes('/product/') ? (
-                            <p>Este contenido está dentro de un <span className="text-duo-yellow font-black">PRODUCTO de WooCommerce</span>. Editalo desde <strong>Productos → Todos los productos</strong> en tu panel de WordPress.</p>
-                          ) : selectedMission.page.includes('/blog/') || selectedMission.page.includes('/entrada/') || selectedMission.page.includes('/post/') ? (
-                            <p>Este contenido es una <span className="text-duo-blue font-black">ENTRADA de Blog</span>. Editala desde <strong>Entradas → Todas las entradas</strong> en tu panel de WordPress.</p>
-                          ) : selectedMission.page.includes('/categoria-producto/') || selectedMission.page.includes('/categoria/') || selectedMission.page.includes('/category/') ? (
-                            <p>Este contenido es una <span className="text-purple-400 font-black">CATEGORÍA de Tienda</span>. Editala desde <strong>Productos → Categorías</strong> en tu panel de WordPress.</p>
-                          ) : (
-                            <p>Este contenido es una <span className="text-green-400 font-black">PÁGINA Estática</span>. Editala desde <strong>Páginas → Todas las páginas</strong> en tu panel de WordPress.</p>
-                          )}
-                        </div>
                       </div>
                     )}
 

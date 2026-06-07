@@ -6,8 +6,13 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, getAeoOpportunities, verifyAeoMission, checkIsAdmin } from "../../lib/actions";
-import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked } from "../../lib/missionMemory";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, getAeoOpportunities, verifyAeoMission, checkIsAdmin, getAiCreditsStatusForSession, getPageLivePreview } from "../../lib/actions";
+import UpgradeModal from "../../components/UpgradeModal";
+import AiCreditsBadge from "../../components/AiCreditsBadge";
+import PlatformSelector from "../../components/PlatformSelector";
+import MissionEditorGuide from "../../components/MissionEditorGuide";
+import { getStoredPlatform, detectPageType, getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation } from "../../lib/cmsGuide";
+import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, buildAeoKey, isAeoCompleted } from "../../lib/missionMemory";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
@@ -40,6 +45,23 @@ function readQuickWinsCache(siteUrl) {
   }
 }
 
+function readSkippedQuickWins(siteUrl) {
+  try {
+    const savedUrl = localStorage.getItem("seojump_skipped_quick_wins_url");
+    if (savedUrl && siteUrl && savedUrl !== siteUrl) return [];
+    const saved = localStorage.getItem("seojump_skipped_quick_wins");
+    if (!saved) return [];
+    const parsed = JSON.parse(saved);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function normQuickWinPage(url) {
+  return String(url || "").replace(/\/$/, "").toLowerCase();
+}
+
 function readAeoCache(siteUrl) {
   try {
     const savedUrl = localStorage.getItem("seojump_aeo_opportunities_url");
@@ -52,78 +74,6 @@ function readAeoCache(siteUrl) {
     return null;
   }
 }
-
-// Mapa de tipos de página para badges
-const getBadgeInfo = (url) => {
-  const staticResponse  = { text: "Página Estática",     color: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300",        wpPath: "🗺️ Ruta en WP: Páginas" };
-  const homeResponse    = { text: "Página de Inicio",    color: "bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300",       wpPath: "🗺️ Ruta en WP: Páginas" };
-  const categoryResponse= { text: "Categoría de Tienda",color: "bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300",   wpPath: "🗺️ Ruta en WP: Productos > Categorías" };
-  const productResponse = { text: "Producto",            color: "bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300",           wpPath: "🗺️ Ruta en WP: Productos > Todos los productos" };
-  if (!url) return staticResponse;
-  const lowerUrl = url.toLowerCase();
-  const categoryKeywords = ['/categoria-producto/', '/categoria/', 'maquinas', 'insumos', 'combos', 'limpieza', 'estetica-vehicular'];
-  if (categoryKeywords.some(k => lowerUrl.includes(k))) return categoryResponse;
-  const productKeywords = ['/producto/', '/shop/', 'shampoo-', 'microfibra-', 'pulimento-', 'kit-'];
-  if (productKeywords.some(k => lowerUrl.includes(k))) return productResponse;
-  try {
-    const parsed = new URL(lowerUrl);
-    if (parsed.pathname === '/' || parsed.pathname === '') return homeResponse;
-  } catch(e) {
-    if (lowerUrl.endsWith('.com/') || lowerUrl.endsWith('.com') || lowerUrl.endsWith('.ar/') || lowerUrl.endsWith('.ar')) return homeResponse;
-  }
-  return staticResponse;
-};
-
-/**
- * Genera título, descripción y objetivo específico de la misión
- * en tiempo de render usando la keyword activa de Fase 1.
- * Nunca depende del texto guardado en localStorage.
- */
-const getMissionDisplay = (mission, goldKeyword) => {
-  const kw = goldKeyword?.trim();
-
-  if (mission.type === 'H1') {
-    return {
-      title: 'El Guardián del Título (H1)',
-      description: kw
-        ? `Modificá la etiqueta H1 de esta página para incluir la frase exacta: "${kw}". Google la lee primero para entender de qué trata tu contenido.`
-        : `Esta página tiene pocas visitas. Revisá y mejorá su etiqueta H1 para que Google la entienda mejor.`,
-      objective: kw
-        ? `🎯 Tu H1 debe contener: "${kw}"`
-        : null,
-    };
-  }
-
-  if (mission.type === 'META') {
-    return {
-      title: 'Gancho de Clics (META)',
-      description: kw
-        ? `Escribí una Meta Descripción que incluya "${kw}". Ese texto aparece debajo de tu título en Google y decide si el usuario entra a tu web o sigue de largo.`
-        : `Esta página aparece en Google pero nadie hace clic. Mejorá su Meta Descripción para ser más atractivo.`,
-      objective: kw
-        ? `🎯 Tu META debe contener: "${kw}"`
-        : null,
-    };
-  }
-
-  if (mission.type === 'ALT') {
-    return {
-      title: 'Ojos de Google (ALT)',
-      description: kw
-        ? `Agregá texto ALT que incluya "${kw}" a las imágenes de esta página. Google no puede ver imágenes, pero sí leer su descripción para indexarlas.`
-        : `Revisá el texto ALT de las imágenes en esta página para que Google las indexe correctamente.`,
-      objective: kw
-        ? `🎯 Tu ALT debe contener: "${kw}"`
-        : null,
-    };
-  }
-
-  return {
-    title: mission.title,
-    description: mission.description,
-    objective: null,
-  };
-};
 
 // ─── PistaDeBoxes ─────────────────────────────────────────────────────────────
 // Bifurcated step-by-step component. Prepared for future video/GIF injection.
@@ -416,6 +366,37 @@ export default function Optimizacion() {
   const [isPremium, setIsPremium] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [copyToast, setCopyToast] = useState(false);
+  const [skippedQuickWins, setSkippedQuickWins] = useState([]);
+  const [businessFocus, setBusinessFocus] = useState("");
+  const [aiCredits, setAiCredits] = useState(null);
+  const [creditsLoading, setCreditsLoading] = useState(true);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeMessage, setUpgradeMessage] = useState("");
+  const [cmsPlatform, setCmsPlatform] = useState("wp_woo");
+  const [pagePreview, setPagePreview] = useState(null);
+  const [pagePreviewLoading, setPagePreviewLoading] = useState(false);
+
+  const refreshCredits = () => {
+    if (!session?.user?.email) {
+      setAiCredits(null);
+      setCreditsLoading(false);
+      return;
+    }
+    setCreditsLoading(true);
+    getAiCreditsStatusForSession()
+      .then((status) => setAiCredits(status))
+      .catch(() => setAiCredits(null))
+      .finally(() => setCreditsLoading(false));
+  };
+
+  const handleAiLimitResponse = (res) => {
+    if (res?.upgrade) {
+      setUpgradeMessage(res.error || "");
+      setShowUpgradeModal(true);
+    }
+    if (res?.credits) setAiCredits(res.credits);
+    else refreshCredits();
+  };
 
   // AEO State
   const [aeoOpportunities, setAeoOpportunities] = useState([]);
@@ -430,7 +411,22 @@ export default function Optimizacion() {
   useEffect(() => {
     const premiumStatus = localStorage.getItem("isPremium") === "true";
     setIsPremium(premiumStatus);
+    const savedFocus = localStorage.getItem("seojump_business_focus");
+    if (savedFocus) setBusinessFocus(savedFocus);
+    setCmsPlatform(getStoredPlatform());
   }, []);
+
+  useEffect(() => {
+    if (businessFocus) {
+      localStorage.setItem("seojump_business_focus", businessFocus);
+    }
+  }, [businessFocus]);
+
+  useEffect(() => {
+    if (siteUrl) {
+      setSkippedQuickWins(readSkippedQuickWins(siteUrl));
+    }
+  }, [siteUrl]);
 
   // Level-up sound tracking
   const prevXpRef = useRef(0);
@@ -468,6 +464,7 @@ export default function Optimizacion() {
 
         // Mostrar progreso local de inmediato (no esperar a Supabase)
         setCompletedIds(localCompleted);
+        setCompletedAeo(new Set(localAeo));
 
         // Combinar con Supabase cuando responda
         fetchCompletedMissions().then(cwResult => {
@@ -684,28 +681,39 @@ export default function Optimizacion() {
   }, [aeoLoading]);
 
   // Load Quick Wins when siteUrl is available
-  useEffect(() => {
-    if (!siteUrl || quickWinsLoading || hasFetchedQuickWins || quickWinsFetchRef.current) return;
+  const loadQuickWins = (excludeList = skippedQuickWins, { useCache = true } = {}) => {
+    if (!siteUrl || quickWinsFetchRef.current) return;
 
-    const cached = readQuickWinsCache(siteUrl);
-    if (cached && cached.length > 0) {
-      setQuickWins(cached);
-      setHasFetchedQuickWins(true);
-      return;
+    if (useCache) {
+      const cached = readQuickWinsCache(siteUrl);
+      if (cached && cached.length > 0) {
+        setQuickWins(cached);
+        setHasFetchedQuickWins(true);
+        return;
+      }
     }
 
     quickWinsFetchRef.current = true;
     setQuickWinsLoading(true);
     setQuickWinsError(null);
 
-    callWithTimeout(getQuickWins(siteUrl, goldKeyword || undefined), "El análisis de oportunidades")
+    const focus = businessFocus.trim() || undefined;
+    callWithTimeout(
+      getQuickWins(siteUrl, goldKeyword || undefined, excludeList, focus),
+      "El análisis de oportunidades"
+    )
       .then(res => {
         if (res.success && Array.isArray(res.quickWins)) {
           setQuickWins(res.quickWins);
           setIsQuickWinsMock(!!res.isMockData);
-          localStorage.setItem("seojump_quick_wins", JSON.stringify(res.quickWins));
-          localStorage.setItem("seojump_quick_wins_url", siteUrl);
+          if (res.quickWins.length > 0) {
+            localStorage.setItem("seojump_quick_wins", JSON.stringify(res.quickWins));
+            localStorage.setItem("seojump_quick_wins_url", siteUrl);
+          } else if (res.message) {
+            setQuickWinsError(res.message);
+          }
         } else {
+          handleAiLimitResponse(res);
           setQuickWinsError(res.error || "No se pudieron obtener oportunidades rápidas.");
         }
       })
@@ -716,8 +724,61 @@ export default function Optimizacion() {
         setQuickWinsLoading(false);
         setHasFetchedQuickWins(true);
         quickWinsFetchRef.current = false;
+        refreshCredits();
       });
+  };
+
+  useEffect(() => {
+    if (!siteUrl || quickWinsLoading || hasFetchedQuickWins) return;
+    loadQuickWins(skippedQuickWins, { useCache: true });
   }, [siteUrl, quickWinsLoading, hasFetchedQuickWins, goldKeyword]);
+
+  useEffect(() => {
+    if (session?.user?.email) refreshCredits();
+    else setCreditsLoading(false);
+  }, [session?.user?.email]);
+
+  const handleSkipQuickWin = (qw) => {
+    playClick();
+    const pageKey = normQuickWinPage(qw.page);
+    const nextSkipped = skippedQuickWins.includes(pageKey)
+      ? skippedQuickWins
+      : [...skippedQuickWins, pageKey];
+    setSkippedQuickWins(nextSkipped);
+    localStorage.setItem("seojump_skipped_quick_wins", JSON.stringify(nextSkipped));
+    localStorage.setItem("seojump_skipped_quick_wins_url", siteUrl);
+    localStorage.removeItem("seojump_quick_wins");
+    localStorage.removeItem("seojump_quick_wins_url");
+    setQuickWins([]);
+    setHasFetchedQuickWins(false);
+    quickWinsFetchRef.current = false;
+    setTimeout(() => loadQuickWins(nextSkipped, { useCache: false }), 0);
+  };
+
+  const handleRefreshQuickWins = () => {
+    playClick();
+    localStorage.removeItem("seojump_quick_wins");
+    localStorage.removeItem("seojump_quick_wins_url");
+    setQuickWins([]);
+    setQuickWinsError(null);
+    setHasFetchedQuickWins(false);
+    quickWinsFetchRef.current = false;
+    setTimeout(() => loadQuickWins(skippedQuickWins, { useCache: false }), 0);
+  };
+
+  const handleResetSkippedQuickWins = () => {
+    playClick();
+    setSkippedQuickWins([]);
+    localStorage.removeItem("seojump_skipped_quick_wins");
+    localStorage.removeItem("seojump_skipped_quick_wins_url");
+    localStorage.removeItem("seojump_quick_wins");
+    localStorage.removeItem("seojump_quick_wins_url");
+    setQuickWins([]);
+    setQuickWinsError(null);
+    setHasFetchedQuickWins(false);
+    quickWinsFetchRef.current = false;
+    setTimeout(() => loadQuickWins([], { useCache: false }), 0);
+  };
 
   // Persist completed Quick Wins
   useEffect(() => {
@@ -741,13 +802,15 @@ export default function Optimizacion() {
     setAeoLoading(true);
     setAeoError(null);
 
-    callWithTimeout(getAeoOpportunities(siteUrl, goldKeyword || undefined), "El análisis AEO")
+    const focus = businessFocus.trim() || undefined;
+    callWithTimeout(getAeoOpportunities(siteUrl, goldKeyword || undefined, undefined, focus), "El análisis AEO")
       .then(res => {
         if (res.success && Array.isArray(res.data)) {
           setAeoOpportunities(res.data);
           localStorage.setItem("seojump_aeo_opportunities", JSON.stringify(res.data));
           localStorage.setItem("seojump_aeo_opportunities_url", siteUrl);
         } else {
+          handleAiLimitResponse(res);
           setAeoError(res.error || "No se pudieron obtener oportunidades AEO.");
         }
       })
@@ -758,6 +821,7 @@ export default function Optimizacion() {
         setAeoLoading(false);
         setHasFetchedAeo(true);
         aeoFetchRef.current = false;
+        refreshCredits();
       });
   }, [activeTab, siteUrl, aeoLoading, hasFetchedAeo, goldKeyword]);
 
@@ -774,6 +838,17 @@ export default function Optimizacion() {
     setShowHelp(false);
     setShowOwl(false);
     setFailedAttempts(0);
+    setPagePreview(null);
+    setPagePreviewLoading(true);
+    if (mission.page) {
+      getPageLivePreview(mission.page)
+        .then((res) => {
+          if (res.success) setPagePreview(res.preview);
+        })
+        .finally(() => setPagePreviewLoading(false));
+    } else {
+      setPagePreviewLoading(false);
+    }
   };
 
   const closeMission = () => setSelectedMission(null);
@@ -889,14 +964,21 @@ export default function Optimizacion() {
         playSuccess();
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 3000);
-        const aeoKey = `${pageUrl}::${headingText}`;
-        if (!completedAeo.has(aeoKey)) {
+        const aeoKey = buildAeoKey(pageUrl, headingText);
+        if (!isAeoCompleted(completedAeo, pageUrl, headingText)) {
           setXp(prev => { const n = prev + 30; localStorage.setItem('seojump_xp', n.toString()); return n; });
-          setCompletedAeo(prev => { const next = new Set(prev); next.add(aeoKey); return next; });
+          setCompletedAeo(prev => {
+            const next = new Set(prev);
+            next.add(aeoKey);
+            localStorage.setItem('seojump_completed_aeo', JSON.stringify(Array.from(next)));
+            return next;
+          });
           setXpPopup({ amount: 30, message: '¡Snack informativo aplicado!' });
           setTimeout(() => setXpPopup(null), 4000);
           setTimeout(() => syncStateWithServer(), 100);
-          markMissionComplete('AEO_OPP', pageUrl, 30, headingText).catch(() => {});
+          markMissionComplete('AEO_OPP', pageUrl, 30, headingText).then(r => {
+            if (!r.success) console.warn('[AEO] No se guardó en Supabase — ¿aplicaste la migración 002?');
+          }).catch(() => {});
         }
       }
     } catch (e) {
@@ -915,8 +997,9 @@ export default function Optimizacion() {
     localStorage.removeItem("seojump_aeo_opportunities");
     localStorage.removeItem("seojump_aeo_opportunities_url");
 
+    const focus = businessFocus.trim() || undefined;
     callWithTimeout(
-      getAeoOpportunities(siteUrl, goldKeyword || undefined, customUrl || undefined),
+      getAeoOpportunities(siteUrl, goldKeyword || undefined, customUrl || undefined, focus),
       "El análisis AEO"
     )
       .then(res => {
@@ -1106,9 +1189,29 @@ export default function Optimizacion() {
                 </div>
               </div>
 
+              <div className="flex justify-end">
+                <AiCreditsBadge credits={aiCredits} loading={creditsLoading} />
+              </div>
+
               {/* QUICK WINS TAB VIEW */}
               {activeTab === "quickwins" ? (
                 <div className="space-y-6">
+                  <div className="card-3d p-4 md:p-5 space-y-3 border border-amber-500/20">
+                    <label className="text-xs font-black text-amber-400 uppercase tracking-wider block">
+                      🏪 ¿Qué vendés? (ayuda a la IA a no equivocarse)
+                    </label>
+                    <input
+                      type="text"
+                      value={businessFocus}
+                      onChange={(e) => setBusinessFocus(e.target.value)}
+                      placeholder="Ej: vinilo líquido removible y pintura de retoque — no pintura de taller"
+                      className="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-sm focus:border-amber-500 focus:outline-none"
+                    />
+                    <p className="text-xs text-slate-500 font-bold">
+                      Si una sugerencia no encaja, usá <span className="text-amber-400">«No me sirve»</span> para buscar otra página.
+                    </p>
+                  </div>
+
                   {quickWinsLoading ? (
                     <div className="text-center py-12 card-3d">
                       <div className="relative w-16 h-16 mx-auto mb-4">
@@ -1121,19 +1224,22 @@ export default function Optimizacion() {
                     <div className="text-center py-12 card-3d space-y-4">
                       <div className="text-6xl">⚠️</div>
                       <p className="text-red-400 font-bold text-lg">{quickWinsError}</p>
-                      <button 
-                        onClick={() => {
-                          setQuickWinsError(null);
-                          setQuickWins([]);
-                          setHasFetchedQuickWins(false);
-                          quickWinsFetchRef.current = false;
-                          localStorage.removeItem("seojump_quick_wins");
-                          localStorage.removeItem("seojump_quick_wins_url");
-                        }} 
-                        className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4"
-                      >
-                        REINTENTAR
-                      </button>
+                      <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                        <button
+                          onClick={handleRefreshQuickWins}
+                          className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black"
+                        >
+                          BUSCAR OTRAS
+                        </button>
+                        {skippedQuickWins.length > 0 && (
+                          <button
+                            onClick={handleResetSkippedQuickWins}
+                            className="btn-3d btn-white inline-block py-3 px-8 text-sm font-black text-slate-700"
+                          >
+                            RESTABLECER DESCARTADAS
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ) : quickWins.length > 0 ? (
                     <div className="space-y-6">
@@ -1253,13 +1359,20 @@ export default function Optimizacion() {
                               )}
                               
                               {!isCompleted && (
-                                <div className="pt-2">
+                                <div className="pt-2 flex flex-col sm:flex-row gap-3">
                                   <button
                                     onClick={() => handleVerifyQuickWin(index, qw.page, qw.suggestedTitle)}
                                     disabled={verifyResult.loading}
                                     className="btn-3d btn-yellow text-sm md:text-base font-black px-6 py-3"
                                   >
                                     {verifyResult.loading ? '⏳ VERIFICANDO...' : 'YA LO CAMBIÉ'}
+                                  </button>
+                                  <button
+                                    onClick={() => handleSkipQuickWin(qw)}
+                                    disabled={quickWinsLoading}
+                                    className="btn-3d bg-slate-700 border-slate-600 border-b-4 hover:bg-slate-600 text-white text-sm font-black px-6 py-3"
+                                  >
+                                    {quickWinsLoading ? '⏳ BUSCANDO...' : '👎 NO ME SIRVE — BUSCAR OTRA'}
                                   </button>
                                 </div>
                               )}
@@ -1333,25 +1446,38 @@ export default function Optimizacion() {
                     <div className="text-center py-12 card-3d space-y-4">
                       <div className="text-6xl">⚠️</div>
                       <p className="text-red-400 font-bold text-lg">{aeoError}</p>
+                      <p className="text-sm text-slate-500 font-bold max-w-md mx-auto">
+                        Si tu clave empieza con <strong className="text-slate-400">AQ.</strong>, Google todavía no la acepta bien. Creá una clave que empiece con <strong className="text-slate-400">AIza</strong> en Google Cloud Console → Credenciales.
+                      </p>
                       <button
-                        onClick={() => {
-                          setAeoError(null);
-                          setAeoOpportunities([]);
-                          setHasFetchedAeo(false);
-                          aeoFetchRef.current = false;
-                          localStorage.removeItem("seojump_aeo_opportunities");
-                          localStorage.removeItem("seojump_aeo_opportunities_url");
-                        }}
+                        onClick={() => { playClick(); handleLoadAeo(manualAeoUrl || undefined); }}
                         className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4"
                       >
                         REINTENTAR
                       </button>
                     </div>
-                  ) : aeoOpportunities.length > 0 ? (
+                  ) : aeoOpportunities.length > 0 ? (() => {
+                    const pendingAeo = aeoOpportunities.filter(
+                      opp => !isAeoCompleted(completedAeo, opp.pageUrl, opp.heading_affected)
+                    );
+                    const doneFromCache = aeoOpportunities.filter(
+                      opp => isAeoCompleted(completedAeo, opp.pageUrl, opp.heading_affected)
+                    );
+                    if (pendingAeo.length === 0) {
+                      return (
+                        <div className="text-center py-12 card-3d space-y-4">
+                          <div className="text-6xl">✅</div>
+                          <p className="text-green-400 font-bold text-xl">¡Ya completaste las oportunidades AEO de esta lista!</p>
+                          <p className="text-sm text-slate-500">Tocá <strong className="text-purple-400">ANALIZAR WEB</strong> para buscar en otra URL, o volvé mañana si agregaste contenido nuevo.</p>
+                          {doneFromCache.length > 0 && (
+                            <p className="text-xs text-slate-500">{doneFromCache.length} tarea(s) AEO guardada(s) en tu progreso.</p>
+                          )}
+                        </div>
+                      );
+                    }
+                    return (
                     <div className="space-y-6">
-                      {aeoOpportunities.map((opp, index) => {
-                        const aeoKey = `${opp.pageUrl}::${opp.heading_affected}`;
-                        const isCompleted = completedAeo.has(aeoKey);
+                      {pendingAeo.map((opp, index) => {
                         const isUnlocked = isPremium || index < 2;
                         const result = verifyAeoResult[index] || {};
 
@@ -1375,10 +1501,7 @@ export default function Optimizacion() {
                         }
 
                         return (
-                          <div key={index} className={`card-3d relative overflow-hidden p-6 md:p-8 flex flex-col gap-5 transition-all duration-300 ${isCompleted ? 'border-green-500/50 opacity-85' : 'border-purple-500/30'}`}>
-                            {isCompleted && (
-                              <div className="absolute top-0 right-0 bg-green-500 text-slate-955 font-black text-xs px-4 py-1.5 rounded-bl-xl uppercase tracking-wider">¡Completado! 🎉</div>
-                            )}
+                          <div key={index} className="card-3d relative overflow-hidden p-6 md:p-8 flex flex-col gap-5 transition-all duration-300 border-purple-500/30">
                             <div className="space-y-4 text-left w-full">
                               {/* Header */}
                               <div className="flex items-start gap-3">
@@ -1421,23 +1544,22 @@ export default function Optimizacion() {
                               )}
 
                               {/* Verify button */}
-                              {!isCompleted && (
-                                <div className="pt-2">
-                                  <button
-                                    onClick={() => handleVerifyAeo(index, opp.pageUrl, opp.heading_affected, opp.optimized_text_replacement)}
-                                    disabled={result.loading}
-                                    className="btn-3d bg-purple-600 border-purple-700 border-b-4 hover:bg-purple-500 text-white text-sm md:text-base font-black px-6 py-3"
-                                  >
-                                    {result.loading ? '⏳ VERIFICANDO...' : 'YA LO CAMBIÉ (+30 XP)'}
-                                  </button>
-                                </div>
-                              )}
+                              <div className="pt-2">
+                                <button
+                                  onClick={() => handleVerifyAeo(index, opp.pageUrl, opp.heading_affected, opp.optimized_text_replacement)}
+                                  disabled={result.loading}
+                                  className="btn-3d bg-purple-600 border-purple-700 border-b-4 hover:bg-purple-500 text-white text-sm md:text-base font-black px-6 py-3"
+                                >
+                                  {result.loading ? '⏳ VERIFICANDO...' : 'YA LO CAMBIÉ (+30 XP)'}
+                                </button>
+                              </div>
                             </div>
                           </div>
                         );
                       })}
                     </div>
-                  ) : (
+                    );
+                  })() : (
                     <div className="text-center py-12 card-3d">
                       <div className="text-6xl mb-4">🤖</div>
                       <p className="text-slate-400 font-bold text-xl">Hacé clic en "ANALIZAR WEB" para escanear tu sitio y encontrar oportunidades AEO.</p>
@@ -1453,7 +1575,7 @@ export default function Optimizacion() {
                     <div className="flex items-center gap-3 bg-amber-950/40 border border-amber-700/40 rounded-2xl px-5 py-3">
                       <span className="text-xl flex-shrink-0">🎯</span>
                       <p className="text-sm font-black text-amber-300/90 leading-snug">
-                        Objetivo activo: <span className="text-amber-200">«{goldKeyword}»</span> — Cada H1, META y ALT debe incluir esta frase para rankear.
+                        Objetivo activo: <span className="text-amber-200">«{goldKeyword}»</span> — Incluí esta frase en el título, la descripción de Google y las imágenes.
                       </p>
                     </div>
                   ) : (
@@ -1464,6 +1586,8 @@ export default function Optimizacion() {
                       </p>
                     </div>
                   )}
+
+                  <PlatformSelector value={cmsPlatform} onChange={setCmsPlatform} playClick={playClick} />
 
                   {prog?.p3 && (
                     <div className="space-y-1">
@@ -1514,8 +1638,8 @@ export default function Optimizacion() {
                              );
                           }
 
-                          const badge = getBadgeInfo(mission.page);
-                          const display = getMissionDisplay(mission, goldKeyword);
+                          const pageType = detectPageType(mission.page);
+                          const display = getMissionDisplayPlain(mission, goldKeyword, siteUrl);
                           return (
                             <div key={mission.id}
                               onClick={() => { playClick(); openMission(mission); }}
@@ -1528,14 +1652,16 @@ export default function Optimizacion() {
                               <div className="flex-1 min-w-0 w-full">
                                 <div className="flex items-center gap-3 flex-wrap mb-1.5">
                                   <h3 className="text-xl md:text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100 group-hover:text-duo-green transition-colors">{display.title}</h3>
-                                  <span className={`text-sm font-black px-3 py-1 rounded-md ${badge.color}`}>{badge.text}</span>
+                                  <span className={`text-sm font-black px-3 py-1 rounded-md ${pageType.badgeColor}`}>{pageType.label}</span>
                                 </div>
                                 <div className="flex items-center gap-2 mb-1.5 w-full min-w-0">
                                   <code className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 truncate block w-full max-w-[200px] min-[400px]:max-w-[260px] sm:max-w-[380px] md:max-w-[450px]">{mission.page}</code>
                                   <button onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(mission.page); playClick(); }}
                                     className="p-2 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-md transition-colors text-slate-400 hover:text-slate-655 text-lg flex-shrink-0" title="Copiar URL">📋</button>
                                 </div>
-                                <p className="text-sm text-slate-400 font-bold italic mb-2">{badge.wpPath}</p>
+                                <p className="text-sm text-slate-400 font-bold italic mb-2 truncate" title={display.suggestedText}>
+                                  💡 Sugerencia: {display.suggestedText}
+                                </p>
                                 <p className="font-bold text-slate-655 dark:text-slate-350 text-base md:text-lg lg:text-xl leading-relaxed mb-2">{display.description}</p>
                                 {display.objective && (
                                    <div className="inline-flex items-center gap-2 bg-amber-955/50 border border-amber-700/40 rounded-xl px-3 py-1.5 mt-1 mb-2">
@@ -1619,13 +1745,25 @@ export default function Optimizacion() {
                 <div className="min-w-0 w-full">
                   <h2 className="text-2xl md:text-3xl lg:text-4xl font-black text-slate-800 dark:text-slate-100 flex items-center gap-3">
                     <button onClick={() => { playClick(); closeMission(); }} className="text-2xl text-slate-500 md:hidden flex-shrink-0">←</button>
-                    Misión: {selectedMission.type}
+                    {getPlainMissionLabels(selectedMission.type).shortTitle}
                   </h2>
-                  <p className="mission-path text-sm md:text-base lg:text-lg font-bold text-slate-550 dark:text-slate-400 mt-1" title={selectedMission.pagePath}>
-                    {selectedMission.pagePath}
+                  <p className="mission-path text-sm md:text-base lg:text-lg font-bold text-slate-550 dark:text-slate-400 mt-1 break-all" title={selectedMission.page}>
+                    {selectedMission.page}
                   </p>
                 </div>
               </div>
+
+              <PlatformSelector value={cmsPlatform} onChange={setCmsPlatform} playClick={playClick} />
+
+              <MissionEditorGuide
+                mission={selectedMission}
+                siteUrl={siteUrl}
+                platformId={cmsPlatform}
+                goldKeyword={goldKeyword}
+                pagePreview={pagePreview}
+                previewLoading={pagePreviewLoading}
+                playClick={playClick}
+              />
 
               {/* Stats */}
               <div className="grid grid-cols-3 gap-2 md:gap-4 min-w-0 w-full">
@@ -1653,9 +1791,7 @@ export default function Optimizacion() {
                     <img src="/images/logo-owl.png" alt="SEO Jump" className="w-16 h-16 md:w-20 md:h-20 object-contain animate-bounce flex-shrink-0" />
                     <div className="flex-1">
                       <div className="bg-slate-800 text-slate-200 p-6 rounded-2xl rounded-tl-none font-bold text-base md:text-lg lg:text-xl leading-relaxed shadow-lg border border-slate-600 relative">
-                        {selectedMission.type === 'H1'  && <p>El <strong className="text-duo-green">H1</strong> es el título principal de tu local. Google lo lee primero para saber EXACTAMENTE de qué se trata tu página. Tiene que ser claro, contener tu palabra clave y convencer al usuario.</p>}
-                        {selectedMission.type === 'META' && <p>La <strong className="text-duo-yellow">Meta Descripción</strong> es el cartel que ve la gente en la vereda de Google antes de entrar. No te hace subir puestos directamente, pero un buen gancho comercial define si te dan el clic a vos o siguen de largo.</p>}
-                        {selectedMission.type === 'ALT'  && <p>Google es ciego para los ojos pero lee como los dioses. Si subís la foto de un producto sin <strong className="text-duo-blue">ALT</strong>, el robot no sabe qué es. Al ponerle una descripción con tu palabra clave, empezás a indexar en Google Imágenes.</p>}
+                        <p>{getOwlExplanation(selectedMission.type, selectedMission.keyword || goldKeyword)}</p>
                         <div className="absolute top-0 -left-2 w-0 h-0 border-t-[10px] border-t-slate-800 border-l-[10px] border-l-transparent" />
                       </div>
                     </div>
@@ -1671,33 +1807,15 @@ export default function Optimizacion() {
               {/* Mission Input */}
               <div className="card-3d bg-white dark:bg-slate-800 space-y-6 p-4 md:p-8 min-w-0 w-full overflow-hidden">
                 <p className="font-bold text-slate-655 dark:text-slate-300 text-base md:text-lg lg:text-xl break-words">
-                  {selectedMission.type === 'H1'  && <>
-                    Hacé el cambio en tu web, después escribí acá el nuevo <span className="text-duo-green">H1</span> que pusiste
-                    {goldKeyword && <> (que debe incluir <span className="text-amber-400 font-black">«{goldKeyword}»</span>)</>}:
-                  </>}
-                  {selectedMission.type === 'META' && <>
-                    Actualizá la <span className="text-duo-yellow">Meta Descripción</span> de tu sitio
-                    {goldKeyword && <>, incluyendo <span className="text-amber-400 font-black">«{goldKeyword}»</span>,</>} después pegala acá:
-                  </>}
-                  {selectedMission.type === 'ALT'  && <>
-                    Agregá el texto <span className="text-duo-blue">ALT</span> a una imagen
-                    {goldKeyword && <> con la frase <span className="text-amber-400 font-black">«{goldKeyword}»</span></>}, después escribí acá el ALT que usaste:
-                  </>}
+                  {getPlainMissionLabels(selectedMission.type).verifyLabel}
+                  {goldKeyword && (
+                    <> — debe incluir <span className="text-amber-400 font-black">«{goldKeyword}»</span></>
+                  )}:
                 </p>
                 <input
                   type="text"
                   placeholder={
-                    selectedMission.type === 'H1'
-                      ? goldKeyword
-                        ? `ej: ${goldKeyword.charAt(0).toUpperCase() + goldKeyword.slice(1)} profesional en Buenos Aires`
-                        : 'ej: Detailing Profesional en Buenos Aires'
-                      : selectedMission.type === 'META'
-                      ? goldKeyword
-                        ? `ej: Los mejores servicios de ${goldKeyword}. Envío gratis.`
-                        : 'ej: Los mejores productos de detailing. Envío gratis.'
-                      : goldKeyword
-                        ? `ej: ${goldKeyword} siendo aplicado en auto rojo`
-                        : 'ej: Auto rojo siendo encerado con cera carnauba'
+                    getMissionDisplayPlain(selectedMission, goldKeyword, siteUrl).suggestedText
                   }
                   value={h1Value}
                   onChange={(e) => setH1Value(e.target.value)}
@@ -1718,24 +1836,6 @@ export default function Optimizacion() {
                     )}
                   </div>
                 )}
-
-                {missionStatus === 'error' && selectedMission?.page && (
-                  <div className="bg-slate-800 border-2 border-slate-600 rounded-2xl p-5 text-base font-bold text-slate-355 flex items-start gap-4">
-                    <span className="text-2xl flex-shrink-0">🏎️</span>
-                    <div>
-                      <p className="font-black text-slate-100 mb-1.5">¿Dónde lo edito en mi WordPress?</p>
-                      {selectedMission.page.includes('/producto/') || selectedMission.page.includes('/product/')
-                        ? <p>Este contenido está en un <span className="text-duo-yellow font-black">PRODUCTO de WooCommerce</span>. Andá a <strong>Productos → Todos los productos</strong> y hacé clic en Editar.</p>
-                        : selectedMission.page.includes('/blog/') || selectedMission.page.includes('/entrada/')
-                        ? <p>Este contenido es una <span className="text-duo-blue font-black">ENTRADA de Blog</span>. Andá a <strong>Entradas → Todas las entradas</strong> y hacé clic en Editar.</p>
-                        : selectedMission.page.includes('/categoria-producto/') || selectedMission.page.includes('/categoria/')
-                        ? <p>Este contenido es una <span className="text-purple-400 font-black">CATEGORÍA de Tienda</span>. Andá a <strong>Productos → Categorías</strong> y editá la categoría correspondiente.</p>
-                        : <p>Este contenido es una <span className="text-green-400 font-black">PÁGINA Estática</span>. Andá a <strong>Páginas → Todas las páginas</strong> y hacé clic en Editar.</p>
-                      }
-                    </div>
-                  </div>
-                )}
-
 
                 <button
                   onClick={() => { playClick(); checkMission(); }}
@@ -1799,6 +1899,13 @@ export default function Optimizacion() {
           playClick={playClick}
         />
       )}
+
+      <UpgradeModal
+        open={showUpgradeModal}
+        onClose={() => setShowUpgradeModal(false)}
+        playClick={playClick}
+        message={upgradeMessage}
+      />
 
     </div>
   );

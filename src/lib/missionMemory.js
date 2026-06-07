@@ -38,7 +38,7 @@ export function idsFromSupabaseMissions(missions) {
     if (m.mission_type === "QUICK_WIN") {
       completedQuickWins.add(m.target_url);
     } else if (m.mission_type === "AEO_OPP") {
-      completedAeo.add(`${m.target_url}::${m.suggested_value || ""}`);
+      completedAeo.add(buildAeoKey(m.target_url, m.suggested_value || ""));
     } else {
       completedIds.add(buildMissionId(m.mission_type, m.target_url));
     }
@@ -107,6 +107,22 @@ export function filterPendingMissions(missions, completedSet) {
   }
 
   return pending;
+}
+
+/** Clave estable para oportunidades AEO: URL normalizada + heading exacto. */
+export function buildAeoKey(pageUrl, heading) {
+  const url = normalizePagePath(pageUrl).toLowerCase();
+  const h = String(heading || "").trim();
+  return `${url}::${h}`;
+}
+
+export function isAeoCompleted(completedSet, pageUrl, heading) {
+  if (!completedSet) return false;
+  const key = buildAeoKey(pageUrl, heading);
+  if (completedSet.has(key)) return true;
+  // Compatibilidad con claves viejas (URL completa sin normalizar)
+  const legacy = `${String(pageUrl || "").replace(/\/$/, "")}::${String(heading || "").trim()}`;
+  return completedSet.has(legacy);
 }
 
 export function completedPagePathsFromSet(completedSet) {

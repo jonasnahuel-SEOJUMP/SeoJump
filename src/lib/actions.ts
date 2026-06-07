@@ -5,8 +5,17 @@ import path from "path"
 import { signIn, signOut, auth } from "../auth"
 import { getSearchConsoleData, submitGoogleIndexing } from "./google"
 import { GoogleGenerativeAI } from "@google/generative-ai"
-import { completeMission, getMissionsByEmail, type MissionType } from './supabase'
-import { normalizePagePath } from './missionMemory'
+import { completeMission, getMissionsByEmail, deleteProfileByEmail, updateSubscriptionPlan, type MissionType } from './supabase'
+import { normalizePagePath, buildAeoKey } from './missionMemory'
+import {
+  checkAndConsumeAiCredit,
+  getAiCreditsStatus,
+  getCachedGeminiResponse,
+  setCachedGeminiResponse,
+  buildGeminiCacheKey,
+  type AiCreditsStatus,
+} from './aiCredits'
+import type { AiFeature } from './planLimits'
 
 export async function login() {
   await signIn("google")
@@ -39,6 +48,91 @@ export async function checkIsAdmin(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * Estado de créditos IA del usuario logueado (para UI).
+ */
+export async function getAiCreditsStatusForSession(): Promise<AiCreditsStatus | null> {
+  const session = await auth();
+  const email = session?.user?.email;
+  if (!email) return null;
+  const isAdmin = await checkIsAdmin();
+  return getAiCreditsStatus(email, { isAdmin });
+}
+
+/**
+ * Activa plan PRO o Agencia manualmente (solo admin). Útil hasta integrar Mercado Pago.
+ */
+export async function activateUserPlan(
+  targetEmail: string,
+  plan: 'free' | 'pro' | 'agency',
+  months: number = 1
+): Promise<{ success: boolean; error?: string }> {
+  const isAdmin = await checkIsAdmin();
+  if (!isAdmin) {
+    return { success: false, error: 'Solo administradores pueden activar planes.' };
+  }
+
+  const email = targetEmail.trim().toLowerCase();
+  if (!email) return { success: false, error: 'Email inválido.' };
+
+  let expiresAt: string | null = null;
+  if (plan !== 'free' && months > 0) {
+    const d = new Date();
+    d.setMonth(d.getMonth() + months);
+    expiresAt = d.toISOString();
+  }
+
+  const ok = await updateSubscriptionPlan(email, plan, expiresAt);
+  if (!ok) {
+    return { success: false, error: 'No se pudo actualizar el plan. ¿Ejecutaste la migración 003 en Supabase?' };
+  }
+
+  return { success: true };
+}
+
+type GeminiCreditResult =
+  | { ok: true; text: string; credits: AiCreditsStatus }
+  | {
+      ok: false;
+      error: string;
+      code?: string;
+      credits?: AiCreditsStatus;
+      upgrade?: boolean;
+    };
+
+async function invokeGeminiWithCredits(params: {
+  email: string;
+  isAdmin: boolean;
+  feature: AiFeature;
+  cacheKey: string;
+  prompt: string;
+  apiKey: string;
+}): Promise<GeminiCreditResult> {
+  const cached = await getCachedGeminiResponse(params.cacheKey);
+  if (cached) {
+    const status = await getAiCreditsStatus(params.email, { isAdmin: params.isAdmin });
+    return { ok: true, text: cached, credits: status };
+  }
+
+  const creditCheck = await checkAndConsumeAiCredit(params.email, params.feature, {
+    isAdmin: params.isAdmin,
+  });
+
+  if (creditCheck.allowed === false) {
+    return {
+      ok: false,
+      error: creditCheck.error,
+      code: creditCheck.code,
+      credits: creditCheck.status,
+      upgrade: true,
+    };
+  }
+
+  const text = await callGeminiREST(params.apiKey, params.prompt);
+  await setCachedGeminiResponse(params.cacheKey, text);
+  return { ok: true, text, credits: creditCheck.status };
 }
 
 /**
@@ -133,69 +227,98 @@ function logErrorToFile(actionName: string, input: any, status: string | number,
 /**
  * Realiza una llamada directa a la API REST de Google Gemini, omitiendo el SDK.
  */
+function geminiKeyHint(apiKey: string): string | null {
+  if (apiKey.startsWith('AQ.')) {
+    return 'Tu clave empieza con "AQ." y Google aún no la acepta en todos los endpoints. Creá una clave clásica que empiece con "AIza" en Google Cloud Console → APIs y servicios → Credenciales → Crear credenciales → Clave de API.';
+  }
+  return null;
+}
+
+/** Mensaje claro según el tipo de fallo de Gemini (saldo, cuota, clave, etc.). */
+function geminiErrorToUserMessage(rawError: string): string {
+  const errMsg = String(rawError || '').toLowerCase();
+
+  if (
+    errMsg.includes('prepayment credits are depleted') ||
+    errMsg.includes('prepayment credit') ||
+    errMsg.includes('credits are depleted') ||
+    (errMsg.includes('saldo') && errMsg.includes('agot'))
+  ) {
+    return 'Saldo de Google agotado. El administrador debe cargar créditos en AI Studio (aistudio.google.com) → tu proyecto → Comprar créditos.';
+  }
+
+  if (errMsg.includes('api key expired') || errMsg.includes('api_key_invalid') || errMsg.includes('key expired') || errMsg.includes('key invalid') || errMsg.includes('invalid authentication')) {
+    return '⚠️ La clave de API de Gemini venció o es inválida. El administrador debe renovarla en Google AI Studio.';
+  }
+
+  if (errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('rate limit') || errMsg.includes('resource_exhausted')) {
+    return 'La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.';
+  }
+
+  if (errMsg.includes('404') || errMsg.includes('not found')) {
+    return 'El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.';
+  }
+
+  return 'Error temporal al conectar con la IA. Intentá de nuevo en unos segundos.';
+}
+
 async function callGeminiREST(apiKey: string, promptText: string): Promise<string> {
-  // Model fallback chain — each model has independent quota
-  const models = [
-    { name: 'gemini-2.5-flash', api: 'v1beta' },
-    { name: 'gemini-2.5-flash-lite', api: 'v1beta' },
-    { name: 'gemini-2.0-flash', api: 'v1beta' },
-  ];
-
+  const model = { name: 'gemini-2.5-flash', api: 'v1beta' };
+  const useHeaderAuth = apiKey.startsWith('AQ.');
+  const baseUrl = `https://generativelanguage.googleapis.com/${model.api}/models/${model.name}:generateContent`;
+  const url = useHeaderAuth ? baseUrl : `${baseUrl}?key=${encodeURIComponent(apiKey)}`;
   let lastError = '';
-  
-  for (const model of models) {
-    const url = `https://generativelanguage.googleapis.com/${model.api}/models/${model.name}:generateContent?key=${apiKey}`;
-    
-    // Try each model up to 2 times with backoff
-    for (let attempt = 0; attempt < 2; attempt++) {
-      console.log(`[Gemini REST] Trying ${model.name} (attempt ${attempt + 1})...`);
-      
-      try {
-        const response = await fetch(url, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          cache: "no-store",
-          body: JSON.stringify({
-            contents: [{ role: "user", parts: [{ text: promptText }] }],
-            generationConfig: { responseMimeType: "application/json" }
-          }),
-          signal: AbortSignal.timeout(10000)
-        });
 
-        if (response.status === 429 || response.status === 503) {
-          lastError = `${model.name}: ${response.status}`;
-          if (attempt === 0) {
-            // Retry once after 3s, then move to next model
-            console.warn(`[Gemini REST] ${model.name} returned ${response.status}, retrying in 3s...`);
-            await new Promise(r => setTimeout(r, 3000));
-            continue;
-          }
-          console.warn(`[Gemini REST] ${model.name} exhausted, trying next model...`);
-          break; // Move to next model
-        }
+  for (let attempt = 0; attempt < 2; attempt++) {
+    console.log(`[Gemini REST] ${model.name} (attempt ${attempt + 1})...`);
 
-        if (!response.ok) {
-          const errText = await response.text();
-          lastError = `${model.name}: ${response.status} ${errText.substring(0, 200)}`;
-          break; // Non-retryable error, try next model
-        }
+    try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (useHeaderAuth) headers['x-goog-api-key'] = apiKey;
 
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        if (!text) {
-          lastError = `${model.name}: empty response`;
-          break;
-        }
-        console.log(`[Gemini REST] ✅ ${model.name} succeeded!`);
-        return text;
-      } catch (fetchErr: any) {
-        lastError = `${model.name}: ${fetchErr.message}`;
-        break; // Network/timeout error, try next model
+      const response = await fetch(url, {
+        method: 'POST',
+        headers,
+        cache: 'no-store',
+        body: JSON.stringify({
+          contents: [{ role: 'user', parts: [{ text: promptText }] }],
+          generationConfig: { responseMimeType: 'application/json' },
+        }),
+        signal: AbortSignal.timeout(12000),
+      });
+
+      if ((response.status === 429 || response.status === 503) && attempt === 0) {
+        lastError = `${model.name}: ${response.status}`;
+        console.warn(`[Gemini REST] ${response.status}, retry in 2s...`);
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
       }
+
+      if (!response.ok) {
+        const errText = await response.text();
+        lastError = `${model.name}: ${response.status} ${errText.substring(0, 200)}`;
+        break;
+      }
+
+      const data = await response.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (!text) {
+        lastError = `${model.name}: empty response`;
+        break;
+      }
+      console.log(`[Gemini REST] ✅ ${model.name} OK`);
+      return text;
+    } catch (fetchErr: any) {
+      lastError = `${model.name}: ${fetchErr.message}`;
+      break;
     }
   }
 
-  throw new Error(`All Gemini models failed. Last error: ${lastError}`);
+  const keyHint = geminiKeyHint(apiKey);
+  if (keyHint && (lastError.includes('401') || lastError.includes('invalid authentication'))) {
+    throw new Error(keyHint);
+  }
+  throw new Error(`Gemini failed. Last error: ${lastError}`);
 }
 
 
@@ -319,11 +442,11 @@ const buildMissionTypes = (goldKeyword?: string) => [
   // Pide agregar una sección FAQ que multiplica chances de aparecer en AI Overviews
   {
     type: 'AEO',
-    title: 'Oportunidad AEO (Respuesta de IA)',
+    title: 'Que ChatGPT y Google IA te recomienden',
     descriptionTemplate: (path: string) =>
       goldKeyword
-        ? `La página ${path} aparece para «${goldKeyword}» — una pregunta real. Agreá una sección FAQ y multiplicá 3× tus chances de aparecer en AI Overviews, ChatGPT y Gemini.`
-        : `La página ${path} aparece para búsquedas con preguntas. Agreá una FAQ y multiplicá las chances de aparecer en la IA que está reemplazando a Google.`,
+        ? `La página ${path} aparece para «${goldKeyword}» — una pregunta real. Agregá al final un bloque de preguntas y respuestas (ej: «¿Para qué sirve?» + respuesta corta) para que ChatGPT y Google IA puedan citar tu página.`
+        : `La página ${path} aparece para búsquedas con preguntas. Agregá al final un bloque de preguntas y respuestas con dudas reales de tus clientes y respuestas cortas.`,
     xp: 80,
     icon: '🤖',
     color: 'purple',
@@ -339,7 +462,7 @@ const buildMissionTypes = (goldKeyword?: string) => [
       ],
       visual: [
         `Abrí tu constructor visual (Elementor, Divi, UX Builder) y editá la página.`,
-        `Bajá al final del contenido. Agreá un bloque de tipo «Acordeón/FAQ» si tu tema lo tiene, o un bloque de texto normal.`,
+        `Bajá al final del contenido. Agregá un bloque de texto normal (o «Preguntas frecuentes» si tu tema tiene ese bloque).`,
         goldKeyword
           ? `Creá un H2 que diga «Preguntas frecuentes sobre ${goldKeyword}».`
           : `Creá un H2 que diga «Preguntas frecuentes».`,
@@ -400,18 +523,22 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
       return { success: false, error: "No hay sesión activa o falta el token de acceso" }
     }
 
-    const rows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined)
+    const rowLimit = cleanGoldKeyword ? 25 : 50;
+    let rows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined, rowLimit)
 
     if (!rows || rows.length === 0) {
       return { success: true, data: [] }
     }
 
+    const sortGscRows = (list: typeof rows) =>
+      [...list].sort((a, b) => {
+        const clicksDiff = (b.clicks || 0) - (a.clicks || 0);
+        if (clicksDiff !== 0) return clicksDiff;
+        return (b.impressions || 0) - (a.impressions || 0);
+      });
+
     // Sort by clicks desc, then impressions desc
-    const sortedRows = [...rows].sort((a, b) => {
-      const clicksDiff = (b.clicks || 0) - (a.clicks || 0);
-      if (clicksDiff !== 0) return clicksDiff;
-      return (b.impressions || 0) - (a.impressions || 0);
-    });
+    let sortedRows = sortGscRows(rows);
 
     // ── Excluir la página de inicio de las misiones regulares ─────────────
     // La portada representa la marca/categoría del negocio, no un producto
@@ -433,7 +560,17 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
       }
     };
 
-    const missionRows = sortedRows.filter(row => !isHomeUrl(row.keys[0]));
+    let missionRows = sortedRows.filter(row => !isHomeUrl(row.keys[0]));
+
+    // Si el top de GSC es solo la home, ampliar búsqueda sin filtro de keyword
+    if (missionRows.length === 0) {
+      const broaderRows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, undefined, 100);
+      if (broaderRows?.length) {
+        sortedRows = sortGscRows(broaderRows);
+        missionRows = sortedRows.filter(row => !isHomeUrl(row.keys[0]));
+        console.log(`[getRealMissions] Fallback sin keyword: ${missionRows.length} página(s) fuera de home`);
+      }
+    }
 
     // ── Coherencia semántica: keyword vs. URL de la página ────────────────
     // GSC a veces registra búsquedas de productos en páginas de categorías
@@ -1045,6 +1182,17 @@ async function scrapeMetadata(siteUrl: string): Promise<{ title: string; descrip
   return result;
 }
 
+/** Vista previa en vivo de título, meta y H1 para misiones (antes/después). */
+export async function getPageLivePreview(pageUrl: string) {
+  try {
+    const preview = await scrapeMetadata(pageUrl);
+    return { success: true, preview };
+  } catch (error) {
+    console.error("getPageLivePreview:", error);
+    return { success: false, preview: { title: "", description: "", h1: "" } };
+  }
+}
+
 /**
  * Server Action híbrida para obtener sugerencias predictivas SEO con IA (Gemini).
  */
@@ -1155,12 +1303,42 @@ Reglas estrictas de generación:
 ]
 `;
 
-    // 4. Llamar a la API de Gemini con mecanismo de reintento (retry) y retroceso exponencial (exponential backoff)
-    let responseText = "";
+    const session = await auth();
+    const email = session?.user?.email || '';
+    const isAdmin = await checkIsAdmin();
+    if (!email && !isAdmin) {
+      return { success: false, error: 'Tenés que iniciar sesión para usar la IA.', code: 'NOT_AUTHENTICATED' };
+    }
 
+    const cacheKey = buildGeminiCacheKey([
+      'buscador_oro',
+      email || 'anon',
+      cleanSiteUrl,
+      cleanSeedKeyword,
+      excludedWords || '',
+    ]);
+
+    let responseText = "";
     try {
-      console.log("[API Debug Detective] Calling Gemini REST API directly (skipping SDK)...");
-      responseText = await callGeminiREST(apiKey, systemInstructions);
+      console.log("[API Debug Buscador] Gemini con créditos...");
+      const geminiResult = await invokeGeminiWithCredits({
+        email: email || 'dev@localhost',
+        isAdmin,
+        feature: 'buscador_oro',
+        cacheKey,
+        prompt: systemInstructions,
+        apiKey,
+      });
+      if (geminiResult.ok === false) {
+        return {
+          success: false,
+          error: geminiResult.error,
+          code: geminiResult.code,
+          credits: geminiResult.credits,
+          upgrade: geminiResult.upgrade,
+        };
+      }
+      responseText = geminiResult.text;
     } catch (geminiErr: any) {
       console.error("[API Debug Detective] REST call failed:", geminiErr.message || geminiErr);
       logErrorToFile(
@@ -1169,16 +1347,7 @@ Reglas estrictas de generación:
         geminiErr.status || "503", 
         geminiErr.message || String(geminiErr)
       );
-      const errMsg = String(geminiErr.message || geminiErr).toLowerCase();
-      let userMessage = "";
-      if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
-        userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
-      } else if (errMsg.includes("404") || errMsg.includes("not found")) {
-        userMessage = "El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.";
-      } else {
-        userMessage = "Error temporal al conectar con la IA. Intentá de nuevo en unos segundos.";
-      }
-      return { success: false, error: userMessage };
+      return { success: false, error: geminiErrorToUserMessage(geminiErr.message || geminiErr) };
     }
 
     // 5. Parsear y Validar JSON
@@ -1276,7 +1445,12 @@ function isHomePage(pageUrl: string, siteUrl: string): boolean {
   }
 }
 
-export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
+export async function getQuickWins(
+  siteUrl: string,
+  goldKeyword?: string,
+  excludePages?: string[],
+  businessFocus?: string
+) {
   const urlSanit = sanitizeInput(siteUrl, 'url');
   if (!urlSanit.isValid) {
     return { success: false, error: urlSanit.error };
@@ -1291,15 +1465,36 @@ export async function getQuickWins(siteUrl: string, goldKeyword?: string) {
     }
   }
 
+  let cleanBusinessFocus = "";
+  if (businessFocus) {
+    const focusSanit = sanitizeInput(businessFocus, 'keyword');
+    if (focusSanit.isValid) {
+      cleanBusinessFocus = focusSanit.sanitized.slice(0, 300);
+    }
+  }
+
+  const excludeList = (excludePages || [])
+    .map(p => String(p).trim())
+    .filter(Boolean)
+    .slice(0, 30);
+
   // Hard timeout: never hang more than 20 seconds on Vercel
   const timeoutPromise = new Promise<{ success: false; error: string }>((resolve) =>
     setTimeout(() => resolve({ success: false, error: "El análisis tardó demasiado. Intentá de nuevo en unos segundos." }), 20000)
   );
 
-  return Promise.race([_getQuickWinsCore(cleanSiteUrl, cleanGoldKeyword), timeoutPromise]);
+  return Promise.race([
+    _getQuickWinsCore(cleanSiteUrl, cleanGoldKeyword, excludeList, cleanBusinessFocus),
+    timeoutPromise,
+  ]);
 }
 
-async function _getQuickWinsCore(cleanSiteUrl: string, cleanGoldKeyword: string) {
+async function _getQuickWinsCore(
+  cleanSiteUrl: string,
+  cleanGoldKeyword: string,
+  excludePages: string[] = [],
+  businessFocus: string = ""
+) {
   try {
     const session = await auth();
 
@@ -1392,9 +1587,27 @@ async function _getQuickWinsCore(cleanSiteUrl: string, cleanGoldKeyword: string)
       }
     }
 
-    // Take at most 3 unique-URL candidates (already sorted by impressions via candidates.sort above)
-    const validCandidates: any[] = Array.from(urlToBestCand.values()).slice(0, 3);
-    console.log(`[QuickWins L1] Unique-URL candidates selected: ${validCandidates.length}`);
+    const excludeNorm = new Set(
+      excludePages.map(p => p.replace(/\/$/, '').toLowerCase())
+    );
+
+    // Hasta 3 candidatos, excluyendo páginas que el usuario descartó
+    const validCandidates: any[] = Array.from(urlToBestCand.values())
+      .sort((a, b) => (b.impressions || 0) - (a.impressions || 0))
+      .filter(c => !excludeNorm.has((c.keys[0] || '').replace(/\/$/, '').toLowerCase()))
+      .slice(0, 3);
+    console.log(`[QuickWins L1] Unique-URL candidates selected: ${validCandidates.length} (excluded: ${excludeNorm.size})`);
+
+    if (validCandidates.length === 0) {
+      return {
+        success: true,
+        quickWins: [],
+        isMockData: false,
+        message: excludeNorm.size > 0
+          ? 'No hay más oportunidades en posiciones 8-15 fuera de las que descartaste.'
+          : 'No detectamos oportunidades en el rango de posiciones 8 a 15.',
+      };
+    }
 
 
     // Scrape all candidate pages IN PARALLEL (was sequential: up to 5x4s = 20s!)
@@ -1554,6 +1767,15 @@ El campo "suggestedTitle" de CADA oportunidad DEBE tener entre 50 y 60 caractere
 Nexo con la Semilla (Seed Keyword):
 ${cleanGoldKeyword ? `El usuario está investigando la keyword: "${cleanGoldKeyword}". Úsala en títulos de PÁGINAS INTERNAS (producto, servicio, blog). En la HOME, transformala a su CATEGORÍA GLOBAL (ej: si la keyword es un producto de car detailing → el título de la home habla de la tienda de car detailing, no del producto específico).` : `Asegúrate de que las optimizaciones propuestas se alineen fuertemente con el nicho y metadatos globales del sitio.`}
 
+██████████████████████████████████████████████████████████████
+⚠️  REGLA #4 — QUÉ VENDE REALMENTE EL NEGOCIO ⚠️
+██████████████████████████████████████████████████████████████
+El usuario declaró que vende/ofrece: "${businessFocus || 'No especificado — inferir solo desde metadatos y URL de cada página.'}"
+- Si la keyword de GSC es genérica (ej: "pintura automotriz", "pintura para autos") pero el negocio vende algo más específico (vinilo líquido, pintura de retoque, detailing), NO sugieras títulos de taller de repintado.
+- Adaptá el título al producto REAL de esa URL y al nicho declarado.
+- Si la búsqueda no encaja con lo que venden, decilo en "explanation" y proponé un ángulo honesto (ej: "pintura de retoque" o "vinilo removible" en lugar de "pintura automotriz de taller").
+██████████████████████████████████████████████████████████████
+
 Reglas de lenguaje:
 - NUNCA uses tecnicismos: "canibalización", "backlinks", "DA", "PA", "search intent", "enlazado interno", "thin content".
 - TIENES PROHIBIDO usar la palabra "Socio" o "Socia". Háblale al usuario de forma directa y respetuosa, con un tono más serio pero motivador.
@@ -1581,9 +1803,41 @@ Oportunidades a analizar:
 ${JSON.stringify(opportunities, null, 2)}
 `;
 
-    console.log("[API Debug QuickWins] Calling Gemini REST API directly (skipping SDK)...");
-    let responseText = "";
-    responseText = await callGeminiREST(apiKey, systemInstructions + "\n\n" + userPrompt);
+    const userEmail = session?.user?.email || '';
+    const isAdmin = await checkIsAdmin();
+    if (!userEmail && !isAdmin) {
+      return { success: false, error: 'Tenés que iniciar sesión para usar Quick Wins con IA.', code: 'NOT_AUTHENTICATED' };
+    }
+
+    const cacheKey = buildGeminiCacheKey([
+      'quick_wins',
+      userEmail || 'dev@localhost',
+      cleanSiteUrl,
+      cleanGoldKeyword,
+      businessFocus,
+      excludePages.join('|'),
+      JSON.stringify(opportunities.map((o: any) => o.page + o.keyword)),
+    ]);
+
+    console.log("[API Debug QuickWins] Gemini con créditos...");
+    const geminiResult = await invokeGeminiWithCredits({
+      email: userEmail || 'dev@localhost',
+      isAdmin,
+      feature: 'quick_wins',
+      cacheKey,
+      prompt: systemInstructions + "\n\n" + userPrompt,
+      apiKey,
+    });
+    if (geminiResult.ok === false) {
+      return {
+        success: false,
+        error: geminiResult.error,
+        code: geminiResult.code,
+        credits: geminiResult.credits,
+        upgrade: geminiResult.upgrade,
+      };
+    }
+    const responseText = geminiResult.text;
 
     let parsed: any[] = [];
     try {
@@ -1700,21 +1954,9 @@ ${JSON.stringify(opportunities, null, 2)}
     return { success: true, quickWins: parsed, isMockData };
   } catch (error: any) {
     console.error("Error en getQuickWins:", error);
-    // Build user-friendly error message
-    const errMsg = String(error.message || error).toLowerCase();
-    let userMessage = "";
-    if (errMsg.includes("api key expired") || errMsg.includes("api_key_invalid") || errMsg.includes("key expired") || errMsg.includes("key invalid")) {
-      userMessage = "⚠️ La clave de API de Gemini venció. El administrador debe renovarla en Google AI Studio.";
-    } else if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
-      userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
-    } else if (errMsg.includes("404") || errMsg.includes("not found")) {
-      userMessage = "El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.";
-    } else {
-      userMessage = "Error temporal al conectar con la IA. Intentá de nuevo en unos segundos.";
-    }
     return {
       success: false,
-      error: userMessage,
+      error: geminiErrorToUserMessage(error.message || error),
       stack: error.stack
     };
   }
@@ -2107,29 +2349,43 @@ REGLAS ESTRICTAS:
 - El JSON debe ser válido, sin comentarios ni texto extra
 `;
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      cache: "no-store",
-      body: JSON.stringify({
-        contents: [{ role: "user", parts: [{ text: promptText }] }],
-        generationConfig: { responseMimeType: "application/json" }
-      }),
-      signal: AbortSignal.timeout(45000),
-    });
-
-    if (!response.ok) {
-      const errData = await response.json().catch(() => ({}));
-      console.error("Gemini API error in auditSiteLinks:", errData);
-      if (response.status === 429) {
-        return { success: false, error: "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo." };
-      }
-      return { success: false, error: "Error temporal al conectar con la IA. Intentá de nuevo." };
+    const session = await auth();
+    const userEmail = session?.user?.email || '';
+    const isAdmin = await checkIsAdmin();
+    if (!userEmail && !isAdmin) {
+      return { success: false, error: 'Tenés que iniciar sesión para usar el Detective con IA.', code: 'NOT_AUTHENTICATED' };
     }
 
-    const data = await response.json();
-    const rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    const cacheKey = buildGeminiCacheKey([
+      'detective_enlaces',
+      userEmail || 'dev@localhost',
+      cleanSiteUrl,
+      goldKeyword || '',
+      String(stats.brokenCount),
+      String(stats.genericAnchors),
+      String(stats.orphanPages),
+    ]);
+
+    const geminiResult = await invokeGeminiWithCredits({
+      email: userEmail || 'dev@localhost',
+      isAdmin,
+      feature: 'detective_enlaces',
+      cacheKey,
+      prompt: promptText,
+      apiKey,
+    });
+
+    if (geminiResult.ok === false) {
+      return {
+        success: false,
+        error: geminiResult.error,
+        code: geminiResult.code,
+        credits: geminiResult.credits,
+        upgrade: geminiResult.upgrade,
+      };
+    }
+
+    const rawText = geminiResult.text;
 
     let parsed;
     try {
@@ -2159,13 +2415,11 @@ REGLAS ESTRICTAS:
 
   } catch (error: any) {
     console.error("Error en auditSiteLinks:", error);
-    const errMsg = String(error.message || error).toLowerCase();
-    let userMessage = "";
-    if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
-      userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
-    } else {
-      userMessage = "Error al escanear el sitio. Verificá que la URL sea correcta e intentá de nuevo.";
-    }
+    const raw = String(error.message || error);
+    const isGemini = /gemini|429|prepayment|quota/i.test(raw);
+    const userMessage = isGemini
+      ? geminiErrorToUserMessage(raw)
+      : "Error al escanear el sitio. Verificá que la URL sea correcta e intentá de nuevo.";
     return { success: false, error: userMessage };
   }
 }
@@ -2213,6 +2467,42 @@ export async function fetchCompletedMissions(): Promise<{
   const missions = await getMissionsByEmail(session.user.email, 'completed');
   console.log(`[Supabase] fetchCompletedMissions: ${missions.length} misión(es) completada(s) encontradas para ${session.user.email}`);
   return { success: true, missions };
+}
+
+/**
+ * Elimina todos los datos del usuario en nuestros servidores (Supabase + backup local).
+ * El cliente debe borrar localStorage y cerrar sesión después de llamar a esta acción.
+ */
+export async function deleteUserAccount(): Promise<{ success: boolean; error?: string }> {
+  const session = await auth();
+  if (!session?.user?.email) {
+    return { success: false, error: 'No hay sesión activa' };
+  }
+
+  const email = session.user.email;
+
+  try {
+    const deleted = await deleteProfileByEmail(email);
+    if (!deleted) {
+      return { success: false, error: 'No se pudieron borrar los datos en el servidor' };
+    }
+
+    try {
+      const dataDir = path.join(process.cwd(), 'data', 'user-states');
+      const sanitizedEmail = email.replace(/[^a-zA-Z0-9_.-]/g, '_');
+      const filePath = path.join(dataDir, `${sanitizedEmail}.json`);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+      }
+    } catch (fileErr) {
+      console.warn('[deleteUserAccount] No se pudo borrar archivo de estado local:', fileErr);
+    }
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('[deleteUserAccount] Error:', err);
+    return { success: false, error: err?.message || 'Error al eliminar la cuenta' };
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -2309,7 +2599,12 @@ async function scrapeHeadingSections(pageUrl: string): Promise<HeadingSection[]>
  * opportunities via Gemini. Returns "Snacks Informativos" — ultra-concise rewrites
  * optimized for AI citation by ChatGPT, Gemini, and Perplexity.
  */
-export async function getAeoOpportunities(siteUrl: string, goldKeyword?: string, manualUrl?: string) {
+export async function getAeoOpportunities(
+  siteUrl: string,
+  goldKeyword?: string,
+  manualUrl?: string,
+  businessFocus?: string
+) {
   const urlSanit = sanitizeInput(siteUrl, 'url');
   if (!urlSanit.isValid) {
     return { success: false, error: urlSanit.error };
@@ -2328,10 +2623,26 @@ export async function getAeoOpportunities(siteUrl: string, goldKeyword?: string,
     setTimeout(() => resolve({ success: false, error: "El análisis AEO tardó demasiado. Intentá de nuevo." }), 20000)
   );
 
-  return Promise.race([_getAeoCore(cleanSiteUrl, cleanGoldKeyword, manualUrl), timeoutPromise]);
+  let cleanBusinessFocus = "";
+  if (businessFocus) {
+    const focusSanit = sanitizeInput(businessFocus, 'keyword');
+    if (focusSanit.isValid) {
+      cleanBusinessFocus = focusSanit.sanitized.slice(0, 300);
+    }
+  }
+
+  return Promise.race([
+    _getAeoCore(cleanSiteUrl, cleanGoldKeyword, manualUrl, cleanBusinessFocus),
+    timeoutPromise,
+  ]);
 }
 
-async function _getAeoCore(cleanSiteUrl: string, cleanGoldKeyword: string, manualUrl?: string): Promise<any> {
+async function _getAeoCore(
+  cleanSiteUrl: string,
+  cleanGoldKeyword: string,
+  manualUrl?: string,
+  businessFocus: string = ""
+): Promise<any> {
   try {
     const session = await auth();
 
@@ -2460,13 +2771,46 @@ Devolvé un array JSON sin bloques de código markdown:
 
     const userPrompt = `Analizá las siguientes secciones de texto extraídas de la web del usuario.
 Palabra clave del negocio: "${cleanGoldKeyword || 'no especificada'}"
+Qué vende/ofrece el negocio: "${businessFocus || 'no especificado — basate en el contenido de cada sección'}"
 
 Secciones a analizar:
 ${JSON.stringify(allSections, null, 2)}`;
 
-    console.log("[API Debug AEO] Calling Gemini REST API directly (skipping SDK)...");
-    let responseText = "";
-    responseText = await callGeminiREST(apiKey, systemInstructions + "\n\n" + userPrompt);
+    const userEmail = session?.user?.email || '';
+    const isAdmin = await checkIsAdmin();
+    if (!userEmail && !isAdmin) {
+      return { success: false, error: 'Tenés que iniciar sesión para usar AEO con IA.', code: 'NOT_AUTHENTICATED' };
+    }
+
+    const cacheKey = buildGeminiCacheKey([
+      'aeo',
+      userEmail || 'dev@localhost',
+      cleanSiteUrl,
+      cleanGoldKeyword,
+      businessFocus,
+      manualUrl || '',
+      JSON.stringify(allSections.map((s) => s.pageUrl + s.heading).slice(0, 20)),
+    ]);
+
+    console.log("[API Debug AEO] Gemini con créditos...");
+    const geminiResult = await invokeGeminiWithCredits({
+      email: userEmail || 'dev@localhost',
+      isAdmin,
+      feature: 'aeo',
+      cacheKey,
+      prompt: systemInstructions + "\n\n" + userPrompt,
+      apiKey,
+    });
+    if (geminiResult.ok === false) {
+      return {
+        success: false,
+        error: geminiResult.error,
+        code: geminiResult.code,
+        credits: geminiResult.credits,
+        upgrade: geminiResult.upgrade,
+      };
+    }
+    const responseText = geminiResult.text;
 
     // ── Parse JSON response ──────────────────────────────────────────────
     let parsed: any[] = [];
@@ -2500,14 +2844,16 @@ ${JSON.stringify(allSections, null, 2)}`;
     if (session?.user?.email) {
       try {
         const doneMissions = await getMissionsByEmail(session.user.email, 'completed');
-        const doneUrls = new Set(
+        const doneAeoKeys = new Set(
           doneMissions
             .filter(m => m.mission_type === 'AEO_OPP')
-            .map(m => m.target_url)
+            .map(m => buildAeoKey(m.target_url, m.suggested_value || ''))
         );
-        if (doneUrls.size > 0) {
-          opportunities = opportunities.filter((opp: any) => !doneUrls.has(opp.pageUrl));
-          console.log(`[AEO] Filtradas ${doneUrls.size} oportunidad(es) ya completada(s) para ${session.user.email}`);
+        if (doneAeoKeys.size > 0) {
+          opportunities = opportunities.filter(
+            (opp: any) => !doneAeoKeys.has(buildAeoKey(opp.pageUrl, opp.heading_affected))
+          );
+          console.log(`[AEO] Filtradas ${doneAeoKeys.size} oportunidad(es) AEO ya completada(s) para ${session.user.email}`);
         }
       } catch (filterErr) {
         console.warn('[AEO] No se pudieron filtrar misiones completadas:', filterErr);
@@ -2523,18 +2869,7 @@ ${JSON.stringify(allSections, null, 2)}`;
       error.status || "500",
       error.message || String(error)
     );
-    const errMsg = String(error.message || error).toLowerCase();
-    let userMessage = "";
-    if (errMsg.includes("api key expired") || errMsg.includes("api_key_invalid") || errMsg.includes("key expired") || errMsg.includes("key invalid")) {
-      userMessage = "⚠️ La clave de API de Gemini venció. El administrador debe renovarla en Google AI Studio.";
-    } else if (errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("rate")) {
-      userMessage = "La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.";
-    } else if (errMsg.includes("404") || errMsg.includes("not found")) {
-      userMessage = "El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.";
-    } else {
-      userMessage = "Error temporal al conectar con la IA. Intentá de nuevo en unos segundos.";
-    }
-    return { success: false, error: userMessage };
+    return { success: false, error: geminiErrorToUserMessage(error.message || error) };
   }
 }
 

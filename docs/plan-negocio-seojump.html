@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SEO Jump — Plan de Negocio y Costos</title>
+  <style>
+    :root {
+      --green: #58cc02;
+      --green-dark: #3d8f00;
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --accent: #a855f7;
+      --orange: #f59e0b;
+      --border: #334155;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      line-height: 1.6;
+      font-size: 14px;
+    }
+
+    .page {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      box-shadow: 0 4px 24px rgba(0,0,0,.08);
+    }
+
+    /* Cover */
+    .cover {
+      background: linear-gradient(135deg, var(--bg) 0%, #1a2744 60%, #0d2818 100%);
+      color: #fff;
+      padding: 56px 48px 48px;
+      page-break-after: always;
+    }
+    .cover-badge {
+      display: inline-block;
+      background: rgba(88, 204, 2, .2);
+      border: 1px solid rgba(88, 204, 2, .5);
+      color: var(--green);
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      padding: 6px 14px;
+      border-radius: 999px;
+      margin-bottom: 24px;
+    }
+    .cover h1 {
+      font-size: 36px;
+      font-weight: 900;
+      line-height: 1.15;
+      margin-bottom: 12px;
+    }
+    .cover h1 span { color: var(--green); }
+    .cover .subtitle {
+      font-size: 18px;
+      color: var(--muted);
+      margin-bottom: 32px;
+      max-width: 600px;
+    }
+    .cover-meta {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin-top: 40px;
+      padding-top: 32px;
+      border-top: 1px solid var(--border);
+    }
+    .cover-meta div label {
+      display: block;
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: .1em;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .cover-meta div strong { font-size: 14px; }
+
+    /* Content */
+    .content { padding: 40px 48px 56px; }
+
+    h2 {
+      font-size: 22px;
+      font-weight: 800;
+      color: var(--bg);
+      margin: 36px 0 16px;
+      padding-bottom: 8px;
+      border-bottom: 3px solid var(--green);
+      page-break-after: avoid;
+    }
+    h2:first-child { margin-top: 0; }
+
+    h3 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #334155;
+      margin: 20px 0 10px;
+      page-break-after: avoid;
+    }
+
+    p { margin-bottom: 12px; color: #475569; }
+    ul, ol { margin: 0 0 16px 20px; color: #475569; }
+    li { margin-bottom: 6px; }
+
+    .highlight-box {
+      background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+      border-left: 4px solid var(--green);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+    .highlight-box strong { color: var(--green-dark); }
+
+    .warn-box {
+      background: #fffbeb;
+      border-left: 4px solid var(--orange);
+      padding: 16px 20px;
+      border-radius: 0 8px 8px 0;
+      margin: 16px 0;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 20px;
+      font-size: 13px;
+      page-break-inside: avoid;
+    }
+    thead th {
+      background: var(--bg);
+      color: #fff;
+      padding: 10px 12px;
+      text-align: left;
+      font-weight: 700;
+      font-size: 12px;
+    }
+    tbody td {
+      padding: 9px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      vertical-align: top;
+    }
+    tbody tr:nth-child(even) { background: #f8fafc; }
+    tbody tr:hover { background: #f0fdf4; }
+
+    .plan-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      margin: 20px 0;
+    }
+    .plan-card {
+      border: 2px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 20px 16px;
+      text-align: center;
+      page-break-inside: avoid;
+    }
+    .plan-card.pro {
+      border-color: var(--green);
+      background: #f0fdf4;
+      transform: scale(1.02);
+    }
+    .plan-card h4 {
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .plan-card .price {
+      font-size: 26px;
+      font-weight: 900;
+      color: var(--bg);
+      margin-bottom: 4px;
+    }
+    .plan-card .price small { font-size: 13px; font-weight: 600; color: var(--muted); }
+    .plan-card ul {
+      list-style: none;
+      margin: 16px 0 0;
+      text-align: left;
+      font-size: 12px;
+    }
+    .plan-card ul li {
+      padding: 5px 0;
+      border-top: 1px solid #e2e8f0;
+    }
+    .plan-card ul li::before { content: "✓ "; color: var(--green); font-weight: 700; }
+
+    .checklist { list-style: none; margin-left: 0; }
+    .checklist li { padding: 6px 0; }
+    .checklist .done::before { content: "☑ "; color: var(--green); }
+    .checklist .pending::before { content: "☐ "; color: var(--muted); }
+
+    .footer {
+      margin-top: 48px;
+      padding-top: 20px;
+      border-top: 2px solid #e2e8f0;
+      text-align: center;
+      font-size: 12px;
+      color: var(--muted);
+    }
+
+    .tag {
+      display: inline-block;
+      background: #ede9fe;
+      color: #6d28d9;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    .tag.green { background: #dcfce7; color: var(--green-dark); }
+    .tag.orange { background: #fef3c7; color: #b45309; }
+
+    @media print {
+      body { background: #fff; }
+      .page { box-shadow: none; max-width: 100%; }
+      .cover { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .plan-card.pro { transform: none; }
+      h2 { page-break-before: auto; }
+      .no-print { display: none; }
+    }
+
+    .print-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--green);
+      color: #fff;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 14px;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(88,204,2,.4);
+      z-index: 100;
+    }
+    .print-btn:hover { background: var(--green-dark); }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">🖨️ Guardar como PDF</button>
+
+<div class="page">
+
+  <!-- PORTADA -->
+  <div class="cover">
+    <div class="cover-badge">Documento estratégico · v1.0</div>
+    <h1>SEO <span>Jump</span></h1>
+    <p class="subtitle">Estudio de negocio, costos de infraestructura y plan de límites por suscripción.</p>
+    <div class="cover-meta">
+      <div><label>Proyecto</label><strong>seo-jump.ai</strong></div>
+      <div><label>Fecha</label><strong>6 de junio de 2026</strong></div>
+      <div><label>Estado</label><strong>Beta → Monetización</strong></div>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <!-- 1. RESUMEN -->
+    <h2>1. Resumen ejecutivo</h2>
+    <p>SEO Jump es una plataforma gamificada de SEO y AEO para PyMEs y agencias en LATAM. La propuesta central: <strong>resultados accionables, no reportes técnicos</strong>.</p>
+    <div class="highlight-box">
+      <strong>Conclusiones clave:</strong>
+      <ul style="margin-top:8px;margin-bottom:0">
+        <li>El modelo freemium (2 gratis → pago) es <strong>viable y rentable</strong>.</li>
+        <li>Costos de infra bajos con límites por usuario (~USD 1–5/cliente pagador en Gemini).</li>
+        <li>Las claves <code>AQ.</code> de Google <strong>funcionan</strong>; el error 429 es cuota, no clave inválida.</li>
+        <li>Un fundador solo puede sostener <strong>50–100 usuarios</strong> con ayuda de IA.</li>
+        <li>Supabase ya tiene <code>subscription_status</code> listo para cobro.</li>
+      </ul>
+    </div>
+
+    <!-- 2. MODELO -->
+    <h2>2. Modelo de negocio</h2>
+    <div class="plan-cards">
+      <div class="plan-card">
+        <h4>Free</h4>
+        <div class="price">$0</div>
+        <ul>
+          <li>2 consultas IA / día</li>
+          <li>20 consultas IA / mes</li>
+          <li>1 sitio</li>
+          <li>Misiones ilimitadas</li>
+        </ul>
+      </div>
+      <div class="plan-card pro">
+        <h4>Pro · PyME</h4>
+        <div class="price">$35.000 <small>ARS/mes</small></div>
+        <ul>
+          <li>12 consultas IA / día</li>
+          <li>250 consultas IA / mes</li>
+          <li>1 sitio</li>
+          <li>Misiones ilimitadas</li>
+        </ul>
+      </div>
+      <div class="plan-card">
+        <h4>Agencia</h4>
+        <div class="price">$150.000 <small>ARS/mes</small></div>
+        <ul>
+          <li>40 consultas IA / día</li>
+          <li>800 consultas IA / mes</li>
+          <li>8 sitios</li>
+          <li>Pool compartido</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>¿Qué es una "Consulta IA"?</h3>
+    <p>Una unidad unificada por cada llamada a Gemini:</p>
+    <table>
+      <thead><tr><th>Cuenta (1 consulta)</th><th>No cuenta (gratis)</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Quick Wins, AEO, Buscador de Oro, Detective de enlaces</td>
+          <td>Misiones GSC, verificación de cambios, XP y fases</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- 3. ECONOMÍA -->
+    <h2>3. Economía del negocio</h2>
+    <table>
+      <thead>
+        <tr><th>Escenario</th><th>Ingreso/mes</th><th>Costo infra</th><th>Margen</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>10 clientes PRO</td><td>~USD 250</td><td>USD 15–40</td><td><span class="tag green">~85%</span></td></tr>
+        <tr><td>50 clientes PRO</td><td>~USD 1.250</td><td>USD 50–120</td><td><span class="tag green">~90%</span></td></tr>
+        <tr><td>100 clientes PRO</td><td>~USD 2.500</td><td>USD 150–300</td><td><span class="tag green">~88%</span></td></tr>
+        <tr><td>30 PRO + 3 agencias</td><td>~USD 1.065</td><td>USD 80–150</td><td><span class="tag green">~88%</span></td></tr>
+      </tbody>
+    </table>
+
+    <div class="warn-box">
+      <strong>Importante:</strong> "Casi gratis hasta miles" es verdad en costo <em>pagado</em>, pero el plan <em>gratuito</em> de Gemini tiene límites por proyecto. La app hoy hace hasta 6 llamadas por intento (3 modelos × 2 reintentos) sin caché — por eso un solo usuario ya genera error 429.
+    </div>
+
+    <!-- 4. TÉCNICO -->
+    <h2>4. Situación técnica (Gemini)</h2>
+    <table>
+      <thead><tr><th>Tema</th><th>Estado</th></tr></thead>
+      <tbody>
+        <tr><td>Claves <code>AQ.</code></td><td><span class="tag green">Funcionan</span> con header x-goog-api-key</td></tr>
+        <tr><td>Proyecto Gemini</td><td><code>gen-lang-client-0918139206</code> (Prepago Nivel 1)</td></tr>
+        <tr><td>Error 429</td><td><span class="tag orange">Cuota agotada</span> — cargar USD 25 si persiste</td></tr>
+        <tr><td>Error timeout</td><td>Timeout 20s mientras reintenta con 429</td></tr>
+        <tr><td>My First Project</td><td>Solo OAuth (login), no Gemini</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 5. SOSTENIBILIDAD -->
+    <h2>5. ¿Puede un solo fundador sostenerlo?</h2>
+    <table>
+      <thead><tr><th>Etapa</th><th>Usuarios</th><th>¿Solo + IA?</th></tr></thead>
+      <tbody>
+        <tr><td>Beta</td><td>3–10</td><td><span class="tag green">Sí</span></td></tr>
+        <tr><td>Validación</td><td>20–50</td><td><span class="tag green">Sí, con fricción</span></td></tr>
+        <tr><td>Negocio chico</td><td>50–100</td><td><span class="tag orange">Al límite</span></td></tr>
+        <tr><td>Escala</td><td>200–500+</td><td>Necesita procesos y/o ayuda</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 6. OPTIMIZACIONES -->
+    <h2>6. Optimizaciones recomendadas</h2>
+    <table>
+      <thead><tr><th>#</th><th>Cambio</th><th>Impacto</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>1 modelo Gemini, 1 reintento</td><td>−70% llamadas en error</td></tr>
+        <tr><td>2</td><td>Caché 24h por usuario+sitio</td><td>No repetir análisis</td></tr>
+        <tr><td>3</td><td>Límites en servidor (Supabase)</td><td>Anti-abuso</td></tr>
+        <tr><td>4</td><td><code>checkAndConsumeAiCredit()</code></td><td>Control centralizado</td></tr>
+        <tr><td>5</td><td>UI "Consultas IA: 1/2 hoy"</td><td>Transparencia</td></tr>
+      </tbody>
+    </table>
+
+    <!-- 7. IMPLEMENTACIÓN -->
+    <h2>7. Checklist de implementación</h2>
+    <h3>Decidido</h3>
+    <ul class="checklist">
+      <li class="done">Modelo: 2 gratis → pago → límites por plan</li>
+      <li class="done">Precio PRO: $35.000 ARS/mes</li>
+      <li class="done">Precio Agencia: $150.000 ARS/mes</li>
+      <li class="done">Unidad de consumo: Consulta IA</li>
+      <li class="done">Misiones sin IA: ilimitadas</li>
+    </ul>
+    <h3>Pendiente</h3>
+    <ul class="checklist">
+      <li class="pending">Implementar límites en código (migración Supabase 003)</li>
+      <li class="pending">Mercado Pago suscripciones</li>
+      <li class="pending">Cargar créditos Gemini (USD 25) si 429 persiste</li>
+      <li class="pending">Publicar cambios locales a producción</li>
+      <li class="pending">Migración Supabase 002 (AEO_OPP)</li>
+      <li class="pending">Verificación Google OAuth</li>
+      <li class="pending">Página /precios</li>
+    </ul>
+
+    <!-- 8. VALIDACIÓN -->
+    <h2>8. Validación de mercado (30 días)</h2>
+    <ol>
+      <li>Resolver mínimo técnico (clave Vercel, créditos Gemini).</li>
+      <li>Publicar fixes locales pendientes.</li>
+      <li>Conseguir 3–5 testers de negocios reales (LATAM).</li>
+      <li>Documentar caso 55detailshop como éxito.</li>
+      <li>Medir: ¿vuelven la semana siguiente?</li>
+    </ol>
+    <div class="highlight-box">
+      <strong>Criterio:</strong> Si 2 de 3 testers vuelven → implementar cobro y límites. Si nadie vuelve → replantear mensaje, no abandonar por costos técnicos.
+    </div>
+
+    <!-- 9. GLOSARIO -->
+    <h2>9. Glosario</h2>
+    <table>
+      <thead><tr><th>Término</th><th>Significado</th></tr></thead>
+      <tbody>
+        <tr><td>SEO</td><td>Optimización para aparecer en Google</td></tr>
+        <tr><td>AEO</td><td>Optimización para ser citado por IAs (ChatGPT, Gemini, etc.)</td></tr>
+        <tr><td>Quick Wins</td><td>Oportunidades en posiciones 8–15 de Google</td></tr>
+        <tr><td>GSC</td><td>Google Search Console</td></tr>
+        <tr><td>429</td><td>Error: cuota de API agotada</td></tr>
+        <tr><td>Consulta IA</td><td>Una llamada a Gemini que consume cupo del usuario</td></tr>
+      </tbody>
+    </table>
+
+    <div class="footer">
+      <p><strong>SEO Jump</strong> — Plan de Negocio y Costos · v1.0 · Junio 2026</p>
+      <p>seo-jump.ai · Documento interno</p>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

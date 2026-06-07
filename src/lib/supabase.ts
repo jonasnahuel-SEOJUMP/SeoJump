@@ -28,6 +28,7 @@ export type Profile = {
   business_name: string | null;
   website_url: string | null;
   subscription_status: 'free' | 'pro' | 'agency';
+  subscription_expires_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -258,4 +259,50 @@ export async function isMissionCompleted(
 
   if (error) return false;
   return data !== null;
+}
+
+/**
+ * Elimina el perfil del usuario y todas sus misiones (CASCADE en user_missions).
+ */
+/**
+ * Actualiza el plan de suscripción de un usuario (activación manual PRO/Agencia).
+ */
+export async function updateSubscriptionPlan(
+  email: string,
+  plan: 'free' | 'pro' | 'agency',
+  expiresAt?: string | null
+): Promise<boolean> {
+  if (!supabaseAdmin) return false;
+
+  const { error } = await supabaseAdmin
+    .from('profiles')
+    .update({
+      subscription_status: plan,
+      subscription_expires_at: expiresAt ?? null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('email', email.trim().toLowerCase());
+
+  if (error) {
+    console.error('[Supabase] updateSubscriptionPlan:', error.message);
+    return false;
+  }
+  return true;
+}
+
+export async function deleteProfileByEmail(email: string): Promise<boolean> {
+  if (!supabaseAdmin) {
+    console.warn('[Supabase] deleteProfileByEmail: Supabase no configurado.');
+    return true;
+  }
+
+  const { error } = await supabaseAdmin.from('profiles').delete().eq('email', email);
+
+  if (error) {
+    console.error('[Supabase] deleteProfileByEmail:', error.message);
+    return false;
+  }
+
+  console.log(`[Supabase] deleteProfileByEmail: perfil eliminado para ${email}`);
+  return true;
 }
