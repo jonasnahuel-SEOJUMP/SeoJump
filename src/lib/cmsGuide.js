@@ -287,27 +287,92 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo') {
   };
 }
 
+/** Normaliza para comparar (minúsculas, sin acentos, sin signos) */
+function normForCompare(text) {
+  return decodeHtmlEntities(text || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** ¿Este fragmento es el nombre de la tienda/marca (para no duplicarlo)? */
+function looksLikeBrand(part, brand) {
+  const p = normForCompare(part).replace(/\s/g, '');
+  const b = normForCompare(brand).replace(/\s/g, '');
+  if (!p || !b) return false;
+  return p === b || p.includes(b) || b.includes(p) || /shop|tienda|store/.test(part.toLowerCase());
+}
+
+/** Cierra el título con la tienda respetando un máximo de caracteres (SEO: ~60) */
+function composeWithBrand(core, brand, maxLen = 60) {
+  const clean = (s) => s.replace(/[\s\-–—|.,]+$/, '').trim();
+  core = clean(core);
+  const suffix = ` | ${brand}`;
+  if (`${core}${suffix}`.length <= maxLen) return `${core}${suffix}`;
+
+  const room = maxLen - suffix.length;
+  // Si la marca es tan larga que casi no deja lugar, priorizar la descripción
+  if (room < 12) return clean(core.slice(0, maxLen));
+
+  let trimmed = core.slice(0, room);
+  const lastSpace = trimmed.lastIndexOf(' ');
+  if (lastSpace > room * 0.6) trimmed = trimmed.slice(0, lastSpace);
+  return `${clean(trimmed)}${suffix}`;
+}
+
+/**
+ * Núcleo descriptivo del producto/servicio: QUÉ es (preserva la intención de
+ * búsqueda). Prioridad: título en vivo (sin la marca) > slug de la URL > keyword.
+ * Siempre garantiza que la keyword esté presente.
+ */
+function deriveProductCore(preview, slug, kw, brand, cap) {
+  let core = '';
+
+  const liveTitle = preview && preview.title ? decodeHtmlEntities(preview.title) : '';
+  if (liveTitle) {
+    core = liveTitle
+      .split(/\s*[|–—]\s*|\s+-\s+/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((part) => !looksLikeBrand(part, brand))
+      .join(' - ')
+      .trim();
+  }
+
+  if (!core && slug) core = cap(slug);
+  if (!core) core = kw ? cap(kw) : brand;
+
+  // Garantizar que la keyword (marca del producto / término de intención) esté
+  if (kw && core && !normForCompare(core).includes(normForCompare(kw))) {
+    core = `${cap(kw)} - ${core}`;
+  }
+
+  return core;
+}
+
 /** Texto sugerido listo para copiar (paquete 1 + 3) */
-export function buildSuggestedText(missionType, keyword, pageUrl, siteUrl) {
+export function buildSuggestedText(missionType, keyword, pageUrl, siteUrl, preview = null) {
   const kw = (keyword || '').trim();
   const brand = brandFromSiteUrl(siteUrl);
   const slug = slugFromUrl(pageUrl);
   const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
 
   if (missionType === 'H1') {
-    if (kw) {
-      return `${cap(kw)} | ${brand}`;
-    }
-    if (slug) {
-      return `${cap(slug)} — ${brand}`;
-    }
-    return `${brand} — tu mejor opción online`;
+    const core = deriveProductCore(preview, slug, kw, brand, cap);
+    if (!core) return `${brand} — tu mejor opción online`;
+    return composeWithBrand(core, brand, 60);
   }
 
   if (missionType === 'META') {
-    const base = kw
-      ? `Encontrá ${kw} en ${brand}. Calidad y asesoramiento. Envíos a todo el país.`
-      : `${brand}: productos y soluciones para tu vehículo. Consultanos sin compromiso.`;
+    if (kw || slug || (preview && preview.title)) {
+      const core = deriveProductCore(preview, slug, kw, brand, cap);
+      const base = `Comprá ${core} en ${brand}. Asesoramiento y envíos a todo el país.`;
+      return base.length > 160 ? base.slice(0, 157).trim() + '...' : base;
+    }
+    const base = `${brand}: productos y soluciones para tu vehículo. Consultanos sin compromiso.`;
     return base.length > 160 ? base.slice(0, 157) + '...' : base;
   }
 

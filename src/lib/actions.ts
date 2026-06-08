@@ -1771,6 +1771,17 @@ El usuario declaró que vende/ofrece: "${businessFocus || 'No especificado — i
 - Si la búsqueda no encaja con lo que venden, decilo en "explanation" y proponé un ángulo honesto (ej: "pintura de retoque" o "vinilo removible" en lugar de "pintura automotriz de taller").
 ██████████████████████████████████████████████████████████████
 
+██████████████████████████████████████████████████████████████
+⚠️  REGLA ABSOLUTA #5 — NUNCA UN TÍTULO PELADO (INTENCIÓN DE BÚSQUEDA) ⚠️
+██████████████████████████████████████████████████████████████
+El "suggestedTitle" SIEMPRE debe dejar claro QUÉ es el producto o servicio (el término que describe la necesidad real del cliente), no solo la marca.
+- PROHIBIDO ABSOLUTO sugerir títulos del estilo "MarcaDelProducto | NombreTienda" que borran la descripción. Ejemplo INVÁLIDO: "Autopint | 55detailshop" (nadie busca la marca "Autopint"; buscan "pintura de retoque de autos").
+- Una marca de producto poco conocida (ej: "Autopint") NO reemplaza al término de intención. Debe ir ACOMPAÑADA del término que la gente busca. Ejemplo CORRECTO: "Autopint: Pintura de Retoque de Autos con Pincel | 55detailshop".
+- Estructura recomendada: [Término de intención que describe el producto] + [marca del producto si aporta confianza] + [gancho corto opcional] + [nombre de la tienda], todo dentro de 60 caracteres.
+- Si para entrar en 60 caracteres tenés que elegir, SACRIFICÁ la marca o el gancho, NUNCA el término que describe qué es el producto.
+🔒 VIOLACIÓN = el cliente pierde la búsqueda real y la página deja de posicionar para lo que importa.
+██████████████████████████████████████████████████████████████
+
 Reglas de lenguaje:
 - NUNCA uses tecnicismos: "canibalización", "backlinks", "DA", "PA", "search intent", "enlazado interno", "thin content".
 - TIENES PROHIBIDO usar la palabra "Socio" o "Socia". Háblale al usuario de forma directa y respetuosa, con un tono más serio pero motivador.

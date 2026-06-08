@@ -61,7 +61,7 @@ export default function MissionEditorGuide({
   const pageType = detectPageType(mission.page);
   const guide = getEditWhereGuide(mission.page, mission.type, platformId);
   const kw = (mission.keyword || goldKeyword || '').trim();
-  const suggested = buildSuggestedText(mission.type, kw, mission.page, siteUrl);
+  const suggested = buildSuggestedText(mission.type, kw, mission.page, siteUrl, pagePreview);
   const current = getCurrentValueFromPreview(mission.type, pagePreview);
   const alreadyApplied = !previewLoading && current && textsMatchLoosely(current, suggested);
   const isAeo = mission.type === 'AEO';
