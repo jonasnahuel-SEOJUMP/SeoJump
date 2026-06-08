@@ -1290,6 +1290,204 @@ export async function getPageLivePreview(pageUrl: string) {
 }
 
 /**
+ * Sugerencia de título/meta generada por IA para una misión puntual.
+ * Razona como un consultor SEO: preserva las palabras de intención de búsqueda
+ * y alta conversión (ej: "parabrisas"), elimina ruido (gramaje/stock), respeta
+ * 60 caracteres y nunca deja el título "pelado" (solo marca). Si la IA no puede
+ * responder (sin créditos, error, sin clave), devuelve fallback:true para que la
+ * UI use la plantilla determinística como red de seguridad.
+ */
+export async function getSmartMissionSuggestion(params: {
+  pageUrl: string;
+  missionType: string;
+  keyword?: string;
+  currentValue?: string;
+  siteUrl?: string;
+  // Contexto real de la página (del scraper en vivo) — qué vende realmente.
+  pageTitle?: string;
+  pageH1?: string;
+  pageDescription?: string;
+  // Métricas de Search Console — cómo le va hoy a esa página.
+  position?: number;
+  impressions?: number;
+  clicks?: number;
+  ctr?: number;
+}) {
+  const { pageUrl, missionType } = params;
+  const keyword = (params.keyword || '').trim();
+  const currentValue = (params.currentValue || '').trim();
+  const siteUrl = (params.siteUrl || '').trim();
+  const pageTitle = (params.pageTitle || '').trim();
+  const pageH1 = (params.pageH1 || '').trim();
+  const pageDescription = (params.pageDescription || '').trim();
+  const position = typeof params.position === 'number' ? params.position : null;
+  const impressions = typeof params.impressions === 'number' ? params.impressions : null;
+  const clicks = typeof params.clicks === 'number' ? params.clicks : null;
+  const ctr = typeof params.ctr === 'number' ? params.ctr : null;
+
+  // Solo H1 (título) y META se benefician de la IA aquí.
+  if (missionType !== 'H1' && missionType !== 'META') {
+    return { success: false, fallback: true as const };
+  }
+
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return { success: false, fallback: true as const };
+
+  let email = '';
+  let isAdmin = false;
+  try {
+    const session = await auth();
+    email = session?.user?.email || '';
+    isAdmin = await checkIsAdmin();
+  } catch {
+    return { success: false, fallback: true as const };
+  }
+  if (!email && !isAdmin) return { success: false, fallback: true as const };
+
+  let brand = siteUrl;
+  let isHomepage = false;
+  try {
+    const u = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
+    brand = new URL(u).hostname.replace(/^www\./, '');
+  } catch { /* keep raw */ }
+  try {
+    const pu = pageUrl.startsWith('http') ? pageUrl : `https://${pageUrl}`;
+    const p = new URL(pu).pathname.replace(/\/+$/, '');
+    isHomepage = p === '' || p === '/';
+  } catch { /* assume internal */ }
+
+  const isTitle = missionType === 'H1';
+
+  const cacheKey = buildGeminiCacheKey([
+    'title_suggestion_v3',
+    email || 'anon',
+    pageUrl,
+    missionType,
+    keyword,
+    currentValue.slice(0, 120),
+    pageH1.slice(0, 60),
+    position != null ? String(Math.round(position)) : '',
+  ]);
+
+  // Cortocircuito: si ya está cacheado, devolvemos sin escanear la portada ni gastar crédito.
+  try {
+    const cachedEarly = await getCachedGeminiResponse(cacheKey);
+    if (cachedEarly) {
+      const raw = cachedEarly.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+      const parsed = JSON.parse(raw);
+      const cachedTitle = decodeHtmlEntities((parsed.suggestedTitle || '').trim());
+      if (cachedTitle) {
+        return { success: true as const, suggestedTitle: cachedTitle, reason: (parsed.reason || '').trim(), fromCache: true as const };
+      }
+    }
+  } catch { /* si el cache está corrupto, seguimos y regeneramos */ }
+
+  // Contexto del negocio: leemos la PORTADA para detectar rubro y perfil multimarca.
+  // Solo en la primera generación de la misión (después queda todo cacheado 24h).
+  let businessContext = '';
+  if (!isHomepage && siteUrl) {
+    try {
+      const homeUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
+      const home = await scrapeMetadata(homeUrl);
+      businessContext = [home.title, home.h1, home.description]
+        .filter(Boolean)
+        .join(' — ')
+        .slice(0, 500);
+    } catch { /* sin contexto de portada: la IA decide con el contenido de la página */ }
+  }
+
+  // Bloque de contexto que la IA debe relacionar antes de decidir.
+  const pageSells = [
+    pageTitle && `  • Título actual: "${pageTitle}"`,
+    pageH1 && `  • Encabezado H1: "${pageH1}"`,
+    pageDescription && `  • Descripción: "${pageDescription}"`,
+  ].filter(Boolean).join('\n') || '  • (sin datos de contenido — inferí con cautela desde la URL)';
+
+  const metricsBlock = [
+    position != null && `  • Posición actual en Google: ${position.toFixed(1)} ${position <= 10 ? '(página 1 — está MUY cerca, no la rompas: optimizá con cuidado)' : position <= 20 ? '(página 2 — zona de ataque: vale la pena ser más agresivo para subirla)' : '(lejos — necesita un cambio fuerte y claro)'}`,
+    impressions != null && `  • Impresiones: ${impressions} (gente que ya la ve en Google)`,
+    clicks != null && `  • Clics: ${clicks}`,
+    ctr != null && `  • CTR: ${(ctr * 100).toFixed(1)}%`,
+  ].filter(Boolean).join('\n') || '  • (sin métricas de Search Console)';
+
+  const prompt = `
+Actuás como un consultor SEO experto que optimiza una página para un dueño de negocio NO técnico que va a confiar a ciegas en tu recomendación. Tu respuesta tiene que ser segura, lista para copiar y pegar. Tenés que RELACIONAR TODAS las variables de abajo antes de decidir, como haría un consultor humano real.
+
+NEGOCIO Y PÁGINA:
+- Sitio/marca: ${brand}
+- URL de esta página: ${pageUrl}
+- Tipo de página: ${isHomepage ? 'PÁGINA DE INICIO / PORTADA' : 'página interna (producto, servicio o categoría)'}
+- Palabra clave objetivo (la intención real del cliente que buscás capturar): "${keyword || '(no especificada — inferila del contenido de abajo)'}"
+
+CONTEXTO DEL NEGOCIO (de la portada del sitio — sirve para entender el rubro y si es mono o multimarca):
+${businessContext ? `  ${businessContext}` : '  (no disponible — deducí el perfil desde el contenido de la página)'}
+
+QUÉ VENDE REALMENTE ESTA PÁGINA (basate en esto para entender el producto puntual):
+${pageSells}
+
+CÓMO LE VA HOY EN GOOGLE (usá esto para decidir cuán agresivo ser):
+${metricsBlock}
+
+CAMPO A OPTIMIZAR: ${isTitle ? 'el TÍTULO SEO (etiqueta <title>)' : 'la META DESCRIPCIÓN'}
+Valor actual de ese campo: "${currentValue || '(vacío)'}"
+
+PASO 1 — IDENTIFICÁ EL PERFIL DE MARCA DEL NEGOCIO (clave para decidir bien):
+- MONOMARCA / producto puntual: el negocio vende su propia marca o esta es la página de un solo producto/marca. Señales: una sola marca repetida, página de ficha de producto único.
+- MULTIMARCA / distribuidor / tienda que vende muchas marcas. Señales: palabras como "distribuidor", "multimarca", "todas las marcas", "importador", o varios nombres de marcas distintas en el contexto del negocio o la página. Muchos rubros funcionan así (tiendas de detailing, ferreterías, perfumerías, tecnología, repuestos, etc.).
+
+PASO 2 — GENERÁ ${isTitle ? 'el TÍTULO SEO' : 'la META DESCRIPCIÓN'} aplicando las reglas según el perfil.
+
+REGLAS ABSOLUTAS (un experto nunca las rompe):
+1. COHERENCIA DE RUBRO ANTE TODO: nunca menciones productos, marcas o categorías de OTRO rubro. Una tienda de car detailing jamás habla de zapatillas; una perfumería jamás de herramientas.
+2. SEGÚN EL PERFIL DE MARCA:
+   - Si es MONOMARCA / producto puntual: trabajá SOLO con lo que la página realmente vende. No inventes marcas ajenas.
+   - Si es MULTIMARCA / distribuidor: PODÉS y CONVIENE incorporar estratégicamente nombres de marcas reconocidas y categorías del MISMO rubro para capturar más búsquedas —incluso marcas que vende la competencia—, porque una tienda multimarca legítimamente atrae ese tráfico. Priorizá las marcas que el negocio realmente muestra que distribuye; si sumás una marca reconocida del rubro como jugada de captación, hacelo de forma honesta (como parte del catálogo o en comparación), SIN afirmar ser la marca oficial.
+3. PRESERVÁ LA INTENCIÓN DE BÚSQUEDA: nunca elimines la palabra que describe QUÉ es el producto/servicio ni los términos específicos de alta conversión (nombres de partes como "parabrisas", "paragolpes"; el problema que resuelve; el tipo exacto de producto). Si el texto actual tiene un término específico que la gente busca, CONSERVALO.
+4. ${isHomepage ? 'ES LA PÁGINA DE INICIO: optimizá para la MARCA + la CATEGORÍA GLOBAL del negocio (ej: "Tienda de Car Detailing"), NUNCA para un producto puntual.' : 'ES UNA PÁGINA INTERNA: optimizá para el producto/servicio específico de esta página, no para la marca genérica.'}
+5. USÁ LA POSICIÓN: si ya está en página 1, hacé cambios conservadores (no arruines lo que funciona); si está en página 2 o más lejos, podés ser más agresivo.
+6. ELIMINÁ EL RUIDO: sacá gramaje, stock, tamaños y SKUs ("x 50gs/100gs", "500ml", "pack x12") y relleno vacío ("puro", "premium", "original") solo si hace falta para entrar en el límite.
+7. DESDUPLICÁ SINÓNIMOS: si hay dos palabras casi iguales ("vidrios" y "cristales"), quedate con la más buscada/específica.
+8. NUNCA dejes un título "pelado" tipo "Marca | Tienda". Siempre debe quedar claro qué se vende.
+9. ${isTitle ? 'LONGITUD: máximo 60 caracteres (ideal 50-60). Estructura sugerida: [qué es + término de intención] + [marca relevante si aporta] + [nombre de la tienda].' : 'LONGITUD: máximo 155 caracteres. Incluí la palabra clave de intención y un llamado a la acción claro ("Comprá", "Pedí presupuesto", "Conocé más").'}
+10. Español rioplatense, natural, sin tecnicismos SEO.
+
+En "reason", si detectaste que es multimarca y por eso sumaste una marca o categoría como estrategia, explicáselo en una frase al dueño (ej: "Como tu tienda es multimarca, sumé X para captar a quien busca esa marca").
+
+Devolvé ESTRICTAMENTE este JSON, sin markdown ni texto extra:
+{"suggestedTitle": "tu ${isTitle ? 'título' : 'meta descripción'} optimizado", "reason": "frase corta explicando qué decidiste y por qué, relacionando las variables (para el dueño del negocio)"}
+`;
+
+  try {
+    const result = await invokeGeminiWithCredits({
+      email: email || 'dev@localhost',
+      isAdmin,
+      feature: 'title_suggestion',
+      cacheKey,
+      prompt,
+      apiKey,
+    });
+
+    if (result.ok === false) {
+      return { success: false, fallback: true as const, code: result.code, credits: result.credits };
+    }
+
+    let raw = result.text.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+    const parsed = JSON.parse(raw);
+    const suggestedTitle = decodeHtmlEntities((parsed.suggestedTitle || '').trim());
+    const reason = (parsed.reason || '').trim();
+
+    if (!suggestedTitle) {
+      return { success: false, fallback: true as const, credits: result.credits };
+    }
+
+    return { success: true as const, suggestedTitle, reason, credits: result.credits };
+  } catch (err: any) {
+    console.warn('[getSmartMissionSuggestion] fallback:', err?.message || err);
+    return { success: false, fallback: true as const };
+  }
+}
+
+/**
  * Server Action híbrida para obtener sugerencias predictivas SEO con IA (Gemini).
  */
 export async function getAIPredictiveSuggestions(siteUrl: string, seedKeyword: string, excludedWords?: string) {

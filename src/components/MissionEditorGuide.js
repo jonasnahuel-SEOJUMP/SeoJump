@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   getPlainMissionLabels,
   getEditWhereGuide,
@@ -10,6 +10,7 @@ import {
   buildDesignerInstructions,
 } from "../lib/cmsGuide";
 import { textsMatchLoosely } from "../lib/textUtils";
+import { getSmartMissionSuggestion } from "../lib/actions";
 
 function CopyButton({ text, label, playClick, variant = "green", className = "" }) {
   const [copied, setCopied] = useState(false);
@@ -55,14 +56,72 @@ export default function MissionEditorGuide({
 }) {
   const [whereOpen, setWhereOpen] = useState(true);
 
+  // Sugerencia inteligente generada por IA (cerebro principal).
+  const [aiSuggestion, setAiSuggestion] = useState(null);
+  const [aiReason, setAiReason] = useState('');
+  const [aiLoading, setAiLoading] = useState(false);
+
+  const missionId = mission?.id;
+  const missionType = mission?.type;
+  const missionPage = mission?.page;
+  const kwForAi = (mission?.keyword || goldKeyword || '').trim();
+  const currentForAi = mission ? getCurrentValueFromPreview(mission.type, pagePreview) : '';
+
+  useEffect(() => {
+    let cancelled = false;
+    setAiSuggestion(null);
+    setAiReason('');
+
+    if (!missionPage) return;
+    // La IA solo aplica a título (H1) y meta. Para AEO usamos la plantilla guía.
+    if (missionType !== 'H1' && missionType !== 'META') return;
+    // Esperar a tener el texto en vivo para darle contexto real a la IA.
+    if (previewLoading) return;
+
+    setAiLoading(true);
+    getSmartMissionSuggestion({
+      pageUrl: missionPage,
+      missionType,
+      keyword: kwForAi,
+      currentValue: currentForAi || '',
+      siteUrl,
+      // Contenido real de la página (qué vende) — ya lo tenemos del scraper en vivo.
+      pageTitle: pagePreview?.title || '',
+      pageH1: pagePreview?.h1 || '',
+      pageDescription: pagePreview?.description || '',
+      // Métricas de Search Console — cómo le va hoy a esta página.
+      position: mission?.position,
+      impressions: mission?.impressions,
+      clicks: mission?.clicks,
+      ctr: mission?.ctr,
+    })
+      .then((res) => {
+        if (cancelled) return;
+        if (res?.success && res.suggestedTitle) {
+          setAiSuggestion(res.suggestedTitle);
+          setAiReason(res.reason || '');
+        }
+      })
+      .catch(() => { /* silencioso: queda la plantilla */ })
+      .finally(() => { if (!cancelled) setAiLoading(false); });
+
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [missionId, missionType, missionPage, previewLoading]);
+
   if (!mission) return null;
 
   const labels = getPlainMissionLabels(mission.type);
   const pageType = detectPageType(mission.page);
   const guide = getEditWhereGuide(mission.page, mission.type, platformId);
   const kw = (mission.keyword || goldKeyword || '').trim();
-  const suggested = buildSuggestedText(mission.type, kw, mission.page, siteUrl, pagePreview);
   const current = getCurrentValueFromPreview(mission.type, pagePreview);
+
+  // Plantilla determinística — red de seguridad si la IA no responde.
+  const templateSuggested = buildSuggestedText(mission.type, kw, mission.page, siteUrl, pagePreview);
+
+  // Lo que se muestra: IA si está disponible, plantilla como respaldo.
+  const suggested = aiSuggestion || templateSuggested;
   const alreadyApplied = !previewLoading && current && textsMatchLoosely(current, suggested);
   const isAeo = mission.type === 'AEO';
   const beforeLabel = isAeo ? '¿Tenés preguntas y respuestas?' : 'Ahora Google ve';
@@ -123,11 +182,27 @@ export default function MissionEditorGuide({
               </p>
             </div>
             <div className="p-4 rounded-xl bg-green-950/30 border border-green-700/50 space-y-2">
-              <p className="text-xs font-black text-duo-green uppercase">
+              <p className="text-xs font-black text-duo-green uppercase flex items-center gap-2 flex-wrap">
                 {isAeo ? 'Ejemplo para copiar y adaptar' : 'Sugerencia SEO Jump'}
+                {aiSuggestion && (
+                  <span className="px-2 py-0.5 rounded-full bg-sky-500/20 text-sky-300 text-[10px] font-black border border-sky-500/40">
+                    ✨ Generada con IA
+                  </span>
+                )}
               </p>
-              <p className="text-sm font-bold text-white leading-snug break-words whitespace-pre-wrap">{suggested}</p>
-              <CopyButton text={suggested} label="📋 Copiar sugerencia" playClick={playClick} variant="green" />
+              {aiLoading && !aiSuggestion ? (
+                <p className="text-sm font-bold text-sky-300 leading-snug animate-pulse">
+                  ✨ La IA está analizando tu página para darte el mejor título…
+                </p>
+              ) : (
+                <>
+                  <p className="text-sm font-bold text-white leading-snug break-words whitespace-pre-wrap">{suggested}</p>
+                  {aiReason && (
+                    <p className="text-xs text-sky-200/80 leading-snug italic">💡 {aiReason}</p>
+                  )}
+                  <CopyButton text={suggested} label="📋 Copiar sugerencia" playClick={playClick} variant="green" />
+                </>
+              )}
             </div>
           </div>
           </>

@@ -49,13 +49,15 @@ export type AiFeature =
   | 'quick_wins'
   | 'aeo'
   | 'buscador_oro'
-  | 'detective_enlaces';
+  | 'detective_enlaces'
+  | 'title_suggestion';
 
 export const AI_FEATURE_LABELS: Record<AiFeature, string> = {
   quick_wins: 'Quick Wins',
   aeo: 'Oportunidades AEO',
   buscador_oro: 'Buscador de Oro',
   detective_enlaces: 'Detective de Enlaces',
+  title_suggestion: 'Sugerencia de Título',
 };
 
 export function getPlanLimits(plan: PlanId): PlanLimits {
