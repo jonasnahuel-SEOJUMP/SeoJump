@@ -56,7 +56,7 @@ export function detectPageType(pageUrl) {
   const fallback = {
     id: 'page',
     label: 'Página de tu web',
-    badgeColor: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+    badgeColor: 'bg-slate-500/20 text-slate-200 border border-slate-400/30',
     searchHint: '',
   };
 
@@ -70,7 +70,7 @@ export function detectPageType(pageUrl) {
     return {
       id: 'category',
       label: 'Categoría de tienda',
-      badgeColor: 'bg-purple-100 text-purple-700 dark:bg-purple-900/50 dark:text-purple-300',
+      badgeColor: 'bg-purple-500/20 text-purple-200 border border-purple-400/30',
       searchHint: slug,
     };
   }
@@ -79,7 +79,7 @@ export function detectPageType(pageUrl) {
     return {
       id: 'product',
       label: 'Ficha de producto',
-      badgeColor: 'bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300',
+      badgeColor: 'bg-blue-500/20 text-sky-200 border border-blue-400/30',
       searchHint: slug,
     };
   }
@@ -90,7 +90,7 @@ export function detectPageType(pageUrl) {
       return {
         id: 'home',
         label: 'Página de inicio',
-        badgeColor: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
+        badgeColor: 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30',
         searchHint: 'inicio',
       };
     }
@@ -98,7 +98,7 @@ export function detectPageType(pageUrl) {
       return {
         id: 'post',
         label: 'Entrada de blog',
-        badgeColor: 'bg-orange-100 text-orange-700 dark:bg-orange-900/50 dark:text-orange-300',
+        badgeColor: 'bg-orange-500/20 text-orange-200 border border-orange-400/30',
         searchHint: slug,
       };
     }
@@ -107,7 +107,7 @@ export function detectPageType(pageUrl) {
       return {
         id: 'home',
         label: 'Página de inicio',
-        badgeColor: 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300',
+        badgeColor: 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30',
         searchHint: 'inicio',
       };
     }
@@ -116,7 +116,7 @@ export function detectPageType(pageUrl) {
   return {
     id: 'page',
     label: 'Página estática',
-    badgeColor: 'bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300',
+    badgeColor: 'bg-slate-500/20 text-slate-200 border border-slate-400/30',
     searchHint: slug,
   };
 }
