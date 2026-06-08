@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { useSession, signOut, signIn } from "next-auth/react";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { deleteUserAccount } from "../../lib/actions";
+import { deleteUserAccount, activateUserPlan } from "../../lib/actions";
 import { clearLocalUserData } from "../../lib/clearUserData";
+import { useSubscription } from "../../hooks/useSubscription";
+import { formatPlanExpiry } from "../../lib/subscription";
 import Link from "next/link";
 
 export default function Perfil() {
@@ -21,6 +23,21 @@ export default function Perfil() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState(null);
+  const {
+    plan,
+    planLabel,
+    hasPremiumAccess,
+    isAdmin,
+    subscriptionExpiresAt,
+    credits,
+    loading: planLoading,
+    refresh: refreshPlan,
+  } = useSubscription();
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPlan, setAdminPlan] = useState("pro");
+  const [adminMonths, setAdminMonths] = useState(1);
+  const [adminMsg, setAdminMsg] = useState(null);
+  const [adminLoading, setAdminLoading] = useState(false);
 
   useEffect(() => {
     const savedXp = localStorage.getItem("seojump_xp");
@@ -156,11 +173,125 @@ export default function Perfil() {
             <p className="text-sm font-bold text-slate-500 dark:text-slate-450 font-mono">
               {session.user?.email}
             </p>
-            <div className="inline-block bg-duo-yellow/15 border border-duo-yellow text-duo-yellow text-xs font-black uppercase tracking-widest rounded-full px-4 py-1.5 shadow-sm">
-              👑 Explorador de SEO
+            <div className={`inline-block text-xs font-black uppercase tracking-widest rounded-full px-4 py-1.5 shadow-sm border ${
+              hasPremiumAccess
+                ? "bg-duo-green/15 border-duo-green text-duo-green"
+                : "bg-duo-yellow/15 border-duo-yellow text-duo-yellow"
+            }`}>
+              {planLoading ? "…" : hasPremiumAccess ? `⭐ Plan ${planLabel}` : "🆓 Plan Gratis"}
             </div>
           </div>
         </div>
+
+        {/* Plan y créditos IA */}
+        <div className="bg-slate-50 dark:bg-slate-900/50 rounded-2xl border-2 border-slate-100 dark:border-slate-800/80 p-6 space-y-4">
+          <h3 className="text-lg font-black text-slate-800 dark:text-slate-250 flex items-center gap-2">
+            💳 Tu plan SEO Jump
+          </h3>
+          {planLoading ? (
+            <p className="text-sm font-bold text-slate-500 animate-pulse">Cargando plan...</p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="text-2xl font-black text-slate-800 dark:text-white">{planLabel}</span>
+                {hasPremiumAccess && (
+                  <span className="text-xs font-black px-2 py-1 rounded-full bg-duo-green/20 text-duo-green border border-duo-green/40">
+                    Misiones desbloqueadas
+                  </span>
+                )}
+                {isAdmin && (
+                  <span className="text-xs font-black px-2 py-1 rounded-full bg-purple-500/20 text-purple-300 border border-purple-500/40">
+                    Admin
+                  </span>
+                )}
+              </div>
+              {subscriptionExpiresAt && (
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                  Válido hasta: {formatPlanExpiry(subscriptionExpiresAt)}
+                </p>
+              )}
+              {credits && !credits.isUnlimited && (
+                <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+                  Consultas IA hoy: {credits.usedToday} / {credits.limitDay} — este mes: {credits.usedMonth} / {credits.limitMonth}
+                </p>
+              )}
+              {credits?.isUnlimited && (
+                <p className="text-sm font-bold text-duo-green">Consultas IA ilimitadas (admin)</p>
+              )}
+              {!hasPremiumAccess && (
+                <Link href="/precios" onClick={playClick} className="btn-3d btn-green inline-block text-sm font-black py-2.5 px-5">
+                  Ver planes PRO y Agencia
+                </Link>
+              )}
+              <p className="text-xs font-bold text-slate-500 dark:text-slate-500">
+                El cobro con Mercado Pago se activará pronto. Hoy el plan se gestiona desde acá o por contacto@seo-jump.ai.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Panel admin: activar planes manualmente (hasta Mercado Pago) */}
+        {isAdmin && (
+          <div className="bg-purple-950/30 rounded-2xl border-2 border-purple-700/50 p-6 space-y-4">
+            <h3 className="text-lg font-black text-purple-200">🛠️ Admin — activar plan</h3>
+            <p className="text-sm font-bold text-slate-400">
+              Asigná PRO o Agencia a un usuario por email. Cuando integremos Mercado Pago, esto lo hará el pago automático.
+            </p>
+            <input
+              type="email"
+              placeholder="email@usuario.com"
+              value={adminEmail}
+              onChange={(e) => setAdminEmail(e.target.value)}
+              className="w-full p-3 rounded-xl border-2 border-slate-600 bg-slate-800 text-white font-bold text-sm"
+            />
+            <div className="flex flex-wrap gap-3">
+              <select
+                value={adminPlan}
+                onChange={(e) => setAdminPlan(e.target.value)}
+                className="p-3 rounded-xl border-2 border-slate-600 bg-slate-800 text-white font-bold text-sm"
+              >
+                <option value="free">Gratis</option>
+                <option value="pro">PRO</option>
+                <option value="agency">Agencia</option>
+              </select>
+              <select
+                value={adminMonths}
+                onChange={(e) => setAdminMonths(Number(e.target.value))}
+                className="p-3 rounded-xl border-2 border-slate-600 bg-slate-800 text-white font-bold text-sm"
+                disabled={adminPlan === "free"}
+              >
+                <option value={1}>1 mes</option>
+                <option value={3}>3 meses</option>
+                <option value={12}>12 meses</option>
+              </select>
+              <button
+                type="button"
+                disabled={adminLoading || !adminEmail.trim()}
+                onClick={async () => {
+                  playClick();
+                  setAdminLoading(true);
+                  setAdminMsg(null);
+                  const res = await activateUserPlan(adminEmail.trim(), adminPlan, adminMonths);
+                  setAdminLoading(false);
+                  if (res.success) {
+                    setAdminMsg({ ok: true, text: `Plan ${adminPlan} activado para ${adminEmail}` });
+                    refreshPlan();
+                  } else {
+                    setAdminMsg({ ok: false, text: res.error || "Error" });
+                  }
+                }}
+                className="btn-3d btn-green text-sm font-black py-2.5 px-5 disabled:opacity-50"
+              >
+                {adminLoading ? "Guardando..." : "Activar plan"}
+              </button>
+            </div>
+            {adminMsg && (
+              <p className={`text-sm font-bold ${adminMsg.ok ? "text-duo-green" : "text-red-400"}`}>
+                {adminMsg.text}
+              </p>
+            )}
+          </div>
+        )}
 
         {/* Gamified Level & XP Section */}
         <div className="space-y-4">

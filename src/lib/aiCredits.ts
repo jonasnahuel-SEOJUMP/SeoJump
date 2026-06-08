@@ -209,6 +209,30 @@ export async function getAiCreditsStatus(
 }
 
 /**
+ * Plan + créditos en una sola lectura (para paywall, perfil y UI).
+ */
+export async function getUserPlanSnapshot(
+  email: string,
+  options?: { isAdmin?: boolean }
+): Promise<import('./subscription').UserPlanSnapshot> {
+  const isAdmin = options?.isAdmin ?? false;
+  const credits = await getAiCreditsStatus(email, { isAdmin });
+  const profile = await getProfileByEmail(email);
+
+  const hasPremiumAccess =
+    isAdmin || credits.isUnlimited || credits.plan === 'pro' || credits.plan === 'agency';
+
+  return {
+    plan: credits.plan,
+    planLabel: credits.planLabel,
+    hasPremiumAccess,
+    isAdmin,
+    subscriptionExpiresAt: profile?.subscription_expires_at ?? null,
+    credits,
+  };
+}
+
+/**
  * Verifica cupo y consume 1 consulta IA si está permitido.
  */
 export async function checkAndConsumeAiCredit(
