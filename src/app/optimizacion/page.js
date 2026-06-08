@@ -6,12 +6,14 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, getAeoOpportunities, verifyAeoMission, checkIsAdmin, getAiCreditsStatusForSession, getPageLivePreview } from "../../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, getAeoOpportunities, verifyAeoMission, checkIsAdmin, getPageLivePreview } from "../../lib/actions";
 import UpgradeModal from "../../components/UpgradeModal";
 import AiCreditsBadge from "../../components/AiCreditsBadge";
 import PlatformSelector from "../../components/PlatformSelector";
 import MissionEditorGuide from "../../components/MissionEditorGuide";
-import { getStoredPlatform, detectPageType, getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation } from "../../lib/cmsGuide";
+import { getStoredPlatform, detectPageType, getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getCurrentValueFromPreview } from "../../lib/cmsGuide";
+import { textsMatchLoosely } from "../../lib/textUtils";
+import { useSubscription } from "../../hooks/useSubscription";
 import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, buildAeoKey, isAeoCompleted } from "../../lib/missionMemory";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
@@ -363,39 +365,23 @@ export default function Optimizacion() {
   const [isQuickWinsMock, setIsQuickWinsMock] = useState(false);
   const [xpPopup, setXpPopup] = useState(null);
   const [activeTab, setActiveTab] = useState("quickwins");
-  const [isPremium, setIsPremium] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
   const [copyToast, setCopyToast] = useState(false);
   const [skippedQuickWins, setSkippedQuickWins] = useState([]);
   const [businessFocus, setBusinessFocus] = useState("");
-  const [aiCredits, setAiCredits] = useState(null);
-  const [creditsLoading, setCreditsLoading] = useState(true);
+  const { hasPremiumAccess, credits: aiCredits, loading: creditsLoading, refresh: refreshCredits } = useSubscription();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeMessage, setUpgradeMessage] = useState("");
   const [cmsPlatform, setCmsPlatform] = useState("wp_woo");
   const [pagePreview, setPagePreview] = useState(null);
   const [pagePreviewLoading, setPagePreviewLoading] = useState(false);
 
-  const refreshCredits = () => {
-    if (!session?.user?.email) {
-      setAiCredits(null);
-      setCreditsLoading(false);
-      return;
-    }
-    setCreditsLoading(true);
-    getAiCreditsStatusForSession()
-      .then((status) => setAiCredits(status))
-      .catch(() => setAiCredits(null))
-      .finally(() => setCreditsLoading(false));
-  };
-
   const handleAiLimitResponse = (res) => {
     if (res?.upgrade) {
       setUpgradeMessage(res.error || "");
       setShowUpgradeModal(true);
     }
-    if (res?.credits) setAiCredits(res.credits);
-    else refreshCredits();
+    refreshCredits();
   };
 
   // AEO State
@@ -409,8 +395,7 @@ export default function Optimizacion() {
   const [manualAeoUrl, setManualAeoUrl] = useState('');
 
   useEffect(() => {
-    const premiumStatus = localStorage.getItem("isPremium") === "true";
-    setIsPremium(premiumStatus);
+    localStorage.removeItem("isPremium");
     const savedFocus = localStorage.getItem("seojump_business_focus");
     if (savedFocus) setBusinessFocus(savedFocus);
     setCmsPlatform(getStoredPlatform());
@@ -733,11 +718,6 @@ export default function Optimizacion() {
     loadQuickWins(skippedQuickWins, { useCache: true });
   }, [siteUrl, quickWinsLoading, hasFetchedQuickWins, goldKeyword]);
 
-  useEffect(() => {
-    if (session?.user?.email) refreshCredits();
-    else setCreditsLoading(false);
-  }, [session?.user?.email]);
-
   const handleSkipQuickWin = (qw) => {
     playClick();
     const pageKey = normQuickWinPage(qw.page);
@@ -843,7 +823,14 @@ export default function Optimizacion() {
     if (mission.page) {
       getPageLivePreview(mission.page)
         .then((res) => {
-          if (res.success) setPagePreview(res.preview);
+          if (res.success) {
+            setPagePreview(res.preview);
+            const suggested = getMissionDisplayPlain(mission, goldKeyword, siteUrl).suggestedText;
+            const current = getCurrentValueFromPreview(mission.type, res.preview);
+            if (current && textsMatchLoosely(current, suggested)) {
+              setH1Value(suggested);
+            }
+          }
         })
         .finally(() => setPagePreviewLoading(false));
     } else {
@@ -1150,7 +1137,7 @@ export default function Optimizacion() {
                     onClick={() => { playClick(); setActiveTab("quickwins"); }}
                     className={`px-5 py-2.5 rounded-full font-black text-xs md:text-sm border-2 transition-all duration-300 flex items-center gap-2 ${
                       activeTab === "quickwins"
-                        ? "bg-gradient-to-r from-amber-500 to-yellow-500 border-amber-400 text-slate-950 shadow-[0_0_15px_rgba(245,158,11,0.3)] scale-105"
+                        ? "bg-gradient-to-r from-yellow-400 to-yellow-500 border-yellow-300 text-slate-950 shadow-[0_0_15px_rgba(250,204,21,0.35)] scale-105"
                         : "bg-slate-800/40 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-white"
                     }`}
                   >
@@ -1196,8 +1183,8 @@ export default function Optimizacion() {
               {/* QUICK WINS TAB VIEW */}
               {activeTab === "quickwins" ? (
                 <div className="space-y-6">
-                  <div className="card-3d p-4 md:p-5 space-y-3 border border-amber-500/20">
-                    <label className="text-xs font-black text-amber-400 uppercase tracking-wider block">
+                  <div className="card-3d p-4 md:p-5 space-y-3 border border-slate-600/40">
+                    <label className="text-xs font-black text-slate-300 uppercase tracking-wider block">
                       🏪 ¿Qué vendés? (ayuda a la IA a no equivocarse)
                     </label>
                     <input
@@ -1205,10 +1192,10 @@ export default function Optimizacion() {
                       value={businessFocus}
                       onChange={(e) => setBusinessFocus(e.target.value)}
                       placeholder="Ej: vinilo líquido removible y pintura de retoque — no pintura de taller"
-                      className="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-sm focus:border-amber-500 focus:outline-none"
+                      className="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-sm focus:border-duo-blue focus:outline-none"
                     />
                     <p className="text-xs text-slate-500 font-bold">
-                      Si una sugerencia no encaja, usá <span className="text-amber-400">«No me sirve»</span> para buscar otra página.
+                      Si una sugerencia no encaja, usá <span className="text-duo-blue">«No me sirve»</span> para buscar otra página.
                     </p>
                   </div>
 
@@ -1268,7 +1255,7 @@ export default function Optimizacion() {
                       
                       {/* ── Pending Quick Wins ── */}
                       {quickWins.filter(qw => !completedQuickWins.has(qw.page) && !isPageAlreadyWorked(completedIds, qw.page)).map((qw, index) => {
-                        const isUnlocked = isPremium || index < 2;
+                        const isUnlocked = hasPremiumAccess || index < 2;
                         
                         if (!isUnlocked) {
                           return (
@@ -1478,7 +1465,7 @@ export default function Optimizacion() {
                     return (
                     <div className="space-y-6">
                       {pendingAeo.map((opp, index) => {
-                        const isUnlocked = isPremium || index < 2;
+                        const isUnlocked = hasPremiumAccess || index < 2;
                         const result = verifyAeoResult[index] || {};
 
                         if (!isUnlocked) {
@@ -1572,10 +1559,10 @@ export default function Optimizacion() {
                 <div className="space-y-6">
                   {/* Keyword activa — banner contextual */}
                   {goldKeyword ? (
-                    <div className="flex items-center gap-3 bg-amber-950/40 border border-amber-700/40 rounded-2xl px-5 py-3">
+                    <div className="flex items-center gap-3 bg-duo-blue/10 border border-duo-blue/30 rounded-2xl px-5 py-3">
                       <span className="text-xl flex-shrink-0">🎯</span>
-                      <p className="text-sm font-black text-amber-300/90 leading-snug">
-                        Objetivo activo: <span className="text-amber-200">«{goldKeyword}»</span> — Incluí esta frase en el título, la descripción de Google y las imágenes.
+                      <p className="text-sm font-black text-sky-300/90 leading-snug">
+                        Objetivo activo: <span className="text-sky-200">«{goldKeyword}»</span> — Incluí esta frase en el título, la descripción de Google y las imágenes.
                       </p>
                     </div>
                   ) : (
@@ -1614,7 +1601,7 @@ export default function Optimizacion() {
                       {pendingMissions.length > 0 ? (
                         pendingMissions.map((mission) => {
                           const originalIndex = missions.findIndex(m => m.id === mission.id);
-                          const isUnlocked = isPremium || originalIndex < 2;
+                          const isUnlocked = hasPremiumAccess || originalIndex < 2;
 
                           if (!isUnlocked) {
                              return (
@@ -1664,8 +1651,8 @@ export default function Optimizacion() {
                                 </p>
                                 <p className="font-bold text-slate-655 dark:text-slate-350 text-base md:text-lg lg:text-xl leading-relaxed mb-2">{display.description}</p>
                                 {display.objective && (
-                                   <div className="inline-flex items-center gap-2 bg-amber-955/50 border border-amber-700/40 rounded-xl px-3 py-1.5 mt-1 mb-2">
-                                     <p className="text-xs font-black text-amber-300">{display.objective}</p>
+                                   <div className="inline-flex items-center gap-2 bg-duo-blue/15 border border-duo-blue/30 rounded-xl px-3 py-1.5 mt-1 mb-2">
+                                     <p className="text-xs font-black text-sky-300">{display.objective}</p>
                                    </div>
                                 )}
                                 <div className="flex flex-wrap gap-4 mt-3 text-sm font-bold text-slate-550 dark:text-slate-400">
@@ -1809,7 +1796,7 @@ export default function Optimizacion() {
                 <p className="font-bold text-slate-655 dark:text-slate-300 text-base md:text-lg lg:text-xl break-words">
                   {getPlainMissionLabels(selectedMission.type).verifyLabel}
                   {goldKeyword && (
-                    <> — debe incluir <span className="text-amber-400 font-black">«{goldKeyword}»</span></>
+                    <> — debe incluir <span className="text-duo-blue font-black">«{goldKeyword}»</span></>
                   )}:
                 </p>
                 <input
@@ -1852,10 +1839,10 @@ export default function Optimizacion() {
                   {!verifyLoading && missionStatus === "success" && `🎉 ¡+${selectedMission.xp} XP GANADOS!`}
                 </button>
 
-                <div className="p-4 bg-amber-55 dark:bg-amber-955/20 border border-amber-200 dark:border-amber-900/30 rounded-2xl text-sm font-bold text-amber-800 dark:text-amber-300 flex gap-3 items-start shadow-sm leading-relaxed text-left animate-in fade-in slide-in-from-bottom duration-300">
+                <div className="p-4 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-600/40 rounded-2xl text-sm font-bold text-slate-700 dark:text-slate-300 flex gap-3 items-start shadow-sm leading-relaxed text-left animate-in fade-in slide-in-from-bottom duration-300">
                   <span className="text-2xl flex-shrink-0 select-none">🦉</span>
                   <p>
-                    <strong className="font-black text-amber-955 dark:text-amber-200">¡Tip de experto!</strong> Para que el sistema detecte tus cambios, asegurate de cerrar el panel de administrador y abrir tu web como un visitor común. Google lee tu sitio tal como lo ven tus clientes, no desde el editor.
+                    <strong className="font-black text-slate-800 dark:text-slate-200">¡Tip de experto!</strong> Para que el sistema detecte tus cambios, asegurate de cerrar el panel de administrador y abrir tu web como un visitor común. Google lee tu sitio tal como lo ven tus clientes, no desde el editor.
                   </p>
                 </div>
               </div>

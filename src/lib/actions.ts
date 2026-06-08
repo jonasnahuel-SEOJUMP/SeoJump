@@ -10,12 +10,14 @@ import { normalizePagePath, buildAeoKey } from './missionMemory'
 import {
   checkAndConsumeAiCredit,
   getAiCreditsStatus,
+  getUserPlanSnapshot,
   getCachedGeminiResponse,
   setCachedGeminiResponse,
   buildGeminiCacheKey,
   type AiCreditsStatus,
 } from './aiCredits'
 import type { AiFeature } from './planLimits'
+import { decodeHtmlEntities } from './textUtils'
 
 export async function login() {
   await signIn("google")
@@ -59,6 +61,15 @@ export async function getAiCreditsStatusForSession(): Promise<AiCreditsStatus | 
   if (!email) return null;
   const isAdmin = await checkIsAdmin();
   return getAiCreditsStatus(email, { isAdmin });
+}
+
+/** Plan unificado desde Supabase (paywall, misiones, créditos IA). */
+export async function getUserPlanForSession() {
+  const session = await auth();
+  const email = session?.user?.email;
+  if (!email) return null;
+  const isAdmin = await checkIsAdmin();
+  return getUserPlanSnapshot(email, { isAdmin });
 }
 
 /**
@@ -692,20 +703,26 @@ function extractFromHtml(html: string, type: string): string | string[] | null {
   try {
     if (type === 'H1') {
       const headings: string[] = [];
+      const pushDecoded = (raw: string) => {
+        const text = decodeHtmlEntities(raw.replace(/<[^>]+>/g, '').trim());
+        if (text) headings.push(text);
+      };
+
+      // Título SEO (<title>) — lo que Google muestra en resultados de búsqueda
+      const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      if (titleMatch) pushDecoded(titleMatch[1]);
       
       // Extract H1s
       const h1Regex = /<h1[^>]*>([\s\S]*?)<\/h1>/gi;
       let match;
       while ((match = h1Regex.exec(html)) !== null) {
-        const text = match[1].replace(/<[^>]+>/g, '').trim();
-        if (text) headings.push(text);
+        pushDecoded(match[1]);
       }
       
       // Extract H2s (as requested for thoroughness)
       const h2Regex = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
       while ((match = h2Regex.exec(html)) !== null) {
-        const text = match[1].replace(/<[^>]+>/g, '').trim();
-        if (text) headings.push(text);
+        pushDecoded(match[1]);
       }
       
       return headings.length > 0 ? headings : null;
@@ -713,22 +730,24 @@ function extractFromHtml(html: string, type: string): string | string[] | null {
 
     if (type === 'META') {
       const metaValues: string[] = [];
+      const pushDecoded = (raw: string) => {
+        const text = decodeHtmlEntities(raw.trim());
+        if (text) metaValues.push(text);
+      };
       
       // Meta description
       const descMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i)
             || html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i);
-      if (descMatch && descMatch[1].trim()) metaValues.push(descMatch[1].trim());
+      if (descMatch) pushDecoded(descMatch[1]);
       
       // Meta keywords
       const keywMatch = html.match(/<meta\s+name=["']keywords["']\s+content=["']([^"']+)["']/i)
             || html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']keywords["']/i);
-      if (keywMatch && keywMatch[1].trim()) metaValues.push(keywMatch[1].trim());
+      if (keywMatch) pushDecoded(keywMatch[1]);
       
       // Page title
       const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-      if (titleMatch && titleMatch[1].trim()) {
-        metaValues.push(titleMatch[1].replace(/<[^>]+>/g, '').trim());
-      }
+      if (titleMatch) pushDecoded(titleMatch[1].replace(/<[^>]+>/g, ''));
       
       return metaValues.length > 0 ? metaValues : null;
     }
@@ -738,7 +757,8 @@ function extractFromHtml(html: string, type: string): string | string[] | null {
       const regex = /<img[^>]+alt=["']([^"']+)["'][^>]*>/gi;
       let match;
       while ((match = regex.exec(html)) !== null) {
-        if (match[1].trim()) alts.push(match[1].trim());
+        const text = decodeHtmlEntities(match[1].trim());
+        if (text) alts.push(text);
       }
       return alts.length > 0 ? alts : null;
     }
@@ -746,34 +766,6 @@ function extractFromHtml(html: string, type: string): string | string[] | null {
     console.error('Error extracting from HTML:', e);
   }
   return null;
-}
-
-/**
- * Decodes HTML entities in a raw string. Called explicitly before normalize.
- */
-function decodeHtmlEntities(text: string): string {
-  if (!text) return '';
-  return text
-    // Must decode in this exact order: &amp; last to avoid double-decoding
-    .replace(/&#8211;/g, '-')
-    .replace(/&#8212;/g, '-')
-    .replace(/&ndash;/g, '-')
-    .replace(/&mdash;/g, '-')
-    .replace(/&#8216;/g, "'")
-    .replace(/&#8217;/g, "'")
-    .replace(/&lsquo;/g, "'")
-    .replace(/&rsquo;/g, "'")
-    .replace(/&#39;/g, "'")
-    .replace(/&apos;/g, "'")
-    .replace(/&#8220;/g, '"')
-    .replace(/&#8221;/g, '"')
-    .replace(/&ldquo;/g, '"')
-    .replace(/&rdquo;/g, '"')
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&');
 }
 
 /**
@@ -1135,9 +1127,12 @@ async function scrapeMetadata(siteUrl: string): Promise<{ title: string; descrip
   if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
     targetUrl = "https://" + targetUrl;
   }
+  const fetchUrl = targetUrl.includes('?')
+    ? `${targetUrl}&nocache=${Date.now()}`
+    : `${targetUrl}?nocache=${Date.now()}`;
   
   try {
-    const res = await fetch(targetUrl, {
+    const res = await fetch(fetchUrl, {
       cache: 'no-store',
       // @ts-ignore
       next: { revalidate: 0 },
@@ -1160,20 +1155,20 @@ async function scrapeMetadata(siteUrl: string): Promise<{ title: string; descrip
     // Extract Title
     const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     if (titleMatch) {
-      result.title = titleMatch[1].replace(/<[^>]+>/g, '').trim();
+      result.title = decodeHtmlEntities(titleMatch[1].replace(/<[^>]+>/g, '').trim());
     }
     
     // Extract Meta Description
     const descMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i) ||
                       html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i);
     if (descMatch) {
-      result.description = descMatch[1].trim();
+      result.description = decodeHtmlEntities(descMatch[1].trim());
     }
     
     // Extract H1
     const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
     if (h1Match) {
-      result.h1 = h1Match[1].replace(/<[^>]+>/g, '').trim();
+      result.h1 = decodeHtmlEntities(h1Match[1].replace(/<[^>]+>/g, '').trim());
     }
   } catch (error) {
     console.error("Error scraping metadata:", error);

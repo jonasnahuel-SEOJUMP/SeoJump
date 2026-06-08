@@ -3,6 +3,8 @@
  * Paquete 1 (lenguaje claro) + 2 (dónde edito) + 3 (antes/después).
  */
 
+import { decodeHtmlEntities } from './textUtils';
+
 export const CMS_PLATFORMS = [
   { id: 'wp_woo', label: 'WordPress + Tienda (WooCommerce)', icon: '🛒' },
   { id: 'wp', label: 'WordPress (sin tienda)', icon: '📝' },
@@ -353,11 +355,14 @@ export function getOwlExplanation(missionType, keyword) {
   }
 }
 
-/** Valor "antes" desde scrape */
+/** Valor "antes" desde scrape — decodificado y alineado con lo que Google muestra */
 export function getCurrentValueFromPreview(missionType, preview) {
   if (!preview) return '';
-  if (missionType === 'H1') return preview.h1 || preview.title || '';
-  if (missionType === 'META') return preview.description || '';
+  if (missionType === 'H1') {
+    // Google muestra el <title> en resultados; el H1 visible puede ser distinto
+    return decodeHtmlEntities(preview.title || preview.h1 || '');
+  }
+  if (missionType === 'META') return decodeHtmlEntities(preview.description || '');
   return '';
 }
 

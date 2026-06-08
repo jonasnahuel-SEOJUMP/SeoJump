@@ -20,7 +20,9 @@ import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, 
 import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
-import { getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getStoredPlatform } from "../lib/cmsGuide";
+import { getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getStoredPlatform, getCurrentValueFromPreview } from "../lib/cmsGuide";
+import { textsMatchLoosely } from "../lib/textUtils";
+import { useSubscription } from "../hooks/useSubscription";
 
 const getBadgeInfo = (url) => {
   const staticResponse = { text: "Página Estática", color: "bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-300", wpPath: "🗺️ Ruta en WP: Páginas" };
@@ -117,12 +119,11 @@ export default function Home() {
   const [missions, setMissions] = useState([]);
   const [missionError, setMissionError] = useState(null);
   const [selectedMission, setSelectedMission] = useState(null);
-  const [isPremium, setIsPremium] = useState(false);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
+  const { hasPremiumAccess } = useSubscription();
 
   useEffect(() => {
-    const premiumStatus = localStorage.getItem("isPremium") === "true";
-    setIsPremium(premiumStatus);
+    localStorage.removeItem("isPremium");
     setCmsPlatform(getStoredPlatform());
   }, []);
   
@@ -611,7 +612,14 @@ export default function Home() {
     if (mission.page) {
       getPageLivePreview(mission.page)
         .then((res) => {
-          if (res.success) setPagePreview(res.preview);
+          if (res.success) {
+            setPagePreview(res.preview);
+            const suggested = getMissionDisplayPlain(mission, goldKeyword, siteUrl).suggestedText;
+            const current = getCurrentValueFromPreview(mission.type, res.preview);
+            if (current && textsMatchLoosely(current, suggested)) {
+              setH1Value(suggested);
+            }
+          }
         })
         .finally(() => setPagePreviewLoading(false));
     } else {
@@ -1107,7 +1115,7 @@ export default function Home() {
                            // Show first 2 pending missions to free users (not first 2 of the full
                            // missions array – that old logic broke when the first 2 slots were
                            // already completed, leaving free users with 0 unlocked missions).
-                           const unlockedMissions = isPremium
+                           const unlockedMissions = hasPremiumAccess
                              ? pendingMissions
                              : pendingMissions.slice(0, 2);
 
@@ -1177,7 +1185,7 @@ export default function Home() {
                                    </div>
                                  </div>
                                ))}
-                               {!isPremium && lockedCount > 0 && (
+                               {!hasPremiumAccess && lockedCount > 0 && (
                                  <div 
                                     onClick={() => { playClick(); setShowPaywallModal(true); }}
                                     className="card-3d relative flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6 p-4 md:p-8 transition-all group cursor-pointer mb-4 w-full overflow-hidden bg-slate-800/40 dark:bg-slate-900/60 border-dashed border-2 border-slate-300 dark:border-slate-700 hover:border-duo-green/50 dark:hover:border-duo-green/50"
@@ -1360,7 +1368,7 @@ export default function Home() {
                           ))}
                         </ul>
                         {selectedMission.pistas?.cacheWarning && (
-                          <p className="text-amber-400 text-sm font-bold mt-2 border-t border-slate-700 pt-3">
+                          <p className="text-sky-400 text-sm font-bold mt-2 border-t border-slate-700 pt-3">
                             ⚡ Recordá vaciar el caché de tu sitio después de guardar los cambios.
                           </p>
                         )}
@@ -1373,7 +1381,7 @@ export default function Home() {
                     <p className="font-bold text-slate-650 dark:text-slate-300 text-base md:text-lg lg:text-xl break-words">
                       {getPlainMissionLabels(selectedMission.type).verifyLabel}
                       {(selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '')) && (
-                        <> — debe incluir <span className="text-amber-400 font-black">«{selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '')}»</span></>
+                        <> — debe incluir <span className="text-duo-blue font-black">«{selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '')}»</span></>
                       )}:
                     </p>
 
