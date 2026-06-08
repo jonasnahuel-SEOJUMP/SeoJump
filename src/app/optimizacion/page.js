@@ -369,6 +369,7 @@ export default function Optimizacion() {
   const [copyToast, setCopyToast] = useState(false);
   const [skippedQuickWins, setSkippedQuickWins] = useState([]);
   const [businessFocus, setBusinessFocus] = useState("");
+  const [myBrands, setMyBrands] = useState("");
   const { hasPremiumAccess, credits: aiCredits, loading: creditsLoading, refresh: refreshCredits } = useSubscription();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeMessage, setUpgradeMessage] = useState("");
@@ -398,6 +399,8 @@ export default function Optimizacion() {
     localStorage.removeItem("isPremium");
     const savedFocus = localStorage.getItem("seojump_business_focus");
     if (savedFocus) setBusinessFocus(savedFocus);
+    const savedBrands = localStorage.getItem("seojump_brands");
+    if (savedBrands) setMyBrands(savedBrands);
     setCmsPlatform(getStoredPlatform());
   }, []);
 
@@ -406,6 +409,12 @@ export default function Optimizacion() {
       localStorage.setItem("seojump_business_focus", businessFocus);
     }
   }, [businessFocus]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("seojump_brands", myBrands);
+    } catch (e) {}
+  }, [myBrands]);
 
   useEffect(() => {
     if (siteUrl) {
@@ -1196,6 +1205,20 @@ export default function Optimizacion() {
                     />
                     <p className="text-xs text-slate-500 font-bold">
                       Si una sugerencia no encaja, usá <span className="text-duo-blue">«No me sirve»</span> para buscar otra página.
+                    </p>
+
+                    <label className="text-xs font-black text-slate-300 uppercase tracking-wider block pt-2">
+                      🏷️ Mis marcas (opcional)
+                    </label>
+                    <input
+                      type="text"
+                      value={myBrands}
+                      onChange={(e) => setMyBrands(e.target.value)}
+                      placeholder="Ej: Black Line, Meguiars, Koch Chemie — las marcas que vendés o distribuís"
+                      className="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-sm focus:border-duo-blue focus:outline-none"
+                    />
+                    <p className="text-xs text-slate-500 font-bold">
+                      Si vendés varias marcas, escribilas separadas por comas. La IA las usará para sugerir títulos más inteligentes (ideal para tiendas multimarca).
                     </p>
                   </div>
 

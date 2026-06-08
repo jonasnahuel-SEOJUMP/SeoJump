@@ -576,13 +576,14 @@ function isMostlySiteBrand(query: string, brandTokens: string[]): boolean {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
-export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
+export async function getRealMissions(siteUrl: string, goldKeyword?: string, goal?: string) {
   // Sanitizar entradas
   const urlSanit = sanitizeInput(siteUrl, 'url');
   if (!urlSanit.isValid) {
     return { success: false, error: urlSanit.error };
   }
   const cleanSiteUrl = urlSanit.sanitized;
+  const cleanGoal = (goal || '').trim().toLowerCase();
 
   let cleanGoldKeyword = "";
   if (goldKeyword) {
@@ -729,9 +730,13 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string) {
       // 3. Elegir la misión más inteligente para esta página:
       //    - Si la mayor oportunidad es una pregunta con demanda → AEO/GEO.
       //    - Si no → H1 atacando la keyword de INTENCIÓN comercial.
+      //    El objetivo del dueño inclina suavemente la balanza (sin romper el motor):
+      //    "visitas" favorece preguntas (AEO/alcance); "vender" favorece la intención comercial (H1).
+      const questionBias = cleanGoal === 'visitas' ? 1.3 : cleanGoal === 'vender' ? 0.77 : 1;
+      const questionScoreAdj = bestQuestion ? bestQuestion.score * questionBias : 0;
       let chosen: { row: typeof pageRows[0]; kw: string; score: number };
       let missionType: 'H1' | 'AEO';
-      if (bestQuestion && (!bestCommercial || bestQuestion.score >= bestCommercial.score)) {
+      if (bestQuestion && (!bestCommercial || questionScoreAdj >= bestCommercial.score)) {
         chosen = bestQuestion;
         missionType = 'AEO';
       } else if (bestCommercial) {
@@ -1312,6 +1317,9 @@ export async function getSmartMissionSuggestion(params: {
   impressions?: number;
   clicks?: number;
   ctr?: number;
+  // Contexto declarado por el dueño del negocio.
+  goal?: string;   // 'vender' | 'visitas' | 'local'
+  brands?: string; // marcas que el negocio realmente vende/distribuye
 }) {
   const { pageUrl, missionType } = params;
   const keyword = (params.keyword || '').trim();
@@ -1324,6 +1332,8 @@ export async function getSmartMissionSuggestion(params: {
   const impressions = typeof params.impressions === 'number' ? params.impressions : null;
   const clicks = typeof params.clicks === 'number' ? params.clicks : null;
   const ctr = typeof params.ctr === 'number' ? params.ctr : null;
+  const goal = (params.goal || '').trim().toLowerCase();
+  const brands = (params.brands || '').trim().slice(0, 300);
 
   // Solo H1 (título) y META se benefician de la IA aquí.
   if (missionType !== 'H1' && missionType !== 'META') {
@@ -1359,7 +1369,7 @@ export async function getSmartMissionSuggestion(params: {
   const isTitle = missionType === 'H1';
 
   const cacheKey = buildGeminiCacheKey([
-    'title_suggestion_v3',
+    'title_suggestion_v4',
     email || 'anon',
     pageUrl,
     missionType,
@@ -1367,6 +1377,8 @@ export async function getSmartMissionSuggestion(params: {
     currentValue.slice(0, 120),
     pageH1.slice(0, 60),
     position != null ? String(Math.round(position)) : '',
+    goal,
+    brands.slice(0, 80),
   ]);
 
   // Cortocircuito: si ya está cacheado, devolvemos sin escanear la portada ni gastar crédito.
@@ -1410,6 +1422,20 @@ export async function getSmartMissionSuggestion(params: {
     ctr != null && `  • CTR: ${(ctr * 100).toFixed(1)}%`,
   ].filter(Boolean).join('\n') || '  • (sin métricas de Search Console)';
 
+  // Objetivo declarado por el dueño — inclina la estrategia del título/meta.
+  const goalGuidance =
+    goal === 'vender'
+      ? 'VENDER MÁS: priorizá la intención de COMPRA. Resaltá el producto/servicio concreto y, si entra, señales transaccionales sutiles (sin inventar precios ni promos). El objetivo es atraer a quien está listo para comprar.'
+      : goal === 'visitas'
+      ? 'CONSEGUIR MÁS VISITAS: priorizá el alcance y el atractivo del clic. Usá el término más buscado del rubro y un texto que invite a entrar, aunque sea más informativo que netamente comercial.'
+      : goal === 'local'
+      ? 'SER EL #1 EN LA CIUDAD (SEO local): si el negocio tiene zona/ciudad detectable en su contenido, incorporá la localidad de forma natural (ej: "en [Ciudad]" o "envíos a [zona]") para captar búsquedas locales. NUNCA inventes una ciudad: solo usala si aparece en el contenido del negocio.'
+      : '';
+
+  const brandsBlock = brands
+    ? `\nMARCAS QUE EL DUEÑO DECLARÓ QUE VENDE/DISTRIBUYE (fuente confiable, priorizá estas):\n  ${brands}\n  → Esto confirma que el negocio es MULTIMARCA. Podés usar estas marcas con total libertad en el título/meta si son relevantes para esta página.`
+    : '';
+
   const prompt = `
 Actuás como un consultor SEO experto que optimiza una página para un dueño de negocio NO técnico que va a confiar a ciegas en tu recomendación. Tu respuesta tiene que ser segura, lista para copiar y pegar. Tenés que RELACIONAR TODAS las variables de abajo antes de decidir, como haría un consultor humano real.
 
@@ -1421,7 +1447,7 @@ NEGOCIO Y PÁGINA:
 
 CONTEXTO DEL NEGOCIO (de la portada del sitio — sirve para entender el rubro y si es mono o multimarca):
 ${businessContext ? `  ${businessContext}` : '  (no disponible — deducí el perfil desde el contenido de la página)'}
-
+${brandsBlock}
 QUÉ VENDE REALMENTE ESTA PÁGINA (basate en esto para entender el producto puntual):
 ${pageSells}
 
@@ -1430,7 +1456,7 @@ ${metricsBlock}
 
 CAMPO A OPTIMIZAR: ${isTitle ? 'el TÍTULO SEO (etiqueta <title>)' : 'la META DESCRIPCIÓN'}
 Valor actual de ese campo: "${currentValue || '(vacío)'}"
-
+${goalGuidance ? `\nOBJETIVO PRINCIPAL DEL DUEÑO (orientá la estrategia hacia esto):\n  ${goalGuidance}` : ''}
 PASO 1 — IDENTIFICÁ EL PERFIL DE MARCA DEL NEGOCIO (clave para decidir bien):
 - MONOMARCA / producto puntual: el negocio vende su propia marca o esta es la página de un solo producto/marca. Señales: una sola marca repetida, página de ficha de producto único.
 - MULTIMARCA / distribuidor / tienda que vende muchas marcas. Señales: palabras como "distribuidor", "multimarca", "todas las marcas", "importador", o varios nombres de marcas distintas en el contexto del negocio o la página. Muchos rubros funcionan así (tiendas de detailing, ferreterías, perfumerías, tecnología, repuestos, etc.).
@@ -1441,7 +1467,7 @@ REGLAS ABSOLUTAS (un experto nunca las rompe):
 1. COHERENCIA DE RUBRO ANTE TODO: nunca menciones productos, marcas o categorías de OTRO rubro. Una tienda de car detailing jamás habla de zapatillas; una perfumería jamás de herramientas.
 2. SEGÚN EL PERFIL DE MARCA:
    - Si es MONOMARCA / producto puntual: trabajá SOLO con lo que la página realmente vende. No inventes marcas ajenas.
-   - Si es MULTIMARCA / distribuidor: PODÉS y CONVIENE incorporar estratégicamente nombres de marcas reconocidas y categorías del MISMO rubro para capturar más búsquedas —incluso marcas que vende la competencia—, porque una tienda multimarca legítimamente atrae ese tráfico. Priorizá las marcas que el negocio realmente muestra que distribuye; si sumás una marca reconocida del rubro como jugada de captación, hacelo de forma honesta (como parte del catálogo o en comparación), SIN afirmar ser la marca oficial.
+   - Si es MULTIMARCA / distribuidor: PODÉS y CONVIENE incorporar estratégicamente nombres de marcas reconocidas y categorías del MISMO rubro para capturar más búsquedas —incluso marcas que vende la competencia—, porque una tienda multimarca legítimamente atrae ese tráfico. Priorizá SIEMPRE las marcas que el dueño declaró (si las hay arriba) y las que el negocio muestra que distribuye; si sumás una marca reconocida del rubro como jugada de captación, hacelo de forma honesta (como parte del catálogo o en comparación), SIN afirmar ser la marca oficial.
 3. PRESERVÁ LA INTENCIÓN DE BÚSQUEDA: nunca elimines la palabra que describe QUÉ es el producto/servicio ni los términos específicos de alta conversión (nombres de partes como "parabrisas", "paragolpes"; el problema que resuelve; el tipo exacto de producto). Si el texto actual tiene un término específico que la gente busca, CONSERVALO.
 4. ${isHomepage ? 'ES LA PÁGINA DE INICIO: optimizá para la MARCA + la CATEGORÍA GLOBAL del negocio (ej: "Tienda de Car Detailing"), NUNCA para un producto puntual.' : 'ES UNA PÁGINA INTERNA: optimizá para el producto/servicio específico de esta página, no para la marca genérica.'}
 5. USÁ LA POSICIÓN: si ya está en página 1, hacé cambios conservadores (no arruines lo que funciona); si está en página 2 o más lejos, podés ser más agresivo.
@@ -1450,6 +1476,7 @@ REGLAS ABSOLUTAS (un experto nunca las rompe):
 8. NUNCA dejes un título "pelado" tipo "Marca | Tienda". Siempre debe quedar claro qué se vende.
 9. ${isTitle ? 'LONGITUD: máximo 60 caracteres (ideal 50-60). Estructura sugerida: [qué es + término de intención] + [marca relevante si aporta] + [nombre de la tienda].' : 'LONGITUD: máximo 155 caracteres. Incluí la palabra clave de intención y un llamado a la acción claro ("Comprá", "Pedí presupuesto", "Conocé más").'}
 10. Español rioplatense, natural, sin tecnicismos SEO.
+${goalGuidance ? '11. RESPETÁ EL OBJETIVO DEL DUEÑO descrito arriba al elegir el enfoque del texto.' : ''}
 
 En "reason", si detectaste que es multimarca y por eso sumaste una marca o categoría como estrategia, explicáselo en una frase al dueño (ej: "Como tu tienda es multimarca, sumé X para captar a quien busca esa marca").
 

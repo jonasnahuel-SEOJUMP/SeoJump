@@ -78,6 +78,14 @@ export default function MissionEditorGuide({
     // Esperar a tener el texto en vivo para darle contexto real a la IA.
     if (previewLoading) return;
 
+    // Contexto declarado por el dueño (persistido en el navegador).
+    let declaredGoal = '';
+    let declaredBrands = '';
+    try {
+      declaredGoal = localStorage.getItem('seojump_goal') || '';
+      declaredBrands = localStorage.getItem('seojump_brands') || '';
+    } catch (e) { /* sin localStorage: la IA decide con el resto del contexto */ }
+
     setAiLoading(true);
     getSmartMissionSuggestion({
       pageUrl: missionPage,
@@ -94,6 +102,9 @@ export default function MissionEditorGuide({
       impressions: mission?.impressions,
       clicks: mission?.clicks,
       ctr: mission?.ctr,
+      // Objetivo y marcas declaradas por el dueño.
+      goal: declaredGoal,
+      brands: declaredBrands,
     })
       .then((res) => {
         if (cancelled) return;

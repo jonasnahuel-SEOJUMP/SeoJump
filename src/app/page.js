@@ -125,6 +125,8 @@ export default function Home() {
   useEffect(() => {
     localStorage.removeItem("isPremium");
     setCmsPlatform(getStoredPlatform());
+    const savedGoal = localStorage.getItem("seojump_goal");
+    if (savedGoal) setGoal(savedGoal);
   }, []);
   
   // Mission interaction state
@@ -155,7 +157,7 @@ export default function Home() {
     setMissionsLoading(true);
     setMissionError(null);
     try {
-      const res = await getRealMissions(siteUrl, keyword || undefined);
+      const res = await getRealMissions(siteUrl, keyword || undefined, goal || undefined);
       if (!res.success) throw new Error(res.error || "Error al cargar misiones");
       const pending = filterPendingMissions(filterHomeMissions(res.data || []), loadLocalCompletedIds());
       setMissions(pending);
@@ -466,7 +468,7 @@ export default function Home() {
             }
           }).catch(err => console.error("Fallo al precargar quick wins:", err));
 
-          getRealMissions(url, goldKeyword).then(res => {
+          getRealMissions(url, goldKeyword, goal || undefined).then(res => {
             if (!res.success) {
               throw new Error(res.error);
             }
@@ -896,7 +898,7 @@ export default function Home() {
               ].map((option) => (
                 <button 
                   key={option.id}
-                  onClick={() => { playClick(); setGoal(option.id); }}
+                  onClick={() => { playClick(); setGoal(option.id); try { localStorage.setItem("seojump_goal", option.id); } catch (e) {} }}
                   className={`btn-3d w-full max-w-sm md:max-w-md text-lg md:text-xl py-3 px-6 font-black ${goal === option.id ? `${option.color} text-white` : 'btn-white text-slate-650 dark:text-slate-200 dark:bg-slate-800 dark:border-slate-700'}`}
                 >
                   {option.label}
