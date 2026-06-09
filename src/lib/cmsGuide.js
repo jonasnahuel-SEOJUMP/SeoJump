@@ -298,6 +298,48 @@ function normForCompare(text) {
     .trim();
 }
 
+/** Palabras vacías que no aportan al comparar intención (es). */
+const COMPARE_STOPWORDS = new Set([
+  'de', 'la', 'el', 'los', 'las', 'y', 'o', 'u', 'para', 'con', 'en', 'a',
+  'del', 'un', 'una', 'unos', 'unas', 'por', 'su', 'sus', 'al', 'que', 'tu',
+]);
+
+/** Reduce plural→singular en español (aproximado, suficiente para deduplicar). */
+function singularize(word) {
+  if (word.length > 4 && word.endsWith('es')) return word.slice(0, -2);
+  if (word.length > 3 && word.endsWith('s')) return word.slice(0, -1);
+  return word;
+}
+
+/** Tokens significativos (sin stopwords, en singular) para comparar intención. */
+function significantTokens(text) {
+  return normForCompare(text)
+    .split(' ')
+    .filter((w) => w.length >= 3 && !COMPARE_STOPWORDS.has(w))
+    .map(singularize)
+    .filter(Boolean);
+}
+
+/**
+ * ¿El núcleo ya cubre la keyword? Compara por tokens en singular, así
+ * "paño de microfibra" se reconoce dentro de "paños y microfibras" y se evita
+ * la redundancia singular/plural (ej: «Paño de microfibra - Paños y microfibras»).
+ */
+function coreCoversKeyword(core, kw) {
+  const kwTokens = significantTokens(kw);
+  if (kwTokens.length === 0) return true;
+  const coreTokens = new Set(significantTokens(core));
+  const present = kwTokens.filter((t) => coreTokens.has(t)).length;
+  return present / kwTokens.length >= 0.6;
+}
+
+/** Baja el "grito" de palabras EN MAYÚSCULAS (≥4 letras) a Capitalizado. */
+function deShout(text) {
+  return (text || '').replace(/\b([A-ZÁÉÍÓÚÑ]{4,})\b/g, (w) =>
+    w.charAt(0) + w.slice(1).toLowerCase()
+  );
+}
+
 /** ¿Este fragmento es el nombre de la tienda/marca (para no duplicarlo)? */
 function looksLikeBrand(part, brand) {
   const p = normForCompare(part).replace(/\s/g, '');
@@ -328,29 +370,45 @@ function composeWithBrand(core, brand, maxLen = 60) {
  * búsqueda). Prioridad: título en vivo (sin la marca) > slug de la URL > keyword.
  * Siempre garantiza que la keyword esté presente.
  */
-function deriveProductCore(preview, slug, kw, brand, cap) {
-  let core = '';
+function deriveDescriptiveCore(text, brand) {
+  if (!text) return '';
+  return decodeHtmlEntities(text)
+    .split(/\s*[|–—]\s*|\s+-\s+/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .filter((part) => !looksLikeBrand(part, brand))
+    .join(' - ')
+    .trim();
+}
 
-  const liveTitle = preview && preview.title ? decodeHtmlEntities(preview.title) : '';
-  if (liveTitle) {
-    core = liveTitle
-      .split(/\s*[|–—]\s*|\s+-\s+/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-      .filter((part) => !looksLikeBrand(part, brand))
-      .join(' - ')
-      .trim();
+function deriveProductCore(preview, slug, kw, brand, cap) {
+  const liveTitle = preview && preview.title ? preview.title : '';
+  const liveH1 = preview && preview.h1 ? preview.h1 : '';
+
+  let core = deriveDescriptiveCore(liveTitle, brand);
+  const h1Core = deriveDescriptiveCore(liveH1, brand);
+
+  // Preservar el nicho: si el H1 aporta más términos significativos (ej:
+  // «...para Estética Vehicular») y no es excesivamente largo, usarlo como base.
+  if (
+    h1Core &&
+    significantTokens(h1Core).length > significantTokens(core).length &&
+    h1Core.length <= 65
+  ) {
+    core = h1Core;
   }
 
   if (!core && slug) core = cap(slug);
   if (!core) core = kw ? cap(kw) : brand;
 
-  // Garantizar que la keyword (marca del producto / término de intención) esté
-  if (kw && core && !normForCompare(core).includes(normForCompare(kw))) {
+  // Garantizar la keyword SOLO si el núcleo todavía no la cubre (comparación
+  // por tokens singular/plural, para no duplicar «paño»/«paños»).
+  if (kw && core && !coreCoversKeyword(core, kw)) {
     core = `${cap(kw)} - ${core}`;
   }
 
-  return core;
+  // Bajar el "grito" de mayúsculas heredadas del título/H1 original.
+  return deShout(core);
 }
 
 /** Texto sugerido listo para copiar (paquete 1 + 3) */
