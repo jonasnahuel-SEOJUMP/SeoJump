@@ -1103,6 +1103,56 @@ export default function Home() {
                       router={router} 
                     />
 
+                    {/* --- BANNER EDUCATIVO + UPSELL A SEARCH CONSOLE (solo sin GSC) --- */}
+                    {missions.length > 0 && missions.some((m) => m.source === 'web') && (
+                      <div className="card-3d p-5 md:p-6 border-2 border-amber-500/40 bg-gradient-to-br from-amber-950/30 to-slate-900/60 space-y-4">
+                        <div className="flex items-start gap-3">
+                          <span className="text-3xl flex-shrink-0">🚀</span>
+                          <div className="space-y-1">
+                            <h3 className="text-lg md:text-xl font-black text-amber-200">
+                              Estas misiones las armamos mirando tu web
+                            </h3>
+                            <p className="text-sm font-bold text-slate-300 leading-relaxed">
+                              Ya podés empezar a mejorar tu sitio ahora mismo. Y cuando conectes <span className="text-amber-200">Google Search Console</span> (es gratis y te guiamos), tus misiones van a usar <span className="text-amber-200">datos reales de Google</span>: por qué búsquedas ya aparecés, cuáles están a un paso de la primera página y dónde estás dejando ventas sobre la mesa.
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                          <div className="rounded-xl bg-slate-900/60 border border-slate-700/60 p-3">
+                            <p className="text-xs font-black text-emerald-300 uppercase tracking-wide mb-1">📈 Más ventas</p>
+                            <p className="text-xs font-bold text-slate-400 leading-snug">Detectamos las páginas a punto de explotar en Google para que les des el empujón final.</p>
+                          </div>
+                          <div className="rounded-xl bg-slate-900/60 border border-slate-700/60 p-3">
+                            <p className="text-xs font-black text-sky-300 uppercase tracking-wide mb-1">🎯 Datos reales</p>
+                            <p className="text-xs font-bold text-slate-400 leading-snug">Dejás de adivinar: ves las búsquedas exactas por las que te encuentran tus clientes.</p>
+                          </div>
+                          <div className="rounded-xl bg-slate-900/60 border border-slate-700/60 p-3">
+                            <p className="text-xs font-black text-purple-300 uppercase tracking-wide mb-1">🤖 Te cita la IA (AEO)</p>
+                            <p className="text-xs font-bold text-slate-400 leading-snug">Que ChatGPT y Google IA te recomienden es el nuevo aparecer primero. Y vale cada vez más.</p>
+                          </div>
+                        </div>
+
+                        <button
+                          onClick={() => {
+                            playClick();
+                            signIn("google", {
+                              callbackUrl: "/",
+                              authorizationParams: {
+                                scope: "openid email profile https://www.googleapis.com/auth/webmasters"
+                              }
+                            });
+                          }}
+                          className="w-full btn-3d bg-green-500 border-green-600 border-b-4 hover:bg-green-450 active:border-b-0 active:translate-y-1 text-white text-sm md:text-base font-black py-3 flex items-center justify-center gap-2"
+                        >
+                          🔓 Conectar Search Console y desbloquear datos reales
+                        </button>
+                        <p className="text-[11px] font-bold text-slate-500 text-center">
+                          Conexión 100% segura y de solo lectura. Nunca modificamos tu sitio.
+                        </p>
+                      </div>
+                    )}
+
                     <div className="space-y-4">
                       {missions.length > 0 ? (() => {
                            const pendingMissions = filterPendingMissions(missions, completedIds).slice(0, 10);
@@ -1154,6 +1204,11 @@ export default function Home() {
                                                   🤖 Para la IA
                                                 </span>
                                               )}
+                                              {mission.source === 'web' && (
+                                                <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300">
+                                                  🌐 Basado en tu web
+                                                </span>
+                                              )}
                                             </div>
                                             <div className="flex items-center gap-2 mb-1.5 w-full min-w-0">
                                               <code className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 truncate block w-full max-w-[200px] min-[400px]:max-w-[260px] sm:max-w-[380px] md:max-w-[450px]">
@@ -1174,11 +1229,17 @@ export default function Home() {
                                         );
                                       })()}
                                      <p className="font-bold text-slate-650 dark:text-slate-350 text-base lg:text-lg mb-2">{getMissionDisplayPlain(mission, mission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '') || '', url).description}</p>
-                                     <div className="flex flex-wrap gap-4 mt-3 text-sm lg:text-base font-bold text-slate-550 dark:text-slate-400">
-                                       <span>👆 {mission.clicks} oportunidades de venta</span>
-                                       <span>👁️ {mission.impressions} dinero sobre la mesa</span>
-                                       <span>📊 Pos. {mission.position?.toFixed(1)}</span>
-                                     </div>
+                                     {mission.source === 'web' || mission.position == null ? (
+                                       <div className="flex flex-wrap gap-2 mt-3 text-xs lg:text-sm font-bold text-amber-300/90">
+                                         <span>🔍 Detectado al analizar tu web · conectá Search Console para ver tus ventas y posiciones reales</span>
+                                       </div>
+                                     ) : (
+                                       <div className="flex flex-wrap gap-4 mt-3 text-sm lg:text-base font-bold text-slate-550 dark:text-slate-400">
+                                         <span>👆 {mission.clicks} oportunidades de venta</span>
+                                         <span>👁️ {mission.impressions} dinero sobre la mesa</span>
+                                         <span>📊 Pos. {mission.position?.toFixed(1)}</span>
+                                       </div>
+                                     )}
                                      <div className="mt-4 w-full">
                                        <button className="btn-3d !text-sm sm:!text-base md:!text-lg lg:!text-xl !py-2.5 !px-4 sm:!py-3 sm:!px-6 btn-green w-full md:w-auto font-black">
                                          EMPEZAR (+{mission.xp} XP)

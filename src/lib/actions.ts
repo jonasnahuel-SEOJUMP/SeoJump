@@ -576,6 +576,129 @@ function isMostlySiteBrand(query: string, brandTokens: string[]): boolean {
 }
 // ─────────────────────────────────────────────────────────────────────────────
 
+/**
+ * Misiones de ARRANQUE (sin Search Console).
+ * La mayoría de los negocios no tienen GSC conectado. En vez de dejar la app
+ * vacía (y perder al usuario), analizamos la web con el scraper y generamos
+ * misiones reales basadas en lo que se ve en el sitio. Cuando el usuario conecte
+ * GSC, estas se reemplazan por las misiones con datos reales de Google.
+ * Cada misión queda marcada con source:'web' para diferenciarla en la UI.
+ */
+async function buildStarterMissions(
+  cleanSiteUrl: string,
+  goldKeyword: string,
+  _goal: string
+): Promise<any[]> {
+  const homeUrl = cleanSiteUrl.startsWith('http') ? cleanSiteUrl : `https://${cleanSiteUrl}`;
+
+  // 1. Traer la portada y descubrir páginas internas reales.
+  let internalPaths: string[] = [];
+  try {
+    const home = await fetchPage(homeUrl);
+    if (home.ok && home.html) {
+      const links = extractLinksFromHtml(home.html, homeUrl);
+      const seen = new Set<string>();
+      const skip = /\.(jpg|jpeg|png|gif|webp|svg|pdf|zip|mp4|css|js)(\?|$)/i;
+      const skipPaths = /(\/wp-admin|\/wp-login|\/cart|\/carrito|\/checkout|\/finalizar|\/mi-cuenta|\/my-account|\/account|\/login|\/registro|\/feed|\/tag\/|\/etiqueta\/|\/author\/|\/autor\/)/i;
+      for (const link of links) {
+        if (!link.isInternal) continue;
+        if (skip.test(link.href) || skipPaths.test(link.href)) continue;
+        let path = '';
+        try { path = new URL(link.href).pathname.replace(/\/+$/, ''); } catch { continue; }
+        if (!path || path === '') continue;            // saltar la home
+        if (path.split('/').filter(Boolean).length > 3) continue; // muy profundo
+        if (seen.has(path)) continue;
+        seen.add(path);
+        internalPaths.push(new URL(link.href).origin + path);
+      }
+    }
+  } catch (e: any) {
+    console.warn('[buildStarterMissions] No se pudo leer la portada:', e?.message || e);
+  }
+
+  // Priorizar páginas con señales de producto/servicio/categoría.
+  const prioritySignal = /(producto|product|tienda|shop|servicio|service|categoria|category|catalogo|coleccion|collection)/i;
+  internalPaths.sort((a, b) => (prioritySignal.test(b) ? 1 : 0) - (prioritySignal.test(a) ? 1 : 0));
+
+  // Lista final de páginas a analizar: internas (hasta 4) o, si no hay, la home.
+  const pageUrls = internalPaths.slice(0, 4);
+  if (pageUrls.length === 0) pageUrls.push(homeUrl);
+
+  // 2. Scrapear metadatos de cada página en paralelo.
+  const metas = await Promise.all(
+    pageUrls.map((u) => scrapeMetadata(u).catch(() => ({ title: '', description: '', h1: '' })))
+  );
+
+  // 3. Construir una misión por página, eligiendo el arreglo más necesario.
+  const missions: any[] = [];
+  pageUrls.forEach((fullPageUrl, i) => {
+    const meta = metas[i];
+    const title = (meta.title || '').trim();
+    const h1 = (meta.h1 || '').trim();
+    const description = (meta.description || '').trim();
+
+    // Diagnóstico simple de la página.
+    const needsTitle = !title || title.length > 60 || !h1;
+    const needsMeta = !description || description.length < 50;
+    const missionType: 'H1' | 'META' = needsTitle ? 'H1' : (needsMeta ? 'META' : 'H1');
+
+    // Puntaje de "problema" para ordenar (más problemas → más arriba).
+    let issue = 0;
+    if (!title) issue += 2;
+    if (!h1) issue += 2;
+    if (title && title.length > 60) issue += 1;
+    if (!description) issue += 1;
+
+    let pagePath = '/';
+    try { pagePath = normalizePagePath(fullPageUrl); } catch { /* keep */ }
+
+    // Keyword: slug legible de la URL o la semilla del usuario.
+    let derivedKw = '';
+    try {
+      const segs = new URL(fullPageUrl).pathname.replace(/\/+$/, '').split('/').filter(Boolean);
+      derivedKw = (segs[segs.length - 1] || '').replace(/-/g, ' ').trim();
+    } catch { /* ignore */ }
+    const effectiveKeyword = derivedKw || goldKeyword || '';
+
+    let displayPath = pagePath;
+    if (displayPath === '/' || displayPath === '') {
+      displayPath = 'Página de Inicio (Portada)';
+    } else {
+      displayPath = displayPath.replace(/^\/+|\/+$/g, '').replace(/[-/]/g, ' ');
+      if (displayPath.length > 0) displayPath = displayPath.charAt(0).toUpperCase() + displayPath.slice(1);
+      if (displayPath.length > 40) displayPath = displayPath.slice(0, 37) + '...';
+    }
+
+    const MISSION_TYPES = buildMissionTypes(effectiveKeyword);
+    const missionDef = MISSION_TYPES.find((m) => m.type === missionType)!;
+
+    missions.push({
+      id: `${missionDef.type.toLowerCase()}-${pagePath}`,
+      title: missionDef.title,
+      description: missionDef.descriptionTemplate(displayPath),
+      xp: missionDef.xp,
+      page: fullPageUrl,
+      pagePath,
+      type: missionDef.type,
+      icon: missionDef.icon,
+      color: missionDef.color,
+      pistas: missionDef.pistas,
+      keyword: effectiveKeyword,
+      // Sin GSC no hay métricas reales: se omiten para no mostrar "0 ventas".
+      clicks: null,
+      impressions: null,
+      ctr: null,
+      position: null,
+      opportunity: issue,
+      source: 'web',
+    });
+  });
+
+  // Más problemas primero; tope de 6 para no abrumar.
+  missions.sort((a, b) => (b.opportunity || 0) - (a.opportunity || 0));
+  return missions.slice(0, 6);
+}
+
 export async function getRealMissions(siteUrl: string, goldKeyword?: string, goal?: string) {
   // Sanitizar entradas
   const urlSanit = sanitizeInput(siteUrl, 'url');
@@ -597,15 +720,28 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
   try {
     const session = await auth()
 
+    // Sin token de Search Console NO bloqueamos: generamos misiones de arranque
+    // analizando la web. La mayoría de los negocios entran así la primera vez.
     if (!session?.accessToken) {
-      return { success: false, error: "No hay sesión activa o falta el token de acceso" }
+      const starter = await buildStarterMissions(cleanSiteUrl, cleanGoldKeyword, cleanGoal);
+      return { success: true, data: starter, source: 'web' };
     }
 
     const rowLimit = cleanGoldKeyword ? 25 : 50;
-    let rows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined, rowLimit)
+    let rows: any[] = [];
+    try {
+      rows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined, rowLimit)
+    } catch (gscErr: any) {
+      // Falta de permiso GSC o propiedad no verificada: en vez de dejar al
+      // usuario trabado, le damos misiones de arranque basadas en su web.
+      console.warn('[getRealMissions] GSC no disponible, usando misiones de arranque:', gscErr?.message || gscErr);
+      const starter = await buildStarterMissions(cleanSiteUrl, cleanGoldKeyword, cleanGoal);
+      return { success: true, data: starter, source: 'web' };
+    }
 
     if (!rows || rows.length === 0) {
-      return { success: true, data: [] }
+      const starter = await buildStarterMissions(cleanSiteUrl, cleanGoldKeyword, cleanGoal);
+      return { success: true, data: starter, source: 'web' };
     }
 
     const sortGscRows = (list: typeof rows) =>
@@ -786,13 +922,20 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
         ctr: chosen.row.ctr,
         position: chosen.row.position,
         opportunity: Math.round(chosen.score * 10) / 10,
+        source: 'gsc',
       });
     }
 
     // Ordenar por oportunidad: primero las páginas con mayor potencial de salto.
     missions.sort((a, b) => (b.opportunity || 0) - (a.opportunity || 0));
 
-    return { success: true, data: missions }
+    // Si GSC no produjo ninguna misión útil, caemos a misiones de arranque.
+    if (missions.length === 0) {
+      const starter = await buildStarterMissions(cleanSiteUrl, cleanGoldKeyword, cleanGoal);
+      return { success: true, data: starter, source: 'web' };
+    }
+
+    return { success: true, data: missions, source: 'gsc' }
   } catch (error: any) {
     console.error("Error generating real missions:", error)
     logErrorToFile(

@@ -1663,6 +1663,11 @@ export default function Optimizacion() {
                                 <div className="flex items-center gap-3 flex-wrap mb-1.5">
                                   <h3 className="text-xl md:text-2xl lg:text-3xl font-black text-slate-800 dark:text-slate-100 group-hover:text-duo-green transition-colors">{display.title}</h3>
                                   <span className={`text-sm font-black px-3 py-1 rounded-md ${pageType.badgeColor}`}>{pageType.label}</span>
+                                  {mission.source === 'web' && (
+                                    <span className="text-xs font-black px-2 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300">
+                                      🌐 Basado en tu web
+                                    </span>
+                                  )}
                                 </div>
                                 <div className="flex items-center gap-2 mb-1.5 w-full min-w-0">
                                   <code className="text-xs md:text-sm font-mono text-slate-500 dark:text-slate-400 truncate block w-full max-w-[200px] min-[400px]:max-w-[260px] sm:max-w-[380px] md:max-w-[450px]">{mission.page}</code>
@@ -1678,11 +1683,17 @@ export default function Optimizacion() {
                                      <p className="text-xs font-black text-sky-300">{display.objective}</p>
                                    </div>
                                 )}
-                                <div className="flex flex-wrap gap-4 mt-3 text-sm font-bold text-slate-550 dark:text-slate-400">
-                                  <span>👆 {mission.clicks} oportunidades de venta</span>
-                                  <span>👁️ {mission.impressions} dinero sobre la mesa</span>
-                                  <span>📊 Pos. {mission.position?.toFixed(1)}</span>
-                                </div>
+                                {mission.source === 'web' || mission.position == null ? (
+                                  <div className="flex flex-wrap gap-2 mt-3 text-xs font-bold text-amber-300/90">
+                                    <span>🔍 Detectado al analizar tu web · conectá Search Console para ver tus ventas y posiciones reales</span>
+                                  </div>
+                                ) : (
+                                  <div className="flex flex-wrap gap-4 mt-3 text-sm font-bold text-slate-550 dark:text-slate-400">
+                                    <span>👆 {mission.clicks} oportunidades de venta</span>
+                                    <span>👁️ {mission.impressions} dinero sobre la mesa</span>
+                                    <span>📊 Pos. {mission.position?.toFixed(1)}</span>
+                                  </div>
+                                )}
                                 <div className="mt-4 w-full">
                                   <button className="btn-3d !text-sm sm:!text-base md:!text-lg lg:!text-xl !py-2.5 !px-4 sm:!py-3 sm:!px-6 btn-green w-full md:w-auto font-black">
                                     EMPEZAR (+{mission.xp} XP)
