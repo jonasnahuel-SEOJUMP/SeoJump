@@ -30,12 +30,12 @@ async function testGemini(model, api, apiKey) {
 export async function GET() {
   const results = [];
   const totalStart = Date.now();
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = (process.env.GEMINI_API_KEY || '').trim();
 
   results.push({
     step: 'API Key check',
     value: apiKey
-      ? `exists (starts with ${apiKey.substring(0, 6)}..., ${apiKey.startsWith('AQ.') ? 'AQ header auth' : 'AIza query auth'})`
+      ? `exists (len=${apiKey.length}, starts ${apiKey.substring(0, 6)}..., ends ...${apiKey.slice(-4)}, ${apiKey.startsWith('AQ.') ? 'AQ header auth' : 'AIza query auth'})`
       : 'MISSING!',
   });
 

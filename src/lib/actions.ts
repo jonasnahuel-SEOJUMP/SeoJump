@@ -296,6 +296,10 @@ function geminiErrorToUserMessage(rawError: string): string {
   return 'Error temporal al conectar con la IA. Intentá de nuevo en unos segundos.';
 }
 
+function readGeminiApiKey(): string {
+  return (process.env.GEMINI_API_KEY || '').trim();
+}
+
 async function callGeminiREST(apiKey: string, promptText: string): Promise<string> {
   // thinkingBudget: 0 desactiva la fase de "razonamiento" de gemini-2.5-flash,
   // que con prompts largos tarda 20-50s y provoca timeouts. Sin ella responde en segundos.
@@ -1537,7 +1541,7 @@ export async function getSmartMissionSuggestion(params: {
     return { success: false, fallback: true as const };
   }
 
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = readGeminiApiKey();
   if (!apiKey) return { success: false, fallback: true as const };
 
   let email = '';
