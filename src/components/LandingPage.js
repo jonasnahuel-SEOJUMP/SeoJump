@@ -108,7 +108,11 @@ export default function LandingPage({ onStart, playClick }) {
           <div className="flex-1 w-full relative">
             <div className="absolute inset-0 bg-duo-blue/20 blur-3xl rounded-full"></div>
             <div className="relative bg-slate-800 border-2 border-slate-700 rounded-2xl shadow-2xl overflow-hidden aspect-[4/3] flex items-center justify-center">
-              <span className="text-slate-500 font-bold">[Aquí irá un Mockup / Screenshot de la App]</span>
+              <img
+                src="/images/landing-dashboard.jpg"
+                alt="Panel de SEO Jump con misiones, oportunidades AEO y sugerencias con IA"
+                className="w-full h-full object-cover object-top"
+              />
             </div>
           </div>
           
@@ -131,7 +135,7 @@ export default function LandingPage({ onStart, playClick }) {
               <div className="w-10 h-10 bg-duo-green text-white rounded-full flex items-center justify-center font-black shrink-0 text-xl shadow-lg border-2 border-green-400">3</div>
               <div>
                 <h3 className="text-xl font-bold text-white">Ejecutás tus Oportunidades</h3>
-                <p className="text-slate-400 mt-2">El sistema te sirve en bandeja una lista de misiones diarias simples. Aplicás el cambio, sumás XP y ves subir tu tráfico.</p>
+                <p className="text-slate-400 mt-2">El sistema te sirve misiones diarias simples. Aplicás el cambio en tu web, sumás XP y cada tarea impacta en cómo te encuentran tus clientes.</p>
               </div>
             </div>
           </div>

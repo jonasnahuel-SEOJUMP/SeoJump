@@ -141,6 +141,7 @@ export default function Home() {
   const [showHelp, setShowHelp] = useState(false);
   const [showOwl, setShowOwl] = useState(false);
   const [showIntroModal, setShowIntroModal] = useState(false);
+  const [skipIntroRemember, setSkipIntroRemember] = useState(false);
   const [showPrivacyModal, setShowPrivacyModal] = useState(false);
   const [showTermsModal, setShowTermsModal] = useState(false);
   const [cmsPlatform, setCmsPlatform] = useState("wp_woo");
@@ -645,6 +646,17 @@ export default function Home() {
   const nextStep = () => setStep(step + 1);
   const prevStep = () => setStep(step - 1);
 
+  const INTRO_SEEN_KEY = 'seojump_intro_seen';
+
+  const finishIntro = () => {
+    playClick();
+    if (skipIntroRemember && typeof window !== 'undefined') {
+      localStorage.setItem(INTRO_SEEN_KEY, '1');
+    }
+    setShowIntroModal(false);
+    nextStep();
+  };
+
   const handleAnalyze = () => {
     clearAnalysisCache();
     if (!session) {
@@ -695,8 +707,10 @@ export default function Home() {
             playClick(); 
             if (!session) {
               signIn("google");
+            } else if (typeof window !== 'undefined' && localStorage.getItem(INTRO_SEEN_KEY) === '1') {
+              setStep(2);
             } else {
-              setShowIntroModal(true); 
+              setShowIntroModal(true);
             }
           }} 
           playClick={playClick} 
@@ -747,33 +761,75 @@ export default function Home() {
 
 
         {step === 1 && showIntroModal && (
-          <div className="w-full max-w-xl mx-auto text-center space-y-8 animate-in zoom-in duration-500">
-             <div className="flex justify-center mb-2"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-28 h-28 object-contain animate-bounce drop-shadow-2xl" /></div>
-             <h2 className="text-2xl md:text-3xl font-extrabold text-yellow-400 tracking-tight drop-shadow-md">
-               ¡Te damos la bienvenida, Jugador!
-             </h2>
-             <div className="bg-slate-900 text-white p-6 md:p-8 rounded-3xl border-2 border-slate-700 shadow-xl relative text-left w-full mx-auto">
-               <p className="text-base md:text-lg font-bold leading-relaxed mb-5">
-                 Antes de comenzar, es importante recordar nuestra <span className="text-yellow-400 font-black">regla de oro</span>: cada meta que alcances en esta plataforma tiene un <span className="text-cyan-400 font-black">impacto directo en el éxito de tu empresa</span>.
-               </p>
-               <p className="text-base md:text-lg font-bold leading-relaxed mb-5">
-                 Cada título, descripción o etiqueta que optimices aquí se sincroniza de forma segura con los motores de búsqueda. Sumar puntos de experiencia (XP) en SEO Jump significa que tu negocio ganará <span className="text-green-400 font-black">máxima visibilidad en internet</span>, posicionándose en los primeros lugares justo cuando tus clientes potenciales buscan lo que ofrecés.
-               </p>
-               <p className="text-lg md:text-xl font-bold text-white text-center pt-2">
-                 ¿Todo listo para hacer crecer tu marca?
-               </p>
-               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-0 h-0 border-b-[16px] border-b-slate-900 border-x-[12px] border-x-transparent"></div>
-             </div>
-             <button
-               onClick={() => {
-                 playClick();
-                 setShowIntroModal(false);
-                 nextStep();
-               }}
-               className="btn-3d btn-green text-lg w-full py-3.5 mt-8"
-             >
-               ¡ENTENDIDO, VAMOS A JUGAR!
-             </button>
+          <div className="w-full max-w-lg mx-auto text-center space-y-6 animate-in zoom-in duration-500">
+            <div className="flex justify-center">
+              <img src="/images/logo-owl.png" alt="SEO Jump" className="w-24 h-24 object-contain drop-shadow-2xl" />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight">
+                {session?.user?.name
+                  ? `¡Hola, ${session.user.name.split(' ')[0]}!`
+                  : '¡Bienvenido a SEO Jump!'}
+              </h2>
+              <p className="text-base md:text-lg font-bold text-slate-300 leading-snug px-2">
+                Cada misión que completes acá tiene{' '}
+                <span className="text-cyan-400 font-black">impacto real en tu negocio</span>:
+                más visibilidad cuando tus clientes buscan lo que vendés.
+              </p>
+            </div>
+
+            <div className="bg-slate-900 text-white p-5 md:p-6 rounded-3xl border-2 border-slate-700 shadow-xl text-left space-y-4">
+              <p className="text-xs font-black text-duo-green uppercase tracking-wider text-center">
+                Cómo funciona en 3 pasos
+              </p>
+
+              <div className="flex gap-3 items-start">
+                <span className="flex-shrink-0 w-9 h-9 rounded-full bg-duo-blue/20 border border-duo-blue/40 text-duo-blue font-black text-sm flex items-center justify-center">1</span>
+                <div>
+                  <p className="font-black text-white text-base">🔗 Conectá Google y tu sitio</p>
+                  <p className="text-sm font-bold text-slate-400 mt-0.5 leading-snug">
+                    Leemos tus datos de Search Console para ver qué buscan tus clientes hoy.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 items-start">
+                <span className="flex-shrink-0 w-9 h-9 rounded-full bg-purple-500/20 border border-purple-500/40 text-purple-300 font-black text-sm flex items-center justify-center">2</span>
+                <div>
+                  <p className="font-black text-white text-base">✨ Recibí misiones con IA</p>
+                  <p className="text-sm font-bold text-slate-400 mt-0.5 leading-snug">
+                    Te damos tareas concretas y sugerencias generadas con IA, listas para copiar.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-3 items-start">
+                <span className="flex-shrink-0 w-9 h-9 rounded-full bg-duo-green/20 border border-duo-green/40 text-duo-green font-black text-sm flex items-center justify-center">3</span>
+                <div>
+                  <p className="font-black text-white text-base">📈 Aplicá los cambios en tu web</p>
+                  <p className="text-sm font-bold text-slate-400 mt-0.5 leading-snug">
+                    Vos editás título, meta o contenido; SEO Jump te guía y sumás XP por cada avance.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <label className="flex items-center justify-center gap-2 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={skipIntroRemember}
+                onChange={(e) => setSkipIntroRemember(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-600 accent-duo-green"
+              />
+              <span className="text-sm font-bold text-slate-400">No volver a mostrar</span>
+            </label>
+
+            <button
+              onClick={finishIntro}
+              className="btn-3d btn-green text-lg w-full py-3.5"
+            >
+              Empezar con mi sitio →
+            </button>
           </div>
         )}
 
