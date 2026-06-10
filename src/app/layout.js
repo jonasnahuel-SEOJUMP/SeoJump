@@ -1,6 +1,9 @@
 import AuthProvider from "../components/AuthProvider";
 import "./globals.css";
 
+// Server actions (IA de títulos, misiones) pueden hacer scrape + Gemini.
+export const maxDuration = 30;
+
 export const metadata = {
   title: "SEOJUMP - ¡Domina el SEO jugando!",
   description: "La forma más divertida de aprender y aplicar SEO en tu sitio web.",

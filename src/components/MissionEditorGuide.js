@@ -69,14 +69,25 @@ export default function MissionEditorGuide({
 
   useEffect(() => {
     let cancelled = false;
+    let loadingTimeoutId = null;
+
     setAiSuggestion(null);
     setAiReason('');
 
-    if (!missionPage) return;
+    if (!missionPage) {
+      setAiLoading(false);
+      return;
+    }
     // La IA solo aplica a título (H1) y meta. Para AEO usamos la plantilla guía.
-    if (missionType !== 'H1' && missionType !== 'META') return;
+    if (missionType !== 'H1' && missionType !== 'META') {
+      setAiLoading(false);
+      return;
+    }
     // Esperar a tener el texto en vivo para darle contexto real a la IA.
-    if (previewLoading) return;
+    if (previewLoading) {
+      setAiLoading(false);
+      return;
+    }
 
     // Contexto declarado por el dueño (persistido en el navegador).
     let declaredGoal = '';
@@ -87,6 +98,11 @@ export default function MissionEditorGuide({
     } catch (e) { /* sin localStorage: la IA decide con el resto del contexto */ }
 
     setAiLoading(true);
+    // Si la IA tarda demasiado, mostramos la plantilla de respaldo sin quedar colgados.
+    loadingTimeoutId = setTimeout(() => {
+      setAiLoading(false);
+    }, 35000);
+
     getSmartMissionSuggestion({
       pageUrl: missionPage,
       missionType,
@@ -108,15 +124,21 @@ export default function MissionEditorGuide({
     })
       .then((res) => {
         if (cancelled) return;
-        if (res?.success && res.suggestedTitle) {
+        if (res?.success && res.suggestedTitle && res.fromAi !== false) {
           setAiSuggestion(res.suggestedTitle);
           setAiReason(res.reason || '');
         }
       })
       .catch(() => { /* silencioso: queda la plantilla */ })
-      .finally(() => { if (!cancelled) setAiLoading(false); });
+      .finally(() => {
+        if (loadingTimeoutId) clearTimeout(loadingTimeoutId);
+        setAiLoading(false);
+      });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (loadingTimeoutId) clearTimeout(loadingTimeoutId);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [missionId, missionType, missionPage, previewLoading]);
 
@@ -210,6 +232,11 @@ export default function MissionEditorGuide({
                   <p className="text-sm font-bold text-white leading-snug break-words whitespace-pre-wrap">{suggested}</p>
                   {aiReason && (
                     <p className="text-xs text-sky-200/80 leading-snug italic">💡 {aiReason}</p>
+                  )}
+                  {!aiSuggestion && !aiLoading && (
+                    <p className="text-[11px] text-slate-400 leading-snug">
+                      Sugerencia automática — si la IA de Google está conectada verás el sello «Generada con IA» arriba.
+                    </p>
                   )}
                   <CopyButton text={suggested} label="📋 Copiar sugerencia" playClick={playClick} variant="green" />
                 </>

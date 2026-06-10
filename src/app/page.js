@@ -616,7 +616,7 @@ export default function Home() {
         .then((res) => {
           if (res.success) {
             setPagePreview(res.preview);
-            const suggested = getMissionDisplayPlain(mission, goldKeyword, siteUrl).suggestedText;
+            const suggested = getMissionDisplayPlain(mission, mission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '') || '', url).suggestedText;
             const current = getCurrentValueFromPreview(mission.type, res.preview);
             if (current && textsMatchLoosely(current, suggested)) {
               setH1Value(suggested);

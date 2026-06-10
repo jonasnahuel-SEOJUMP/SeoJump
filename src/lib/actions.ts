@@ -240,9 +240,32 @@ function logErrorToFile(actionName: string, input: any, status: string | number,
  */
 function geminiKeyHint(apiKey: string): string | null {
   if (apiKey.startsWith('AQ.')) {
-    return 'Tu clave empieza con "AQ." y Google aún no la acepta en todos los endpoints. Creá una clave clásica que empiece con "AIza" en Google Cloud Console → APIs y servicios → Credenciales → Crear credenciales → Clave de API.';
+    return 'La clave AQ. de AI Studio no autenticó. En aistudio.google.com → API Keys → creá una clave nueva en el proyecto donde cargaste créditos (gen-lang-client-0918139206). Si sigue fallando, usá una clave clásica AIza… del mismo proyecto en Vercel → GEMINI_API_KEY.';
   }
   return null;
+}
+
+/** Extrae título y razón del JSON que devuelve Gemini (tolera markdown y nombres alternativos). */
+function parseTitleSuggestionFromGemini(raw: string): { suggestedTitle: string; reason: string } | null {
+  const clean = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(clean);
+  } catch {
+    const match = clean.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    try {
+      parsed = JSON.parse(match[0]);
+    } catch {
+      return null;
+    }
+  }
+  const suggestedTitle = decodeHtmlEntities(
+    String(parsed.suggestedTitle || parsed.suggested_title || parsed.title || '').trim()
+  );
+  const reason = String(parsed.reason || parsed.explanation || '').trim();
+  if (!suggestedTitle) return null;
+  return { suggestedTitle, reason };
 }
 
 /** Mensaje claro según el tipo de fallo de Gemini (saldo, cuota, clave, etc.). */
@@ -274,55 +297,86 @@ function geminiErrorToUserMessage(rawError: string): string {
 }
 
 async function callGeminiREST(apiKey: string, promptText: string): Promise<string> {
-  const model = { name: 'gemini-2.5-flash', api: 'v1beta' };
-  const useHeaderAuth = apiKey.startsWith('AQ.');
-  const baseUrl = `https://generativelanguage.googleapis.com/${model.api}/models/${model.name}:generateContent`;
-  const url = useHeaderAuth ? baseUrl : `${baseUrl}?key=${encodeURIComponent(apiKey)}`;
+  // thinkingBudget: 0 desactiva la fase de "razonamiento" de gemini-2.5-flash,
+  // que con prompts largos tarda 20-50s y provoca timeouts. Sin ella responde en segundos.
+  const attempts: Array<{ name: string; api: string; label: string; config: Record<string, unknown> | null }> = [
+    { name: 'gemini-2.5-flash', api: 'v1beta', label: 'json+fast', config: { responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } },
+    { name: 'gemini-2.5-flash', api: 'v1beta', label: 'json', config: { responseMimeType: 'application/json' } },
+    { name: 'gemini-2.5-flash', api: 'v1beta', label: 'plain', config: null },
+  ];
   let lastError = '';
 
-  for (let attempt = 0; attempt < 2; attempt++) {
-    console.log(`[Gemini REST] ${model.name} (attempt ${attempt + 1})...`);
+  for (const { name, api, label, config } of attempts) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      console.log(`[Gemini REST] ${name} ${api} (${label}) (attempt ${attempt + 1})...`);
 
+      try {
+        const baseUrl = `https://generativelanguage.googleapis.com/${api}/models/${name}:generateContent`;
+        const response = await fetch(baseUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-goog-api-key': apiKey,
+          },
+          cache: 'no-store',
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: promptText }] }],
+            ...(config ? { generationConfig: config } : {}),
+          }),
+          signal: AbortSignal.timeout(25000),
+        });
+
+        if ((response.status === 429 || response.status === 503) && attempt === 0) {
+          lastError = `${name}: ${response.status}`;
+          console.warn(`[Gemini REST] ${response.status}, retry in 2s...`);
+          await new Promise((r) => setTimeout(r, 2000));
+          continue;
+        }
+
+        if (!response.ok) {
+          const errText = await response.text();
+          lastError = `${name} (${api}): ${response.status} ${errText.substring(0, 200)}`;
+          break;
+        }
+
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (!text) {
+          lastError = `${name}: empty response`;
+          break;
+        }
+        console.log(`[Gemini REST] ✅ ${name} (${api}) OK`);
+        return text;
+      } catch (fetchErr: any) {
+        lastError = `${name}: ${fetchErr.message}`;
+        break;
+      }
+    }
+  }
+
+  // Respaldo: claves AIza clásicas a veces responden solo con ?key= en la URL.
+  if (apiKey.startsWith('AIza')) {
     try {
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (useHeaderAuth) headers['x-goog-api-key'] = apiKey;
-
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
       const response = await fetch(url, {
         method: 'POST',
-        headers,
+        headers: { 'Content-Type': 'application/json' },
         cache: 'no-store',
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: promptText }] }],
           generationConfig: { responseMimeType: 'application/json' },
         }),
-        signal: AbortSignal.timeout(12000),
+        signal: AbortSignal.timeout(10000),
       });
-
-      if ((response.status === 429 || response.status === 503) && attempt === 0) {
-        lastError = `${model.name}: ${response.status}`;
-        console.warn(`[Gemini REST] ${response.status}, retry in 2s...`);
-        await new Promise((r) => setTimeout(r, 2000));
-        continue;
+      if (response.ok) {
+        const data = await response.json();
+        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        if (text) {
+          console.log('[Gemini REST] ✅ gemini-2.5-flash (query key fallback) OK');
+          return text;
+        }
       }
-
-      if (!response.ok) {
-        const errText = await response.text();
-        lastError = `${model.name}: ${response.status} ${errText.substring(0, 200)}`;
-        break;
-      }
-
-      const data = await response.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      if (!text) {
-        lastError = `${model.name}: empty response`;
-        break;
-      }
-      console.log(`[Gemini REST] ✅ ${model.name} OK`);
-      return text;
-    } catch (fetchErr: any) {
-      lastError = `${model.name}: ${fetchErr.message}`;
-      break;
-    }
+    } catch { /* seguimos con el error principal */ }
   }
 
   const keyHint = geminiKeyHint(apiKey);
@@ -1528,19 +1582,24 @@ export async function getSmartMissionSuggestion(params: {
   try {
     const cachedEarly = await getCachedGeminiResponse(cacheKey);
     if (cachedEarly) {
-      const raw = cachedEarly.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
-      const parsed = JSON.parse(raw);
-      const cachedTitle = decodeHtmlEntities((parsed.suggestedTitle || '').trim());
-      if (cachedTitle) {
-        return { success: true as const, suggestedTitle: cachedTitle, reason: (parsed.reason || '').trim(), fromCache: true as const };
+      const parsed = parseTitleSuggestionFromGemini(cachedEarly);
+      if (parsed) {
+        return {
+          success: true as const,
+          suggestedTitle: parsed.suggestedTitle,
+          reason: parsed.reason,
+          fromCache: true as const,
+          fromAi: true as const,
+        };
       }
     }
   } catch { /* si el cache está corrupto, seguimos y regeneramos */ }
 
-  // Contexto del negocio: leemos la PORTADA para detectar rubro y perfil multimarca.
-  // Solo en la primera generación de la misión (después queda todo cacheado 24h).
+  // Contexto del negocio: leemos la PORTADA solo si no tenemos ya contenido de la página
+  // (el cliente ya envía título/H1/descripción del scraper en vivo — evita +4s y timeouts en Vercel).
   let businessContext = '';
-  if (!isHomepage && siteUrl) {
+  const hasPageContent = !!(pageTitle || pageH1 || pageDescription);
+  if (!isHomepage && siteUrl && !hasPageContent) {
     try {
       const homeUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
       const home = await scrapeMetadata(homeUrl);
@@ -1641,16 +1700,19 @@ Devolvé ESTRICTAMENTE este JSON, sin markdown ni texto extra:
       return { success: false, fallback: true as const, code: result.code, credits: result.credits };
     }
 
-    let raw = result.text.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
-    const parsed = JSON.parse(raw);
-    const suggestedTitle = decodeHtmlEntities((parsed.suggestedTitle || '').trim());
-    const reason = (parsed.reason || '').trim();
-
-    if (!suggestedTitle) {
+    const parsed = parseTitleSuggestionFromGemini(result.text);
+    if (!parsed) {
+      console.warn('[getSmartMissionSuggestion] JSON inválido:', result.text.substring(0, 200));
       return { success: false, fallback: true as const, credits: result.credits };
     }
 
-    return { success: true as const, suggestedTitle, reason, credits: result.credits };
+    return {
+      success: true as const,
+      suggestedTitle: parsed.suggestedTitle,
+      reason: parsed.reason,
+      fromAi: true as const,
+      credits: result.credits,
+    };
   } catch (err: any) {
     console.warn('[getSmartMissionSuggestion] fallback:', err?.message || err);
     return { success: false, fallback: true as const };
