@@ -1557,6 +1557,7 @@ export async function getSmartMissionSuggestion(params: {
 
   let brand = siteUrl;
   let isHomepage = false;
+  let pageSlug = '';
   try {
     const u = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
     brand = new URL(u).hostname.replace(/^www\./, '');
@@ -1565,12 +1566,14 @@ export async function getSmartMissionSuggestion(params: {
     const pu = pageUrl.startsWith('http') ? pageUrl : `https://${pageUrl}`;
     const p = new URL(pu).pathname.replace(/\/+$/, '');
     isHomepage = p === '' || p === '/';
+    // Último segmento de la ruta: palabras que Google ya lee en la dirección.
+    pageSlug = (p.split('/').pop() || '').replace(/[-_]+/g, ' ').trim();
   } catch { /* assume internal */ }
 
   const isTitle = missionType === 'H1';
 
   const cacheKey = buildGeminiCacheKey([
-    'title_suggestion_v4',
+    'title_suggestion_v5',
     email || 'anon',
     pageUrl,
     missionType,
@@ -1621,6 +1624,15 @@ export async function getSmartMissionSuggestion(params: {
     pageDescription && `  • Descripción: "${pageDescription}"`,
   ].filter(Boolean).join('\n') || '  • (sin datos de contenido — inferí con cautela desde la URL)';
 
+  // Qué cubren YA los otros campos: el título, la meta y el slug funcionan como un
+  // conjunto. La IA debe complementarlos, no repetir lo que ya está dicho ahí.
+  const siblingFields = [
+    pageSlug && `  • Slug de la URL (Google ya lo lee): "${pageSlug}"`,
+    isTitle
+      ? (pageDescription && `  • Meta descripción actual (el campo que NO estás editando): "${pageDescription}"`)
+      : (pageTitle && `  • Título actual (el campo que NO estás editando): "${pageTitle}"`),
+  ].filter(Boolean).join('\n');
+
   const metricsBlock = [
     position != null && `  • Posición actual en Google: ${position.toFixed(1)} ${position <= 10 ? '(página 1 — está MUY cerca, no la rompas: optimizá con cuidado)' : position <= 20 ? '(página 2 — zona de ataque: vale la pena ser más agresivo para subirla)' : '(lejos — necesita un cambio fuerte y claro)'}`,
     impressions != null && `  • Impresiones: ${impressions} (gente que ya la ve en Google)`,
@@ -1639,7 +1651,7 @@ export async function getSmartMissionSuggestion(params: {
       : '';
 
   const brandsBlock = brands
-    ? `\nMARCAS QUE EL DUEÑO DECLARÓ QUE VENDE/DISTRIBUYE (fuente confiable, priorizá estas):\n  ${brands}\n  → Esto confirma que el negocio es MULTIMARCA. Podés usar estas marcas con total libertad en el título/meta si son relevantes para esta página.`
+    ? `\nMARCAS QUE EL DUEÑO DECLARÓ QUE VENDE/DISTRIBUYE (fuente confiable, priorizá estas):\n  ${brands}\n  → Esto confirma que el negocio es MULTIMARCA. Podés usar estas marcas en el título/meta si son relevantes para esta página, SIEMPRE que no estén ya cubiertas en el slug o en el otro campo (regla de complementariedad).`
     : '';
 
   const prompt = `
@@ -1656,7 +1668,7 @@ ${businessContext ? `  ${businessContext}` : '  (no disponible — deducí el pe
 ${brandsBlock}
 QUÉ VENDE REALMENTE ESTA PÁGINA (basate en esto para entender el producto puntual):
 ${pageSells}
-
+${siblingFields ? `\nQUÉ CUBREN YA LOS OTROS CAMPOS DE ESTA PÁGINA (título, meta y slug trabajan en equipo — NO repitas lo que ya está dicho acá):\n${siblingFields}` : ''}
 CÓMO LE VA HOY EN GOOGLE (usá esto para decidir cuán agresivo ser):
 ${metricsBlock}
 
@@ -1673,18 +1685,28 @@ REGLAS ABSOLUTAS (un experto nunca las rompe):
 1. COHERENCIA DE RUBRO ANTE TODO: nunca menciones productos, marcas o categorías de OTRO rubro. Una tienda de car detailing jamás habla de zapatillas; una perfumería jamás de herramientas.
 2. SEGÚN EL PERFIL DE MARCA:
    - Si es MONOMARCA / producto puntual: trabajá SOLO con lo que la página realmente vende. No inventes marcas ajenas.
-   - Si es MULTIMARCA / distribuidor: PODÉS y CONVIENE incorporar estratégicamente nombres de marcas reconocidas y categorías del MISMO rubro para capturar más búsquedas —incluso marcas que vende la competencia—, porque una tienda multimarca legítimamente atrae ese tráfico. Priorizá SIEMPRE las marcas que el dueño declaró (si las hay arriba) y las que el negocio muestra que distribuye; si sumás una marca reconocida del rubro como jugada de captación, hacelo de forma honesta (como parte del catálogo o en comparación), SIN afirmar ser la marca oficial.
+   - Si es MULTIMARCA / distribuidor: PODÉS incorporar estratégicamente nombres de marcas reconocidas y categorías del MISMO rubro para capturar más búsquedas —incluso marcas que vende la competencia—, porque una tienda multimarca legítimamente atrae ese tráfico. Priorizá SIEMPRE las marcas que el dueño declaró (si las hay arriba) y las que el negocio muestra que distribuye; si sumás una marca reconocida del rubro como jugada de captación, hacelo de forma honesta (como parte del catálogo o en comparación), SIN afirmar ser la marca oficial.
+   - PERO ANTES DE SUMAR UNA MARCA, aplicá la regla 4 (complementariedad): si esa marca ya aparece en el slug de la URL o en el otro campo (meta/título), repetirla NO suma posicionamiento — usá ese espacio para un diferencial o término de intención.
 3. PRESERVÁ LA INTENCIÓN DE BÚSQUEDA: nunca elimines la palabra que describe QUÉ es el producto/servicio ni los términos específicos de alta conversión (nombres de partes como "parabrisas", "paragolpes"; el problema que resuelve; el tipo exacto de producto). Si el texto actual tiene un término específico que la gente busca, CONSERVALO.
-4. ${isHomepage ? 'ES LA PÁGINA DE INICIO: optimizá para la MARCA + la CATEGORÍA GLOBAL del negocio (ej: "Tienda de Car Detailing"), NUNCA para un producto puntual.' : 'ES UNA PÁGINA INTERNA: optimizá para el producto/servicio específico de esta página, no para la marca genérica.'}
-5. USÁ LA POSICIÓN: si ya está en página 1, hacé cambios conservadores (no arruines lo que funciona); si está en página 2 o más lejos, podés ser más agresivo.
-6. ELIMINÁ EL RUIDO: sacá gramaje, stock, tamaños y SKUs ("x 50gs/100gs", "500ml", "pack x12") y relleno vacío ("puro", "premium", "original") solo si hace falta para entrar en el límite.
-7. DESDUPLICÁ SINÓNIMOS: si hay dos palabras casi iguales ("vidrios" y "cristales"), quedate con la más buscada/específica.
-8. NUNCA dejes un título "pelado" tipo "Marca | Tienda". Siempre debe quedar claro qué se vende.
-9. ${isTitle ? 'LONGITUD: máximo 60 caracteres (ideal 50-60). Estructura sugerida: [qué es + término de intención] + [marca relevante si aporta] + [nombre de la tienda].' : 'LONGITUD: máximo 155 caracteres. Incluí la palabra clave de intención y un llamado a la acción claro ("Comprá", "Pedí presupuesto", "Conocé más").'}
-10. Español rioplatense, natural, sin tecnicismos SEO.
-${goalGuidance ? '11. RESPETÁ EL OBJETIVO DEL DUEÑO descrito arriba al elegir el enfoque del texto.' : ''}
+4. COMPLEMENTARIEDAD ENTRE CAMPOS: el título, la meta descripción y el slug de la URL forman UN CONJUNTO que Google lee completo. Cada campo debe aportar algo distinto:
+   - Si una marca o frase YA está cubierta en el slug o en el otro campo (mirá el bloque "QUÉ CUBREN YA LOS OTROS CAMPOS"), NO la repitas: es espacio desperdiciado.
+   - ${isTitle ? 'El TÍTULO lleva la intención principal + el diferencial del negocio. La marca de producto va en el título SOLO si no está ya en el slug/meta y captura búsquedas propias.' : 'La META nunca debe ser una copia del título: complementalo con el beneficio concreto, una marca o dato que el título no dijo, y un llamado a la acción.'}
+5. PRESERVÁ LOS DIFERENCIALES COMPETITIVOS: frases que distinguen al negocio de la competencia ("importación directa", "fabricantes", "envío a todo el país", "precios mayoristas", "atención 24hs", años de trayectoria) valen MÁS que repetir una marca ya cubierta en otro campo. NUNCA elimines un diferencial presente en el texto actual para hacer lugar a una marca redundante; si el espacio no alcanza, el diferencial gana.
+6. ${isHomepage ? 'ES LA PÁGINA DE INICIO: optimizá para la MARCA + la CATEGORÍA GLOBAL del negocio (ej: "Tienda de Car Detailing"), NUNCA para un producto puntual.' : 'ES UNA PÁGINA INTERNA: optimizá para el producto/servicio específico de esta página, no para la marca genérica.'}
+7. USÁ LA POSICIÓN: si ya está en página 1, hacé cambios conservadores (no arruines lo que funciona); si está en página 2 o más lejos, podés ser más agresivo.
+8. ELIMINÁ EL RUIDO: sacá gramaje, stock, tamaños y SKUs ("x 50gs/100gs", "500ml", "pack x12") y relleno vacío ("puro", "premium", "original") solo si hace falta para entrar en el límite.
+9. DESDUPLICÁ SINÓNIMOS: si hay dos palabras casi iguales ("vidrios" y "cristales"), quedate con la más buscada/específica.
+10. NUNCA dejes un título "pelado" tipo "Marca | Tienda". Siempre debe quedar claro qué se vende.
+11. ${isTitle ? 'LONGITUD: máximo 60 caracteres (ideal 50-60). Estructura sugerida: [qué es + término de intención] + [diferencial o marca SOLO si aporta y no es redundante] + [nombre de la tienda].' : 'LONGITUD: máximo 155 caracteres. Incluí la palabra clave de intención y un llamado a la acción claro ("Comprá", "Pedí presupuesto", "Conocé más").'}
+12. Español rioplatense, natural, sin tecnicismos SEO.
+${goalGuidance ? '13. RESPETÁ EL OBJETIVO DEL DUEÑO descrito arriba al elegir el enfoque del texto.' : ''}
 
-En "reason", si detectaste que es multimarca y por eso sumaste una marca o categoría como estrategia, explicáselo en una frase al dueño (ej: "Como tu tienda es multimarca, sumé X para captar a quien busca esa marca").
+ANTES DE RESPONDER, AUTO-VERIFICÁ tu sugerencia como un consultor que revisa su trabajo:
+  a) ¿Repetí una marca o frase que ya está en el slug o en el otro campo? → Reemplazala por un diferencial o término de intención.
+  b) ¿Eliminé un diferencial competitivo que estaba en el texto actual? → Restauralo.
+  c) ¿Se entiende QUÉ vende la página sin ver el resto del sitio? → Si no, corregilo.
+
+En "reason", explicale al dueño en una frase qué decidiste y por qué, relacionando las variables. Si sumaste una marca por ser multimarca, decilo; si NO sumaste una marca declarada porque ya estaba cubierta en el slug o la meta, también decilo (ej: "No repetí Black Line en el título porque ya está en la dirección y la descripción; prioricé tu diferencial de importación directa").
 
 Devolvé ESTRICTAMENTE este JSON, sin markdown ni texto extra:
 {"suggestedTitle": "tu ${isTitle ? 'título' : 'meta descripción'} optimizado", "reason": "frase corta explicando qué decidiste y por qué, relacionando las variables (para el dueño del negocio)"}
@@ -2317,6 +2339,15 @@ El "suggestedTitle" SIEMPRE debe dejar claro QUÉ es el producto o servicio (el 
 🔒 VIOLACIÓN = el cliente pierde la búsqueda real y la página deja de posicionar para lo que importa.
 ██████████████████████████████████████████████████████████████
 
+██████████████████████████████████████████████████████████████
+⚠️  REGLA ABSOLUTA #6 — COMPLEMENTARIEDAD Y DIFERENCIALES ⚠️
+██████████████████████████████████████████████████████████████
+El título, la meta descripción ("currentDescription") y la URL de cada página forman UN CONJUNTO que Google lee completo. Antes de escribir cada "suggestedTitle":
+- Mirá la URL y la "currentDescription" de esa oportunidad: si una marca o frase YA aparece ahí, NO la repitas en el título — es espacio desperdiciado. Usá ese espacio para el término de intención o un diferencial.
+- PRESERVÁ LOS DIFERENCIALES COMPETITIVOS del título actual ("importación directa", "fabricantes", "envío a todo el país", "precios mayoristas", años de trayectoria): valen MÁS que repetir una marca ya cubierta en otro campo. Si el espacio no alcanza, el diferencial gana sobre la marca redundante.
+🔒 VIOLACIÓN = título redundante que no suma posicionamiento nuevo.
+██████████████████████████████████████████████████████████████
+
 Reglas de lenguaje:
 - NUNCA uses tecnicismos: "canibalización", "backlinks", "DA", "PA", "search intent", "enlazado interno", "thin content".
 - TIENES PROHIBIDO usar la palabra "Socio" o "Socia". Háblale al usuario de forma directa y respetuosa, con un tono más serio pero motivador.
@@ -2351,7 +2382,7 @@ ${JSON.stringify(opportunities, null, 2)}
     }
 
     const cacheKey = buildGeminiCacheKey([
-      'quick_wins',
+      'quick_wins_v2',
       userEmail || 'dev@localhost',
       cleanSiteUrl,
       cleanGoldKeyword,
