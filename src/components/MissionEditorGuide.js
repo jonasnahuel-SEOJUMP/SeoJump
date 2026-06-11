@@ -145,8 +145,8 @@ export default function MissionEditorGuide({
   if (!mission) return null;
 
   const labels = getPlainMissionLabels(mission.type);
-  const pageType = detectPageType(mission.page);
-  const guide = getEditWhereGuide(mission.page, mission.type, platformId);
+  const pageType = detectPageType(mission.page, pagePreview?.pageType);
+  const guide = getEditWhereGuide(mission.page, mission.type, platformId, pagePreview?.pageType);
   const kw = (mission.keyword || goldKeyword || '').trim();
   const current = getCurrentValueFromPreview(mission.type, pagePreview);
 

@@ -14,6 +14,21 @@ export function normalizePagePath(urlOrPath) {
   return path.replace(/\/+$/, "") || "/";
 }
 
+/**
+ * Último segmento de la ruta (slug). Sirve para reconocer la MISMA página aunque
+ * la URL venga con distinto prefijo: ej. "/categoria-producto/pulidoras" y
+ * "/pulidoras" comparten el slug "pulidoras". Search Console y los enlaces
+ * "limpios" de WooCommerce suelen diferir solo en ese prefijo.
+ * Devuelve "" para slugs muy cortos (<4) para evitar falsos positivos.
+ */
+export function pathSlug(urlOrPath) {
+  const path = normalizePagePath(urlOrPath);
+  if (path === "/") return "";
+  const last = path.split("/").filter(Boolean).pop() || "";
+  const slug = last.toLowerCase();
+  return slug.length >= 4 ? slug : "";
+}
+
 export function buildMissionId(type, pagePathOrUrl) {
   return `${String(type || "").toLowerCase()}-${normalizePagePath(pagePathOrUrl)}`;
 }
@@ -77,6 +92,7 @@ export function isMissionCompleted(completedSet, mission) {
 /** Si ya completaste cualquier misión en esta página, no mostrar más tareas ahí. */
 export function isPageAlreadyWorked(completedSet, pagePathOrUrl) {
   const pagePath = normalizePagePath(pagePathOrUrl);
+  const slug = pathSlug(pagePathOrUrl);
   for (const completedId of completedSet) {
     const dashIdx = completedId.indexOf("-");
     if (dashIdx === -1) continue;
@@ -86,6 +102,11 @@ export function isPageAlreadyWorked(completedSet, pagePathOrUrl) {
       completedRest.startsWith(`${pagePath}-`) ||
       normalizePagePath(completedRest) === pagePath
     ) {
+      return true;
+    }
+    // Coincidencia por slug: misma página con distinto prefijo de URL
+    // (ej: "/categoria-producto/pulidoras" vs "/pulidoras").
+    if (slug && pathSlug(completedRest) === slug) {
       return true;
     }
   }

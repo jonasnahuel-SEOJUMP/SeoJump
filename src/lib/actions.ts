@@ -6,7 +6,7 @@ import { signIn, signOut, auth } from "../auth"
 import { getSearchConsoleData, submitGoogleIndexing } from "./google"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { completeMission, getMissionsByEmail, deleteProfileByEmail, updateSubscriptionPlan, type MissionType } from './supabase'
-import { normalizePagePath, buildAeoKey } from './missionMemory'
+import { normalizePagePath, pathSlug, buildAeoKey } from './missionMemory'
 import {
   checkAndConsumeAiCredit,
   getAiCreditsStatus,
@@ -1426,8 +1426,45 @@ function inferNichoFromUrl(siteUrl: string): string {
 /**
  * Escanea metadatos Title, Description y H1 de forma rápida con timeout de 4 segundos.
  */
-async function scrapeMetadata(siteUrl: string): Promise<{ title: string; description: string; h1: string }> {
-  const result = { title: "", description: "", h1: "" };
+/**
+ * Detecta el tipo real de página desde el HTML (huellas de WooCommerce/WordPress
+ * en la clase del <body>). Es mucho más confiable que adivinar por la URL, porque
+ * muchas tiendas usan enlaces "limpios" (ej: /pulidoras/ en vez de
+ * /categoria-producto/pulidoras/) donde la URL no revela el tipo.
+ * Devuelve: 'home' | 'category' | 'product' | 'post' | 'page' | '' (desconocido).
+ */
+function detectPageTypeFromHtml(html: string): string {
+  if (!html) return '';
+  const bodyMatch = html.match(/<body[^>]*class=["']([^"']+)["']/i);
+  const bodyClass = (bodyMatch ? bodyMatch[1] : '').toLowerCase();
+
+  if (bodyClass) {
+    // Categoría de tienda (archivo de taxonomía de productos)
+    if (/\b(tax-product_cat|term-|post-type-archive-product|woocommerce-shop|archive)\b/.test(bodyClass) &&
+        !/\bsingle-product\b/.test(bodyClass)) {
+      // "archive" solo cuenta como categoría si además hay marcas de WooCommerce
+      if (/\b(tax-product_cat|post-type-archive-product|woocommerce-shop|woocommerce-page)\b/.test(bodyClass) ||
+          /\bterm-/.test(bodyClass)) {
+        return 'category';
+      }
+    }
+    // Ficha de producto
+    if (/\bsingle-product\b/.test(bodyClass)) return 'product';
+    // Entrada de blog
+    if (/\b(single-post|single\s|blog|category|tag-)\b/.test(bodyClass) && !/\bwoocommerce/.test(bodyClass)) {
+      if (/\bsingle-post\b/.test(bodyClass) || /\bblog\b/.test(bodyClass)) return 'post';
+    }
+    // Inicio
+    if (/\b(home|front-page)\b/.test(bodyClass)) return 'home';
+    // Página estática común
+    if (/\b(page-template|page-id-|page\b)\b/.test(bodyClass)) return 'page';
+  }
+
+  return '';
+}
+
+async function scrapeMetadata(siteUrl: string): Promise<{ title: string; description: string; h1: string; pageType?: string }> {
+  const result: { title: string; description: string; h1: string; pageType?: string } = { title: "", description: "", h1: "", pageType: "" };
   if (!siteUrl) return result;
   
   let targetUrl = siteUrl.trim();
@@ -1477,6 +1514,9 @@ async function scrapeMetadata(siteUrl: string): Promise<{ title: string; descrip
     if (h1Match) {
       result.h1 = decodeHtmlEntities(h1Match[1].replace(/<[^>]+>/g, '').trim());
     }
+
+    // Detectar tipo de página desde el HTML (huellas de WooCommerce/WordPress)
+    result.pageType = detectPageTypeFromHtml(html);
   } catch (error) {
     console.error("Error scraping metadata:", error);
   }
@@ -2051,7 +2091,7 @@ async function _getQuickWinsCore(
     const session = await auth();
 
     let inferredNicho = "";
-    let homeMeta = { title: "", description: "", h1: "" };
+    let homeMeta: { title: string; description: string; h1: string; pageType?: string } = { title: "", description: "", h1: "", pageType: "" };
     try {
       inferredNicho = inferNichoFromUrl(cleanSiteUrl);
       homeMeta = await scrapeMetadata(cleanSiteUrl);
@@ -2165,7 +2205,7 @@ async function _getQuickWinsCore(
     // Scrape all candidate pages IN PARALLEL (was sequential: up to 5x4s = 20s!)
     const candidateMetas = await Promise.all(
       validCandidates.map(cand =>
-        scrapeMetadata(cand.keys[0]).catch(() => ({ title: '', description: '', h1: '' }))
+        scrapeMetadata(cand.keys[0]).catch(() => ({ title: '', description: '', h1: '', pageType: '' }))
       )
     );
 
@@ -2178,6 +2218,7 @@ async function _getQuickWinsCore(
       currentTitle: candidateMetas[i].title || '',
       currentDescription: candidateMetas[i].description || '',
       currentH1: candidateMetas[i].h1 || '',
+      pageType: candidateMetas[i].pageType || '',
     }));
 
     if (opportunities.length < 3) {
@@ -2236,7 +2277,7 @@ async function _getQuickWinsCore(
       const fallbackMetas = await Promise.all(
         needed.map((t: any) => {
           if (t.path === '') return Promise.resolve(homeMeta);
-          return scrapeMetadata(cleanSiteUrl.replace(/\/$/, '') + t.path).catch(() => ({ title: '', description: '', h1: '' }));
+          return scrapeMetadata(cleanSiteUrl.replace(/\/$/, '') + t.path).catch(() => ({ title: '', description: '', h1: '', pageType: '' }));
         })
       );
 
@@ -2251,6 +2292,7 @@ async function _getQuickWinsCore(
           currentTitle: fallbackMetas[i].title || '',
           currentDescription: fallbackMetas[i].description || '',
           currentH1: fallbackMetas[i].h1 || '',
+          pageType: fallbackMetas[i].pageType || (isHomePage(pageUrl, cleanSiteUrl) ? 'home' : ''),
         });
       });
     }
@@ -2440,6 +2482,18 @@ ${JSON.stringify(opportunities, null, 2)}
     }
     parsed = dedupedParsed;
 
+    // ── Reincorporar el tipo de página detectado desde el HTML ──
+    // La IA no devuelve pageType; lo recuperamos de las oportunidades originales
+    // por URL para que la guía "¿Dónde aplico esto?" mande al lugar correcto.
+    const pageTypeByUrl = new Map<string, string>();
+    for (const opp of opportunities) {
+      if (opp.page) pageTypeByUrl.set(opp.page.replace(/\/$/, "").toLowerCase(), opp.pageType || '');
+    }
+    parsed = parsed.map((win: any) => {
+      const key = (win.page || '').replace(/\/$/, "").toLowerCase();
+      return { ...win, pageType: pageTypeByUrl.get(key) || '' };
+    });
+
     // ── LAYER 2: POST-PROCESS SAFETY NET ────────────────────────────────────
     // Even if the AI ignored every instruction, we detect and correct ANY Home
     // title that contains a product/brand keyword — regardless of its position.
@@ -2509,10 +2563,20 @@ ${JSON.stringify(opportunities, null, 2)}
             .filter(m => ['H1', 'META', 'ALT'].includes(m.mission_type))
             .map(m => normalizePagePath(m.target_url))
         );
-        if (doneQuickWinUrls.size > 0 || workedPagePaths.size > 0) {
+        // Slugs ya trabajados (cualquier tipo de misión / quick win): reconoce la
+        // misma página aunque la URL difiera en el prefijo (ej:
+        // "/categoria-producto/pulidoras" vs "/pulidoras").
+        const workedSlugs = new Set(
+          doneMissions
+            .map(m => pathSlug(m.target_url))
+            .filter(Boolean)
+        );
+        if (doneQuickWinUrls.size > 0 || workedPagePaths.size > 0 || workedSlugs.size > 0) {
           parsed = parsed.filter((win: any) => {
             if (doneQuickWinUrls.has(win.page)) return false;
             if (workedPagePaths.has(normalizePagePath(win.page))) return false;
+            const winSlug = pathSlug(win.page);
+            if (winSlug && workedSlugs.has(winSlug)) return false;
             return true;
           });
           console.log(`[QuickWins] Filtradas oportunidades ya trabajadas para ${session.user.email}`);

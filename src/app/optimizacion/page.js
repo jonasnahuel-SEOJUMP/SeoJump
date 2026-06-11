@@ -167,35 +167,63 @@ function PistaDeBoxes({ pistas, playClick }) {
 }
 
 // ── SmartWpLocation: detecta el tipo de página y muestra la ruta exacta en WordPress
-function SmartWpLocation({ pageUrl, playClick }) {
+// pageType (opcional): tipo detectado desde el HTML real ('category'|'product'|'post'|'home'|'page').
+// Es más confiable que la URL, porque muchas tiendas usan enlaces "limpios" donde la
+// dirección no revela si es una categoría o una página.
+function SmartWpLocation({ pageUrl, pageType, playClick }) {
   const [open, setOpen] = React.useState(false);
 
   if (!pageUrl) return null;
 
   const url = pageUrl.toLowerCase();
 
-  // Detectar tipo de página según patrones de URL
-  const isProduct     = /\/(producto|product|productos|products)\//.test(url);
-  const isCategory    = /\/(categoria-producto|product-category|categoria|category)\//.test(url);
-  const isBlog        = /\/(blog|entrada|post|articulo|article|news)\//.test(url);
-  const isHome        = /^https?:\/\/[^/]+(\/?)(index\.html?)?$/.test(url.trim());
+  // 1º elegir el tipo detectado desde el HTML; si no hay, adivinar por la URL.
+  const urlIsProduct  = /\/(producto|product|productos|products)\//.test(url);
+  const urlIsCategory = /\/(categoria-producto|product-category|categoria|category)\//.test(url);
+  const urlIsBlog     = /\/(blog|entrada|post|articulo|article|news)\//.test(url);
+  const urlIsHome     = /^https?:\/\/[^/]+(\/?)(index\.html?)?$/.test(url.trim());
+
+  let kind;
+  if (pageType === 'category' || pageType === 'product' || pageType === 'post' || pageType === 'home' || pageType === 'page') {
+    kind = pageType;
+  } else if (urlIsCategory) {
+    kind = 'category';
+  } else if (urlIsProduct) {
+    kind = 'product';
+  } else if (urlIsBlog) {
+    kind = 'post';
+  } else if (urlIsHome) {
+    kind = 'home';
+  } else {
+    kind = 'ambiguous'; // No pudimos detectar con certeza: mostramos ambas rutas.
+  }
 
   let icon, label, path, color;
-  if (isCategory) {
+  if (kind === 'category') {
     icon = '🗂️'; label = 'Categoría de tienda'; color = 'text-purple-300';
     path = <><strong className="text-white">Productos</strong> → <strong className="text-purple-300">Categorías</strong></>;
-  } else if (isProduct) {
+  } else if (kind === 'product') {
     icon = '🛍️'; label = 'Producto de WooCommerce'; color = 'text-amber-300';
     path = <><strong className="text-white">Productos</strong> → <strong className="text-amber-300">Todos los productos</strong></>;
-  } else if (isBlog) {
+  } else if (kind === 'post') {
     icon = '✍️'; label = 'Entrada de blog'; color = 'text-sky-300';
     path = <><strong className="text-white">Entradas</strong> → <strong className="text-sky-300">Todas las entradas</strong></>;
-  } else if (isHome) {
+  } else if (kind === 'home') {
     icon = '🏠'; label = 'Página de inicio'; color = 'text-green-300';
     path = <><strong className="text-white">Páginas</strong> → <strong className="text-green-300">Todas las páginas</strong> → Inicio</>;
-  } else {
+  } else if (kind === 'page') {
     icon = '📄'; label = 'Página estática'; color = 'text-slate-300';
     path = <><strong className="text-white">Páginas</strong> → <strong className="text-slate-300">Todas las páginas</strong></>;
+  } else {
+    // Ambiguo: no sabemos si es categoría o página. Mostramos las dos opciones.
+    icon = '🔎'; label = '¿Categoría o página?'; color = 'text-amber-300';
+    path = (
+      <>
+        <span className="block">Si es <strong className="text-purple-300">categoría</strong>: <strong className="text-white">Productos</strong> → <strong className="text-purple-300">Categorías</strong></span>
+        <span className="block">Si es un <strong className="text-amber-300">producto</strong>: <strong className="text-white">Productos</strong> → <strong className="text-amber-300">Todos los productos</strong></span>
+        <span className="block">Si es una <strong className="text-slate-300">página</strong>: <strong className="text-white">Páginas</strong> → <strong className="text-slate-300">Todas las páginas</strong></span>
+      </>
+    );
   }
 
   return (
@@ -1351,7 +1379,7 @@ export default function Optimizacion() {
                                 </div>
 
                                 {/* Acordeón de ayuda */}
-                                <SmartWpLocation pageUrl={qw.page} playClick={playClick} />
+                                <SmartWpLocation pageUrl={qw.page} pageType={qw.pageType} playClick={playClick} />
 
                                 <p className="text-xs text-slate-300 bg-slate-950/40 p-3 rounded-xl border border-slate-800 leading-normal mt-2">
                                   🔒 <strong className="text-purple-300">Aclaración técnica:</strong> Cambiar el título o H1 no modifica la dirección del enlace (URL). **No perderás la antigüedad ni la autoridad de tu página**. Solo optimiza el texto para hacerlo más atractivo en las búsquedas.

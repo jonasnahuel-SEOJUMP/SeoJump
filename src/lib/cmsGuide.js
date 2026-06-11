@@ -51,8 +51,11 @@ export function brandFromSiteUrl(siteUrl) {
 
 /**
  * Detecta tipo de página por URL (WooCommerce patterns + heurísticas).
+ * pageTypeHint (opcional): tipo detectado desde el HTML real del sitio
+ * ('category'|'product'|'post'|'home'|'page'). Tiene prioridad sobre la URL,
+ * porque muchas tiendas usan enlaces "limpios" donde la dirección no revela el tipo.
  */
-export function detectPageType(pageUrl) {
+export function detectPageType(pageUrl, pageTypeHint = '') {
   const fallback = {
     id: 'page',
     label: 'Página de tu web',
@@ -64,6 +67,18 @@ export function detectPageType(pageUrl) {
 
   const lower = pageUrl.toLowerCase();
   const slug = slugFromUrl(pageUrl);
+
+  // 1º: tipo confirmado desde el HTML (más confiable que la URL).
+  const hintMap = {
+    category: { id: 'category', label: 'Categoría de tienda', badgeColor: 'bg-purple-500/20 text-purple-200 border border-purple-400/30', searchHint: slug },
+    product: { id: 'product', label: 'Ficha de producto', badgeColor: 'bg-blue-500/20 text-sky-200 border border-blue-400/30', searchHint: slug },
+    post: { id: 'post', label: 'Entrada de blog', badgeColor: 'bg-orange-500/20 text-orange-200 border border-orange-400/30', searchHint: slug },
+    home: { id: 'home', label: 'Página de inicio', badgeColor: 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30', searchHint: 'inicio' },
+    page: { id: 'page', label: 'Página estática', badgeColor: 'bg-slate-500/20 text-slate-200 border border-slate-400/30', searchHint: slug },
+  };
+  if (pageTypeHint && hintMap[pageTypeHint]) {
+    return hintMap[pageTypeHint];
+  }
 
   if (lower.includes('/categoria-producto/') || lower.includes('/product-category/') ||
       (lower.includes('/categoria/') && !lower.includes('/producto/'))) {
@@ -169,9 +184,10 @@ export function getPlainMissionLabels(missionType) {
 
 /**
  * Ruta paso a paso: ¿dónde edito? (paquete 2)
+ * pageTypeHint (opcional): tipo detectado desde el HTML real, tiene prioridad.
  */
-export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo') {
-  const page = detectPageType(pageUrl);
+export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', pageTypeHint = '') {
+  const page = detectPageType(pageUrl, pageTypeHint);
   const labels = getPlainMissionLabels(missionType);
   const search = page.searchHint ? `«${page.searchHint}»` : 'el nombre de esta página';
   const steps = [];
