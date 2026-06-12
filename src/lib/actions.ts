@@ -3254,9 +3254,9 @@ export async function getAeoOpportunities(
       cleanGoldKeyword = kwSanit.sanitized;
     }
   }
-  // Hard timeout: never hang more than 20 seconds
-  const timeoutPromise = new Promise<{ success: false; error: string }>((resolve) =>
-    setTimeout(() => resolve({ success: false, error: "El análisis AEO tardó demasiado. Intentá de nuevo." }), 20000)
+  // Hard timeout: never hang more than 35 seconds
+  const timeoutPromise = new Promise<{ success: false; error: string; code: string }>((resolve) =>
+    setTimeout(() => resolve({ success: false, error: "El análisis AEO tardó demasiado. Tocá Reintentar.", code: 'TIMEOUT' }), 35000)
   );
 
   let cleanBusinessFocus = "";
@@ -3271,6 +3271,48 @@ export async function getAeoOpportunities(
     _getAeoCore(cleanSiteUrl, cleanGoldKeyword, manualUrl, cleanBusinessFocus),
     timeoutPromise,
   ]);
+}
+
+/**
+ * Generates 2 generic AEO starter opportunities when no H2/H3 sections are found on the site.
+ * These guide users to add the minimal content structures that AI models look for.
+ */
+function buildAeoStarterOpportunities(
+  siteUrl: string,
+  goldKeyword: string,
+  businessFocus: string
+): any[] {
+  const topic = goldKeyword || businessFocus || siteUrl.replace(/https?:\/\/(www\.)?/, '').split('/')[0];
+  const cap = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : s;
+  const topicCap = cap(topic);
+  const homeUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
+
+  return [
+    {
+      is_opportunity: true,
+      section_index: 0,
+      heading_affected: `¿Qué es ${topicCap}?`,
+      heading_tag: 'H2',
+      current_text_snippet: '(sección no encontrada en tu web)',
+      problem_identified: `Tu web no tiene una sección que responda directamente "¿Qué es ${topicCap}?". ChatGPT, Perplexity y Google AI buscan ese bloque para citarte como fuente.`,
+      optimized_text_replacement: `${topicCap} es [describí en 1 oración qué es exactamente lo que ofrecés]. [Agregá 1 dato concreto: tiempo, precio, resultado o diferencial]. Ideal para [perfil de tu cliente ideal].`,
+      word_count: 35,
+      pageUrl: homeUrl,
+      source: 'starter',
+    },
+    {
+      is_opportunity: true,
+      section_index: 1,
+      heading_affected: `¿Para quién es ${topicCap}?`,
+      heading_tag: 'H2',
+      current_text_snippet: '(sección no encontrada en tu web)',
+      problem_identified: `Sin una sección que defina tu cliente ideal, la IA no puede recomendar tu negocio en respuestas dirigidas. Es el segundo bloque más buscado por los modelos de IA.`,
+      optimized_text_replacement: `${topicCap} está pensado para [describí el perfil: tipo de persona, empresa o situación]. Si [describí el problema que resolvés] y buscás [resultado que obtenés], esta es la solución indicada.`,
+      word_count: 38,
+      pageUrl: homeUrl,
+      source: 'starter',
+    },
+  ];
 }
 
 async function _getAeoCore(
@@ -3361,7 +3403,12 @@ async function _getAeoCore(
     }
 
     if (allSections.length === 0) {
-      return { success: true, data: [] };
+      const starters = buildAeoStarterOpportunities(
+        cleanSiteUrl,
+        cleanGoldKeyword,
+        businessFocus
+      );
+      return { success: true, data: starters };
     }
 
     // ── Call Gemini ───────────────────────────────────────────────────────
@@ -3419,7 +3466,7 @@ ${JSON.stringify(allSections, null, 2)}`;
     }
 
     const cacheKey = buildGeminiCacheKey([
-      'aeo',
+      'aeo_v2',
       userEmail || 'dev@localhost',
       cleanSiteUrl,
       cleanGoldKeyword,

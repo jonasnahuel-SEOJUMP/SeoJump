@@ -19,7 +19,7 @@ import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../.
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
 
-const CLIENT_FETCH_TIMEOUT_MS = 28000;
+const CLIENT_FETCH_TIMEOUT_MS = 40000;
 
 /** Evita que la UI quede en "cargando" si la server action no responde (común en móvil/Vercel). */
 function callWithTimeout(promise, label = "La solicitud") {
@@ -1484,9 +1484,11 @@ export default function Optimizacion() {
                     <div className="text-center py-12 card-3d space-y-4">
                       <div className="text-6xl">⚠️</div>
                       <p className="text-red-400 font-bold text-lg">{aeoError}</p>
-                      <p className="text-sm text-slate-500 font-bold max-w-md mx-auto">
-                        Si tu clave empieza con <strong className="text-slate-400">AQ.</strong>, Google todavía no la acepta bien. Creá una clave que empiece con <strong className="text-slate-400">AIza</strong> en Google Cloud Console → Credenciales.
-                      </p>
+                      {/api.?key|AQ\.|credencial|clave/i.test(aeoError) && (
+                        <p className="text-sm text-slate-500 font-bold max-w-md mx-auto">
+                          Si tu clave empieza con <strong className="text-slate-400">AQ.</strong>, Google todavía no la acepta bien. Creá una clave que empiece con <strong className="text-slate-400">AIza</strong> en Google Cloud Console → Credenciales.
+                        </p>
+                      )}
                       <button
                         onClick={() => { playClick(); handleLoadAeo(manualAeoUrl || undefined); }}
                         className="btn-3d btn-green inline-block py-3 px-8 text-lg font-black mt-4"
@@ -1513,8 +1515,18 @@ export default function Optimizacion() {
                         </div>
                       );
                     }
+                    const allStarters = pendingAeo.every(o => o.source === 'starter');
                     return (
                     <div className="space-y-6">
+                      {allStarters && (
+                        <div className="flex items-start gap-3 bg-purple-950/40 border border-purple-500/30 rounded-2xl px-5 py-4">
+                          <span className="text-2xl flex-shrink-0">💡</span>
+                          <div>
+                            <p className="text-sm font-black text-purple-300">No encontramos secciones H2/H3 en tu web para analizar.</p>
+                            <p className="text-sm font-bold text-purple-400/80 mt-1">Estas son 2 sugerencias de arranque: agregá estas secciones a tu web y la IA te va a citar más seguido. Podés pegar el texto directamente en tu CMS.</p>
+                          </div>
+                        </div>
+                      )}
                       {pendingAeo.map((opp, index) => {
                         const isUnlocked = hasPremiumAccess || index < 2;
                         const result = verifyAeoResult[index] || {};
@@ -1545,7 +1557,7 @@ export default function Optimizacion() {
                               <div className="flex items-start gap-3">
                                 <div className="w-14 h-14 rounded-2xl flex-shrink-0 flex items-center justify-center bg-purple-600 border-b-4 border-purple-800 text-2xl font-black text-white">🤖</div>
                                 <div>
-                                  <h3 className="text-xl md:text-2xl font-black text-white">Oportunidad AEO</h3>
+                                  <h3 className="text-xl md:text-2xl font-black text-white">{opp.source === 'starter' ? 'Sección a Crear' : 'Oportunidad AEO'}</h3>
                                   <p className="text-sm font-bold text-purple-400">Heading: <span className="text-purple-300">«{opp.heading_affected}»</span> <span className="text-slate-500">({opp.heading_tag})</span></p>
                                   <code className="text-xs font-mono text-slate-500 truncate block max-w-md mt-1">{opp.pageUrl}</code>
                                 </div>
