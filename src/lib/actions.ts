@@ -2725,7 +2725,7 @@ async function fetchPage(url: string): Promise<{ html: string; ok: boolean; stat
         'Accept': 'text/html,application/xhtml+xml',
         'Cache-Control': 'no-cache',
       },
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(5000),
     });
     if (!response.ok) return { html: '', ok: false, status: response.status };
     const html = await response.text();
@@ -2740,7 +2740,7 @@ async function checkLinkStatus(url: string): Promise<number> {
     const response = await fetch(url, {
       method: 'HEAD',
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)' },
-      signal: AbortSignal.timeout(4000),
+      signal: AbortSignal.timeout(2500),
       redirect: 'follow',
     });
     return response.status;
@@ -2755,11 +2755,13 @@ async function crawlSiteLinks(siteUrl: string) {
   const pages: Array<{ url: string; title: string; links: Array<{ href: string; anchorText: string; isInternal: boolean; statusCode: number }> }> = [];
   const queue: Array<{ url: string; depth: number }> = [{ url: cleanUrl, depth: 0 }];
   const allDestinations = new Map<string, number>(); // url -> status code (lazy check)
-  const MAX_PAGES = 10;
-  const MAX_DEPTH = 2;
+  const MAX_PAGES = 5;
+  const MAX_DEPTH = 1;
+  // Hard wall: abort the whole crawl if it takes more than 25 seconds
+  const crawlDeadline = Date.now() + 25000;
 
   // BFS crawl
-  while (queue.length > 0 && pages.length < MAX_PAGES) {
+  while (queue.length > 0 && pages.length < MAX_PAGES && Date.now() < crawlDeadline) {
     const { url, depth } = queue.shift()!;
     const normalizedUrl = url.replace(/\/$/, '');
     if (visited.has(normalizedUrl)) continue;
@@ -2798,9 +2800,11 @@ async function crawlSiteLinks(siteUrl: string) {
   }
 
   // Check status codes for all unique destinations (parallel, batched)
-  const destinationUrls = Array.from(allDestinations.keys());
+  // Cap at 15 URLs to avoid exhausting the function timeout
+  const MAX_LINK_CHECKS = 15;
+  const destinationUrls = Array.from(allDestinations.keys()).slice(0, MAX_LINK_CHECKS);
   const BATCH_SIZE = 5;
-  for (let i = 0; i < destinationUrls.length; i += BATCH_SIZE) {
+  for (let i = 0; i < destinationUrls.length && Date.now() < crawlDeadline; i += BATCH_SIZE) {
     const batch = destinationUrls.slice(i, i + BATCH_SIZE);
     const results = await Promise.all(batch.map(url => checkLinkStatus(url)));
     batch.forEach((url, idx) => {
