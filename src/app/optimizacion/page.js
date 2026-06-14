@@ -688,7 +688,7 @@ export default function Optimizacion() {
       setHasFetchedQuickWins(true);
       quickWinsFetchRef.current = false;
       setQuickWinsError("El análisis tardó demasiado. Tocá Reintentar.");
-    }, 30000);
+    }, 55000);
     return () => clearTimeout(timer);
   }, [quickWinsLoading]);
 

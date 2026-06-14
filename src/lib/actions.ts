@@ -2070,15 +2070,39 @@ export async function getQuickWins(
     .filter(Boolean)
     .slice(0, 30);
 
-  // Hard timeout: never hang more than 20 seconds on Vercel
-  const timeoutPromise = new Promise<{ success: false; error: string }>((resolve) =>
-    setTimeout(() => resolve({ success: false, error: "El análisis tardó demasiado. Intentá de nuevo en unos segundos." }), 20000)
+  // Hard timeout: Quick Wins = GSC + scrape (3 URLs) + Gemini — needs headroom on Vercel
+  const timeoutPromise = new Promise<{ success: false; error: string; code: string }>((resolve) =>
+    setTimeout(() => resolve({ success: false, error: "El análisis tardó demasiado. Tocá Reintentar.", code: 'TIMEOUT' }), 50000)
   );
 
   return Promise.race([
     _getQuickWinsCore(cleanSiteUrl, cleanGoldKeyword, excludeList, cleanBusinessFocus),
     timeoutPromise,
   ]);
+}
+
+/** Fallback when Gemini is slow/unavailable — keeps Quick Wins usable with GSC data. */
+function buildQuickWinsFallback(opportunities: any[]): any[] {
+  return opportunities.slice(0, 3).map((opp) => {
+    const kw = opp.keyword || 'tu producto';
+    const pos = typeof opp.position === 'number' ? Math.round(opp.position) : 10;
+    const brand = (opp.currentTitle || '').split('|')[0].trim();
+    const suggestedTitle = brand
+      ? `${kw} | ${brand}`.slice(0, 60)
+      : `${kw} — Comprá Online`.slice(0, 60);
+    return {
+      page: opp.page,
+      keyword: opp.keyword,
+      clicks: opp.clicks,
+      impressions: opp.impressions,
+      position: opp.position,
+      currentTitle: opp.currentTitle || '',
+      suggestedTitle,
+      explanation: `Esta página está en posición ${pos} con ${opp.impressions || 0} impresiones. Un título más claro y comercial puede empujarla al Top 3.`,
+      pageType: opp.pageType || '',
+      source: 'fallback',
+    };
+  });
 }
 
 async function _getQuickWinsCore(
@@ -2091,30 +2115,38 @@ async function _getQuickWinsCore(
     const session = await auth();
 
     let inferredNicho = "";
-    let homeMeta: { title: string; description: string; h1: string; pageType?: string } = { title: "", description: "", h1: "", pageType: "" };
     try {
       inferredNicho = inferNichoFromUrl(cleanSiteUrl);
-      homeMeta = await scrapeMetadata(cleanSiteUrl);
     } catch (e) {
-      console.warn("Error obteniendo metadatos de la home para Quick Wins:", e);
+      console.warn("Error infiriendo nicho para Quick Wins:", e);
+    }
+
+    let isMockData = false;
+    let homeMeta: { title: string; description: string; h1: string; pageType?: string } = { title: "", description: "", h1: "", pageType: "" };
+    let gscRows: any[] = [];
+
+    // Home scrape + GSC in parallel (saves ~3-4s vs sequential)
+    const [scrapedHome, fetchedGsc] = await Promise.all([
+      scrapeMetadata(cleanSiteUrl).catch(() => ({ title: '', description: '', h1: '', pageType: '' })),
+      session?.accessToken
+        ? getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined, 100).catch((err: any) => {
+            console.warn("Fallo al obtener datos de GSC para Quick Wins:", err.message);
+            return null;
+          })
+        : Promise.resolve(null),
+    ]);
+    homeMeta = scrapedHome;
+    if (fetchedGsc === null) {
+      isMockData = true;
+    } else if (!session?.accessToken) {
+      isMockData = true;
+    } else {
+      gscRows = fetchedGsc;
     }
 
     const businessNiche = [inferredNicho, homeMeta.title, homeMeta.description, homeMeta.h1]
       .filter(Boolean)
       .join(" | ") || "Nicho de negocio general";
-
-    let isMockData = false;
-    let gscRows: any[] = [];
-    if (session?.accessToken) {
-      try {
-        gscRows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined, 100);
-      } catch (err: any) {
-        console.warn("Fallo al obtener datos de GSC para Quick Wins:", err.message);
-        isMockData = true;
-      }
-    } else {
-      isMockData = true;
-    }
 
     let candidates = gscRows.filter(row => {
       const pos = row.position;
@@ -2424,7 +2456,7 @@ ${JSON.stringify(opportunities, null, 2)}
     }
 
     const cacheKey = buildGeminiCacheKey([
-      'quick_wins_v2',
+      'quick_wins_v3',
       userEmail || 'dev@localhost',
       cleanSiteUrl,
       cleanGoldKeyword,
@@ -2443,6 +2475,11 @@ ${JSON.stringify(opportunities, null, 2)}
       apiKey,
     });
     if (geminiResult.ok === false) {
+      console.warn('[QuickWins] Gemini falló, usando fallback con datos GSC:', geminiResult.error);
+      const fallbackWins = buildQuickWinsFallback(opportunities);
+      if (fallbackWins.length > 0) {
+        return { success: true, quickWins: fallbackWins, isMockData, fromFallback: true };
+      }
       return {
         success: false,
         error: geminiResult.error,
@@ -2464,6 +2501,10 @@ ${JSON.stringify(opportunities, null, 2)}
       }
     } catch (parseErr: any) {
       console.error("Error parseando JSON de Gemini para Quick Wins:", responseText, parseErr);
+      const fallbackWins = buildQuickWinsFallback(opportunities);
+      if (fallbackWins.length > 0) {
+        return { success: true, quickWins: fallbackWins, isMockData, fromFallback: true };
+      }
       return { success: false, error: "Error al interpretar la respuesta de la IA." };
     }
 
