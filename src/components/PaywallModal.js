@@ -59,8 +59,8 @@ export default function PaywallModal({ onClose, totalHiddenMissions, playClick }
 
           <p className="text-slate-500 text-xs font-bold mt-6">
             ¿Querés probar PRO gratis? Escribinos a{" "}
-            <a href="mailto:contacto@seo-jump.ai" className="text-duo-green hover:underline">
-              contacto@seo-jump.ai
+            <a href="mailto:nahuel@seo-jump.ai" className="text-duo-green hover:underline">
+              nahuel@seo-jump.ai
             </a>
           </p>
         </div>

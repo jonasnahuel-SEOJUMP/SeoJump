@@ -371,7 +371,7 @@ export default function LandingPage({ onStart, playClick }) {
           <a href="/terminos" target="_blank" rel="noopener noreferrer" className="hover:text-slate-300 transition-colors">Términos y Condiciones</a>
           <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="hover:text-slate-300 transition-colors">Política de Privacidad</a>
           <a href="/perfil" className="hover:text-slate-300 transition-colors">Mi Perfil</a>
-          <a href="mailto:contacto@seojump.ai" className="hover:text-slate-300 transition-colors">Contacto</a>
+          <a href="mailto:nahuel@seo-jump.ai" className="hover:text-slate-300 transition-colors">Contacto</a>
         </div>
       </footer>
 

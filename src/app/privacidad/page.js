@@ -126,7 +126,7 @@ export default function PrivacidadPage() {
               <li>
                 <strong className="text-slate-300">Solicitud por email:</strong>{" "}
                 si no podés acceder a la app, escribinos a{" "}
-                <a href="mailto:contacto@seojump.ai" className="text-emerald-400 underline">contacto@seojump.ai</a>
+                <a href="mailto:nahuel@seo-jump.ai" className="text-emerald-400 underline">nahuel@seo-jump.ai</a>
                 {" "}desde el mismo correo con el que te registraste. Respondemos y procesamos la eliminación en un plazo máximo de 30 días.
               </li>
             </ul>
@@ -144,7 +144,7 @@ export default function PrivacidadPage() {
             <h2 className="text-white font-black text-lg">9. Contacto</h2>
             <p>El responsable legal del desarrollo y tratamiento de datos de esta plataforma es <strong className="text-white">Nahuel Cosentino</strong>.</p>
             <p>Para cualquier consulta legal, técnica o sobre el ejercicio de tus derechos de privacidad, podés contactarnos de forma directa a:</p>
-            <p className="text-emerald-400 font-bold text-base">contacto@seojump.ai</p>
+            <p className="text-emerald-400 font-bold text-base">nahuel@seo-jump.ai</p>
           </div>
         </div>
 

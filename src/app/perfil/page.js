@@ -92,7 +92,7 @@ export default function Perfil() {
           </button>
           <p className="text-xs font-bold text-slate-500">
             Si no podés entrar, escribinos a{" "}
-            <a href="mailto:contacto@seojump.ai" className="text-emerald-400 underline">contacto@seojump.ai</a>
+            <a href="mailto:nahuel@seo-jump.ai" className="text-emerald-400 underline">nahuel@seo-jump.ai</a>
             {" "}para solicitar el borrado de tus datos.
           </p>
         </div>
@@ -109,14 +109,14 @@ export default function Perfil() {
     try {
       const result = await deleteUserAccount();
       if (!result.success) {
-        setDeleteError(result.error || "No se pudieron borrar los datos. Escribinos a contacto@seojump.ai");
+        setDeleteError(result.error || "No se pudieron borrar los datos. Escribinos a nahuel@seo-jump.ai");
         return;
       }
       clearLocalUserData();
       setShowDeleteModal(false);
       await signOut({ callbackUrl: "/" });
     } catch (e) {
-      setDeleteError("Ocurrió un error. Intentá de nuevo o escribinos a contacto@seojump.ai");
+      setDeleteError("Ocurrió un error. Intentá de nuevo o escribinos a nahuel@seo-jump.ai");
     } finally {
       setDeleteLoading(false);
     }
@@ -224,7 +224,7 @@ export default function Perfil() {
                 </Link>
               )}
               <p className="text-xs font-bold text-slate-500 dark:text-slate-500">
-                El cobro con Mercado Pago se activará pronto. Hoy el plan se gestiona desde acá o por contacto@seo-jump.ai.
+                El cobro con Mercado Pago se activará pronto. Hoy el plan se gestiona desde acá o por nahuel@seo-jump.ai.
               </p>
             </div>
           )}

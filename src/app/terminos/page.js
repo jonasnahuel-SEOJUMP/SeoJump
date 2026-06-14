@@ -21,7 +21,7 @@ export default function TerminosPage() {
 
           <div className="space-y-3">
             <h2 className="text-white font-black text-lg">1. Identificación del Responsable</h2>
-            <p>La plataforma SEO Jump, su marca, código fuente, activos visuales y sistemas automatizados son de propiedad exclusiva de <strong className="text-white">Nahuel Cosentino</strong>, con domicilio legal en la ciudad de Villa Carlos Paz, Córdoba, Argentina, y dirección de correo electrónico de contacto <span className="text-amber-400">contacto@seojump.ai</span>.</p>
+            <p>La plataforma SEO Jump, su marca, código fuente, activos visuales y sistemas automatizados son de propiedad exclusiva de <strong className="text-white">Nahuel Cosentino</strong>, con domicilio legal en la ciudad de Villa Carlos Paz, Córdoba, Argentina, y dirección de correo electrónico de contacto <span className="text-amber-400">nahuel@seo-jump.ai</span>.</p>
           </div>
 
           <div className="space-y-3">
@@ -76,7 +76,7 @@ export default function TerminosPage() {
           <div className="space-y-3">
             <h2 className="text-white font-black text-lg">9. Contacto</h2>
             <p>Si tenés alguna duda o consulta respecto a estos Términos y Condiciones, podés escribirnos en cualquier momento a:</p>
-            <p className="text-amber-400 font-bold text-base">contacto@seojump.ai</p>
+            <p className="text-amber-400 font-bold text-base">nahuel@seo-jump.ai</p>
           </div>
         </div>
 

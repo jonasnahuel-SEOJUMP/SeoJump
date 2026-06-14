@@ -23,7 +23,7 @@ export default function PrivacyModal({ onClose, playClick }) {
 
           <div className="space-y-2">
             <h3 className="text-white font-black text-base">Cómo borrar tus datos</h3>
-            <p>Podés revocar el acceso en <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-duo-green underline">tu cuenta de Google</a>, o <a href="/perfil" className="text-duo-green underline">entar a tu Perfil</a> (con sesión iniciada) y usar &quot;Eliminar mi cuenta y borrar mis datos&quot;. También podés escribir a contacto@seojump.ai.</p>
+            <p>Podés revocar el acceso en <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-duo-green underline">tu cuenta de Google</a>, o <a href="/perfil" className="text-duo-green underline">entar a tu Perfil</a> (con sesión iniciada) y usar &quot;Eliminar mi cuenta y borrar mis datos&quot;. También podés escribir a nahuel@seo-jump.ai.</p>
           </div>
 
           <div className="space-y-2">

@@ -28,14 +28,14 @@ export default function PreciosPage() {
       plan: PLANS.pro,
       highlight: true,
       cta: "Quiero PRO",
-      ctaHref: "mailto:contacto@seo-jump.ai?subject=SEO%20Jump%20PRO",
+      ctaHref: "mailto:nahuel@seo-jump.ai?subject=SEO%20Jump%20PRO",
       ctaDisabled: false,
     },
     {
       plan: PLANS.agency,
       highlight: false,
       cta: "Contactar agencia",
-      ctaHref: "mailto:contacto@seo-jump.ai?subject=SEO%20Jump%20Agencia",
+      ctaHref: "mailto:nahuel@seo-jump.ai?subject=SEO%20Jump%20Agencia",
       ctaDisabled: false,
     },
   ];
