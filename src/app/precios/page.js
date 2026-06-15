@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { PLANS, formatArs } from "../../lib/planLimits";
+import SubscribeProButton from "../../components/SubscribeProButton";
 
 const FEATURES = [
   "Quick Wins con IA",
@@ -23,13 +24,14 @@ export default function PreciosPage() {
       cta: session ? "Plan actual" : "Empezar gratis",
       ctaHref: "/",
       ctaDisabled: !!session,
+      isPro: false,
     },
     {
       plan: PLANS.pro,
       highlight: true,
-      cta: "Quiero PRO",
-      ctaHref: "mailto:nahuel@seo-jump.ai?subject=SEO%20Jump%20PRO",
+      cta: null,
       ctaDisabled: false,
+      isPro: true,
     },
     {
       plan: PLANS.agency,
@@ -37,6 +39,7 @@ export default function PreciosPage() {
       cta: "Contactar agencia",
       ctaHref: "mailto:nahuel@seo-jump.ai?subject=SEO%20Jump%20Agencia",
       ctaDisabled: false,
+      isPro: false,
     },
   ];
 
@@ -56,7 +59,7 @@ export default function PreciosPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {cards.map(({ plan, highlight, cta, ctaHref, ctaDisabled }) => (
+          {cards.map(({ plan, highlight, cta, ctaHref, ctaDisabled, isPro }) => (
             <div
               key={plan.id}
               className={`rounded-2xl border-2 p-6 flex flex-col gap-4 ${
@@ -73,6 +76,9 @@ export default function PreciosPage() {
                 {plan.priceUsdNote && (
                   <p className="text-xs text-slate-500 font-bold mt-1">{plan.priceUsdNote}</p>
                 )}
+                {plan.id === "pro" && (
+                  <p className="text-xs text-slate-500 font-bold mt-1">Precio final · suscripción mensual</p>
+                )}
               </div>
 
               <ul className="space-y-2 text-sm font-bold text-slate-300 flex-1">
@@ -82,7 +88,13 @@ export default function PreciosPage() {
                 <li>✅ Misiones ilimitadas (sin IA)</li>
               </ul>
 
-              {ctaDisabled ? (
+              {isPro ? (
+                <SubscribeProButton
+                  className={`w-full text-center py-3 rounded-xl font-black text-sm transition-all bg-duo-green text-white hover:brightness-110 disabled:opacity-60`}
+                >
+                  Quiero PRO — Mercado Pago
+                </SubscribeProButton>
+              ) : ctaDisabled ? (
                 <span className="w-full text-center py-3 rounded-xl bg-slate-800 text-slate-500 font-black text-sm">
                   {cta}
                 </span>
@@ -122,7 +134,10 @@ export default function PreciosPage() {
         </div>
 
         <p className="text-center text-xs text-slate-500 font-bold">
-          Cobro con Mercado Pago — próximamente. Por ahora escribinos para activar PRO o Agencia manualmente.
+          Cobro mensual con Mercado Pago · {formatArs(PLANS.pro.priceArs)} IVA incluido · Plan Agencia:{" "}
+          <a href="mailto:nahuel@seo-jump.ai" className="text-duo-green hover:underline">
+            nahuel@seo-jump.ai
+          </a>
         </p>
       </div>
     </div>

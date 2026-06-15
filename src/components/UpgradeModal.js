@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import { PLANS, formatArs } from "../lib/planLimits";
+import SubscribeProButton from "./SubscribeProButton";
 
 export default function UpgradeModal({ open, onClose, playClick, message }) {
   if (!open) return null;
@@ -29,13 +31,12 @@ export default function UpgradeModal({ open, onClose, playClick, message }) {
           </p>
         </div>
         <div className="flex flex-col gap-3">
-          <Link
-            href="/precios"
-            onClick={() => playClick && playClick()}
-            className="w-full btn-3d bg-duo-green border-duo-green-shadow border-b-4 hover:brightness-110 active:border-b-0 active:translate-y-1 text-white text-lg font-black py-4 flex items-center justify-center gap-2 shadow-lg"
+          <SubscribeProButton
+            onBeforeRedirect={() => playClick && playClick()}
+            className="w-full btn-3d bg-duo-green border-duo-green-shadow border-b-4 hover:brightness-110 active:border-b-0 active:translate-y-1 text-white text-lg font-black py-4 flex items-center justify-center gap-2 shadow-lg disabled:opacity-60"
           >
-            Ver planes desde $35.000/mes
-          </Link>
+            Pasar a PRO — {formatArs(PLANS.pro.priceArs)}/mes
+          </SubscribeProButton>
           <button
             onClick={() => {
               if (playClick) playClick();

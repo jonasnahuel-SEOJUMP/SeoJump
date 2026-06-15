@@ -28,8 +28,8 @@ export const PLANS: Record<PlanId, PlanLimits> = {
   pro: {
     id: 'pro',
     label: 'Pro',
-    priceArs: 35_000,
-    priceUsdNote: '~USD 25/mes',
+    priceArs: 39_000,
+    priceUsdNote: 'IVA incluido',
     aiPerDay: 12,
     aiPerMonth: 250,
     maxSites: 1,
