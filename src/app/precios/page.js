@@ -134,7 +134,7 @@ export default function PreciosPage() {
         </div>
 
         <p className="text-center text-xs text-slate-500 font-bold max-w-xl mx-auto">
-          Podés pagar con cualquier cuenta de Mercado Pago (no tiene que ser el mismo Gmail con el que entrás a SEO Jump).
+          Al pagar, indicá el email de tu cuenta Mercado Pago (puede ser distinto al de Google). El plan PRO se activa en tu cuenta de SEO Jump.
         </p>
 
         <p className="text-center text-xs text-slate-500 font-bold">

@@ -94,17 +94,21 @@ async function mpFetch<T>(
 
 /** Crea suscripción mensual PRO y devuelve URL de checkout (init_point). */
 export async function createProSubscriptionCheckout(params: {
+  /** Cuenta SEO Jump (Google) — activamos PRO acá vía external_reference */
+  accountEmail: string;
+  /** Email de la cuenta Mercado Pago que va a pagar (puede ser distinto) */
   payerEmail: string;
 }): Promise<{ initPoint: string; preapprovalId: string } | { error: string }> {
   const plan = PLANS.pro;
   const baseUrl = getAppBaseUrl();
-  const externalReference = buildExternalReference('pro', params.payerEmail);
+  const accountEmail = params.accountEmail.trim().toLowerCase();
+  const payerEmail = params.payerEmail.trim().toLowerCase();
+  const externalReference = buildExternalReference('pro', accountEmail);
 
-  // No enviamos payer_email: MP exige que coincida con la cuenta que paga.
-  // external_reference sigue vinculando el PRO a la cuenta Google de SEO Jump.
   const body = {
     reason: `SEO Jump — Plan ${plan.label}`,
     external_reference: externalReference,
+    payer_email: payerEmail,
     auto_recurring: {
       frequency: 1,
       frequency_type: 'months',
