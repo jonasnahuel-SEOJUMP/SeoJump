@@ -133,6 +133,10 @@ export default function PreciosPage() {
           </div>
         </div>
 
+        <p className="text-center text-xs text-slate-500 font-bold max-w-xl mx-auto">
+          Podés pagar con cualquier cuenta de Mercado Pago (no tiene que ser el mismo Gmail con el que entrás a SEO Jump).
+        </p>
+
         <p className="text-center text-xs text-slate-500 font-bold">
           Cobro mensual con Mercado Pago · {formatArs(PLANS.pro.priceArs)} IVA incluido · Plan Agencia:{" "}
           <a href="mailto:nahuel@seo-jump.ai" className="text-duo-green hover:underline">

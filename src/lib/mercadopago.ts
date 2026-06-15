@@ -100,10 +100,11 @@ export async function createProSubscriptionCheckout(params: {
   const baseUrl = getAppBaseUrl();
   const externalReference = buildExternalReference('pro', params.payerEmail);
 
+  // No enviamos payer_email: MP exige que coincida con la cuenta que paga.
+  // external_reference sigue vinculando el PRO a la cuenta Google de SEO Jump.
   const body = {
     reason: `SEO Jump — Plan ${plan.label}`,
     external_reference: externalReference,
-    payer_email: params.payerEmail.trim().toLowerCase(),
     auto_recurring: {
       frequency: 1,
       frequency_type: 'months',
@@ -181,16 +182,25 @@ type MpSearchResult = {
 export async function syncProSubscriptionForEmail(
   email: string
 ): Promise<'activated' | 'pending' | 'none' | 'error'> {
-  const q = encodeURIComponent(email.trim().toLowerCase());
+  const normalizedEmail = email.trim().toLowerCase();
+  const expectedRef = buildExternalReference('pro', normalizedEmail);
+
+  // Buscar por external_reference (el pagador MP puede usar otro email).
+  const q = encodeURIComponent(expectedRef);
   const result = await mpFetch<MpSearchResult>(
-    `/preapproval/search?payer_email=${q}&sort=date_created&criteria=desc`
+    `/preapproval/search?q=${q}&sort=date_created&criteria=desc`
   );
 
-  if (!result.ok || !result.data?.results?.length) return 'none';
+  const results = result.data?.results ?? [];
+  const matches = results.filter(
+    (sub) => sub.external_reference === expectedRef
+  );
 
-  for (const sub of result.data.results) {
+  if (!result.ok || matches.length === 0) return 'none';
+
+  for (const sub of matches) {
     const parsed = parseExternalReference(sub.external_reference);
-    if (!parsed || parsed.email !== email.trim().toLowerCase()) continue;
+    if (!parsed || parsed.email !== normalizedEmail) continue;
 
     const status = (sub.status || '').toLowerCase();
     if (status === 'authorized' || status === 'active') {
