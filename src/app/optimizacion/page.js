@@ -21,6 +21,23 @@ import PaywallModal from "../../components/PaywallModal";
 
 const CLIENT_FETCH_TIMEOUT_MS = 40000;
 
+/**
+ * Ejemplos rotativos para los placeholders de "¿Qué vendés?" y "Mis marcas".
+ * Cubren distintos rubros para que no parezca una app solo de estética vehicular.
+ * Se elige uno al azar en el cliente (useEffect) para evitar mismatch de hidratación.
+ */
+const QUICK_WIN_PLACEHOLDER_EXAMPLES = [
+  { focus: "zapatillas urbanas y de running — no calzado de seguridad", brands: "Nike, Adidas, New Balance — las marcas que vendés o distribuís" },
+  { focus: "indumentaria de mujer: vestidos, camisas y jeans", brands: "Levi's, Wrangler, Zara — las marcas que vendés o distribuís" },
+  { focus: "carteras y mochilas de cuero — no marroquinería mayorista", brands: "Prüne, Vacavaliente — las marcas que vendés o distribuís" },
+  { focus: "celulares y accesorios — fundas, cargadores y auriculares", brands: "Samsung, Xiaomi, Anker — las marcas que vendés o distribuís" },
+  { focus: "muebles de interior: sillas, mesas y bibliotecas", brands: "Tugó, Sodimac — las marcas que vendés o distribuís" },
+  { focus: "productos de cosmética natural y cuidado de la piel", brands: "Natura, L'Oréal, CeraVe — las marcas que vendés o distribuís" },
+  { focus: "suplementos deportivos: proteínas y creatina", brands: "ENA, Star Nutrition, Gentech — las marcas que vendés o distribuís" },
+  { focus: "juguetes didácticos y juegos de mesa para chicos", brands: "Lego, Ruibal, Plastigal — las marcas que vendés o distribuís" },
+  { focus: "herramientas eléctricas y accesorios de ferretería", brands: "Bosch, DeWalt, Black+Decker — las marcas que vendés o distribuís" },
+];
+
 /** Evita que la UI quede en "cargando" si la server action no responde (común en móvil/Vercel). */
 function callWithTimeout(promise, label = "La solicitud") {
   return Promise.race([
@@ -398,6 +415,8 @@ export default function Optimizacion() {
   const [skippedQuickWins, setSkippedQuickWins] = useState([]);
   const [businessFocus, setBusinessFocus] = useState("");
   const [myBrands, setMyBrands] = useState("");
+  // Ejemplo de placeholder rotativo (se elige en el cliente para evitar mismatch SSR)
+  const [phExample, setPhExample] = useState(QUICK_WIN_PLACEHOLDER_EXAMPLES[0]);
   const { hasPremiumAccess, credits: aiCredits, loading: creditsLoading, refresh: refreshCredits } = useSubscription();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [upgradeMessage, setUpgradeMessage] = useState("");
@@ -430,6 +449,12 @@ export default function Optimizacion() {
     const savedBrands = localStorage.getItem("seojump_brands");
     if (savedBrands) setMyBrands(savedBrands);
     setCmsPlatform(getStoredPlatform());
+  }, []);
+
+  // Elige un ejemplo de placeholder al azar (solo en cliente → sin mismatch SSR)
+  useEffect(() => {
+    const idx = Math.floor(Math.random() * QUICK_WIN_PLACEHOLDER_EXAMPLES.length);
+    setPhExample(QUICK_WIN_PLACEHOLDER_EXAMPLES[idx]);
   }, []);
 
   useEffect(() => {
@@ -1228,7 +1253,7 @@ export default function Optimizacion() {
                       type="text"
                       value={businessFocus}
                       onChange={(e) => setBusinessFocus(e.target.value)}
-                      placeholder="Ej: vinilo líquido removible y pintura de retoque — no pintura de taller"
+                      placeholder={`Ej: ${phExample.focus}`}
                       className="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-sm focus:border-duo-blue focus:outline-none"
                     />
                     <p className="text-xs text-slate-500 font-bold">
@@ -1242,7 +1267,7 @@ export default function Optimizacion() {
                       type="text"
                       value={myBrands}
                       onChange={(e) => setMyBrands(e.target.value)}
-                      placeholder="Ej: Black Line, Meguiars, Koch Chemie — las marcas que vendés o distribuís"
+                      placeholder={`Ej: ${phExample.brands}`}
                       className="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-sm focus:border-duo-blue focus:outline-none"
                     />
                     <p className="text-xs text-slate-500 font-bold">
