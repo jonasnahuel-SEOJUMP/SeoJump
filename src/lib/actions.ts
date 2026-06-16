@@ -3198,6 +3198,55 @@ type HeadingSection = {
 };
 
 /**
+ * Encabezados típicos de navegación / UI de e-commerce que NO son contenido
+ * informativo y por lo tanto no sirven para AEO (carruseles, secciones de tienda).
+ * Se comparan en minúsculas y sin tildes.
+ */
+const AEO_UI_HEADING_PATTERNS = [
+  'ultimos ingresos', 'nuevos ingresos', 'recien llegados', 'novedades',
+  'destacados', 'productos destacados', 'mas vendidos', 'los mas vendidos',
+  'mas buscados', 'ofertas', 'promociones', 'liquidacion', 'outlet',
+  'productos relacionados', 'tambien te puede interesar', 'quizas te interese',
+  'productos similares', 'completa tu compra', 'vistos recientemente',
+  'categorias', 'nuestras categorias', 'marcas', 'nuestras marcas',
+  'carrito', 'tu carrito', 'lista de deseos', 'favoritos',
+  'mi cuenta', 'seguinos', 'redes sociales', 'newsletter', 'suscribite',
+  'medios de pago', 'formas de pago', 'envios', 'menu', 'filtrar', 'filtros',
+  'ordenar por', 'resultados', 'coleccion', 'colecciones', 'catalogo',
+];
+
+/** Frases que indican que el "párrafo" es ruido de interfaz, no contenido real. */
+const AEO_UI_TEXT_PATTERNS = [
+  'añadir a la lista de deseos', 'agregar al carrito', 'añadir al carrito',
+  'vista rapida', 'vista rápida', 'comprar ahora', 'ver mas', 'ver más',
+  'agotado', 'sin stock', 'leer mas', 'leer más', 'seleccionar opciones',
+];
+
+function normalizeForAeo(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '') // quita tildes
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/** True si el encabezado es una sección de navegación/UI, no contenido informativo. */
+function isUiNavigationHeading(heading: string): boolean {
+  const norm = normalizeForAeo(heading);
+  if (!norm) return true;
+  return AEO_UI_HEADING_PATTERNS.some(
+    (p) => norm === p || norm.startsWith(p + ' ') || norm.endsWith(' ' + p)
+  );
+}
+
+/** True si el texto parece un listado de productos / botones de interfaz. */
+function isUiNoiseText(text: string): boolean {
+  const norm = normalizeForAeo(text);
+  return AEO_UI_TEXT_PATTERNS.some((p) => norm.includes(normalizeForAeo(p)));
+}
+
+/**
  * Fetch a page's HTML and extract H2/H3 headings with their following paragraph text.
  * Used by getAeoOpportunities to gather real content for Gemini analysis.
  */
@@ -3244,6 +3293,10 @@ async function scrapeHeadingSections(pageUrl: string): Promise<HeadingSection[]>
 
       if (!headingText) continue;
 
+      // Filter: skip navigation/UI section headings (carruseles, tienda, menús).
+      // No son contenido informativo y generan falsos positivos en AEO.
+      if (isUiNavigationHeading(headingText)) continue;
+
       // Find the next <p> tag after this heading in the HTML
       const afterHeading = html.substring(match.index + match[0].length);
       const pMatch = afterHeading.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
@@ -3255,6 +3308,9 @@ async function scrapeHeadingSections(pageUrl: string): Promise<HeadingSection[]>
 
       // Filter: skip sections where paragraph is empty or less than 20 chars
       if (!paragraphText || paragraphText.length < 20) continue;
+
+      // Filter: skip when the text is interface noise (botones de producto, etc.).
+      if (isUiNoiseText(paragraphText)) continue;
 
       sections.push({
         heading: headingText,

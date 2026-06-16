@@ -95,3 +95,22 @@ Cuanto más cerca del Top 3 estés al empezar, más rápido ves el resultado.
 ### 🏁 Encontrá tus Oportunidades de Venta hoy
 
 ¿Querés saber qué páginas de tu sitio están en la zona de ataque ahora mismo? Conectá tu Search Console en [SEOJump](/) y andá a **Fase 3 → Oportunidades de Venta**. El Búho ya analizó tus datos y te dice exactamente dónde poner el empujón. Gratis. En minutos. Sin saber SEO.
+
+También puede interesarte: [cómo escribir el H1 perfecto para la keyword que encontraste](/blog/mision-del-h1) y [por qué no estás apareciendo en Google todavía](/blog/por-que-no-aparezco-en-google).
+
+## Preguntas frecuentes sobre la zona de ataque
+
+**¿Cuánto tiempo tarda en subir la posición después de optimizar?**
+Depende de la posición inicial y de cuándo Google re-indexe tu página. En general: si estás en posición 8–15, podés ver mejoras en 2 a 6 semanas. Si estás en posición 16–20, puede llevar 1 a 3 meses. Google suele recrawlear páginas modificadas en días, pero el cambio de ranking tarda un poco más en estabilizarse.
+
+**¿Qué posición en Google se considera buena?**
+El Top 3 concentra más del 50% de todos los clics de una búsqueda. La posición 1 sola puede llevarse entre el 25% y el 35%. Desde posición 4 en adelante, el CTR cae drásticamente. Cualquier posición del 4 al 10 (primera página) es zona de ataque y tiene alto potencial. Posición 11 en adelante ya es segunda página y casi no genera clics.
+
+**¿El CTR afecta mi posición en Google?**
+Sí, aunque de forma indirecta. Google usa señales de comportamiento del usuario, incluyendo el CTR, como uno de los factores de ranking. Un CTR alto para tu posición indica que los usuarios prefieren tu resultado, y Google puede subirte. Un CTR bajo puede estancarte o bajarte. Por eso mejorar el título no solo atrae más clics: también puede mejorar tu posición.
+
+**¿Puedo estar en la zona de ataque sin saberlo?**
+Sí, es muy común. La mayoría de los dueños de negocios no revisan Search Console y no saben que tienen decenas de páginas en posición 8–18 esperando un empujón. SEO Jump lee tu Search Console automáticamente y te muestra cuáles son esas páginas.
+
+**¿Qué hago si mi página está en posición 21 o más para una keyword importante?**
+Ahí la estrategia cambia: no alcanza con mejorar el título. Necesitás mejorar el contenido (más profundidad, responder mejor la intención), conseguir links internos desde otras páginas de tu sitio y posiblemente crear contenido nuevo relacionado. Es trabajo de mediano plazo, no quick win.

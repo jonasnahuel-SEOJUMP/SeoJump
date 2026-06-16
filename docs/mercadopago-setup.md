@@ -28,6 +28,38 @@ En Mercado Pago Developers conviene crear una **aplicación nueva** para SEO Jum
 
 > Usá credenciales de **producción** solo cuando pruebes con plata real. Para pruebas, MP ofrece usuarios de test en la doc.
 
+### Configuración de la aplicación (Información general)
+
+Cuando MP pida completar la ficha de la app, usá estos valores:
+
+| Campo | Valor |
+|-------|-------|
+| **Nombre de la aplicación** | `SEO Jump` (espacios OK) |
+| **Nombre corto** | `SEOJump` o `seojump` (**sin espacios**) |
+| **Descripción** | Ver texto abajo |
+| **URL producción** | `https://seo-jump.ai` |
+| **Categoría** | Servicio de informática (o similar) |
+| **Producto integrado** | Suscripciones |
+| **Logo** | PNG o JPG, cuadrado, &lt; 1 MB (opcional) |
+
+**Descripción sugerida (~150 caracteres):**
+
+```
+Suscripción mensual PRO de SEO Jump: consultas IA, misiones SEO y herramientas para mejorar tu posicionamiento en Google.
+```
+
+**Si MP no deja guardar** ("No pudimos guardar los cambios"):
+
+1. **Nombre corto** → `seojump` (minúsculas, sin espacios)
+2. Sacá el logo temporalmente e intentá guardar solo texto
+3. Descripción simplificada sin tildes: `Suscripcion mensual PRO de SEO Jump`
+4. Probá otro navegador o incógnito
+5. Nombre corto más único si hace falta: `seojumpai` o `seojump2026`
+
+> Logo y descripción **no bloquean los cobros**. Si no guarda, podés seguir con el token y webhooks igual.
+
+**Cuenta recomendada:** `cobros.seojump@seo-jump.ai` (cuenta MP separada de 55 Detail Shop, mismo CUIT).
+
 ---
 
 ## Paso 2 — Variables en Vercel (proyecto `seojump`)
@@ -127,6 +159,30 @@ Sigue siendo **manual** (mail o panel admin) hasta integrar un segundo plan en M
 | Botón no redirige | Consola del navegador + logs Vercel en `/api/mercadopago/subscribe` |
 | Pagó pero sigue Free | Webhook en MP, `MP_WEBHOOK_SECRET`, logs en `/api/mercadopago/webhook` |
 | Error 401 webhook | Secret incorrecto o desactualizado |
+| `Unauthorized access to resource` | Cuenta MP nueva sin habilitar producción (ver abajo) |
+| "No pudimos guardar los cambios" | Nombre corto sin espacios; guardar sin logo; no bloquea cobros |
+
+### Error `Unauthorized access to resource`
+
+Suele pasar con la **cuenta nueva** (`cobros@`) antes de que MP habilite cobros en producción.
+
+Revisá en [mercadopago.com.ar](https://www.mercadopago.com.ar) (no Developers):
+
+- Identidad verificada (DNI + selfie si lo piden)
+- CUIT y domicilio fiscal completos
+- **IIBB en estado "Validando"** → hay que esperar (15 min – 24 h)
+- CBU vinculado si lo solicitan
+
+**Mientras esperás:** podés volver temporalmente al token de la cuenta vieja (55 Detail Shop) en Vercel para no frenar cobros. Cuando IIBB quede verde, volvé al token de `cobros@` y redeploy.
+
+**Probar si el token funciona:**
+
+```bash
+curl -s -H "Authorization: Bearer TU_ACCESS_TOKEN" https://api.mercadopago.com/users/me
+```
+
+- JSON con tus datos → token OK
+- `Unauthorized` → cuenta o token aún no habilitados
 
 ---
 

@@ -2,6 +2,7 @@
 title: "Por qué no optimizás tu marca en Google (y qué sí deberías atacar)"
 description: "La diferencia entre la keyword de tu marca y la keyword de intención puede costarte cientos de clientes. Aprendé a elegir la palabra correcta sin ser experto en SEO."
 date: "2026-06-08"
+dateModified: "2026-06-16"
 readTime: "5 min"
 author: "SeoJump"
 ---
@@ -92,3 +93,22 @@ Ejemplos:
 ### 🏁 Dejá que el Búho elija la palabra correcta
 
 ¿No sabés cuál es tu keyword de intención? No hace falta ser experto. En [SEOJump](/), conectá tu Search Console y la **Fase 3: Optimización** te muestra, página por página, qué búsqueda atacar y qué título poner. Sin gráficos aburridos. Sin jerga. Solo misiones claras para ganar clientes que todavía no te conocen.
+
+Para completar la imagen: leé cómo [el H1 tiene que reflejar la keyword de intención](/blog/mision-del-h1) y [cuáles son las palabras clave que realmente convierten](/blog/palabras-clave-ventas).
+
+## Preguntas frecuentes sobre marca e intención de búsqueda
+
+**¿Puedo optimizar para las dos keywords a la vez?**
+No en la misma página. Si intentás rankear para "Autopint" y para "pintura de retoque para autos" en la misma página, Google no sabe cuál priorizar. Lo correcto es: la home optimizada para la intención (lo que buscan), y dentro de la web una página "Sobre nosotros" o el footer que confirme el nombre de marca.
+
+**¿Cómo sé cuál es mi keyword de intención?**
+Preguntate: ¿qué escribe alguien en Google cuando tiene el problema que yo resuelvo, antes de saber que yo existo? Esa frase es tu keyword de intención. Si no estás seguro, buscá en Google tu categoría (sin tu nombre) y fijate qué preguntas y frases sugiere el autocompletado.
+
+**¿Mi keyword de marca tiene que estar en el H1?**
+No necesariamente. La marca puede estar en el título de la pestaña (title tag), en el logo, en el pie de página. El H1 —el título visible de la página— debería tener la keyword de intención. La marca puede aparecer al final del H1 como refuerzo, pero no como protagonista.
+
+**¿Y si ya rankeo bien para mi marca pero no para la intención?**
+Es el caso más común. Significa que ya existís para los que te conocen pero sos invisible para los que todavía no. La solución: optimizá el H1 y el primer párrafo de tu página principal con la keyword de intención. Sin borrar tu marca, sino poniendo la intención primero.
+
+**¿Esto aplica solo a la home o a todas las páginas?**
+A todas. Cada página de tu sitio debería tener su propia keyword de intención. La home apunta al servicio principal. Cada página de producto o servicio apunta a esa categoría específica. El blog apunta a preguntas informacionales. Así cubrís todo el embudo de búsqueda.

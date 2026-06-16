@@ -2,6 +2,7 @@
 title: "El Diccionario de SEOJump: Entendiendo tus métricas (sin tecnicismos)"
 description: "Descubrí qué significa 'Dinero sobre la mesa', 'Oportunidades de Venta' y 'Fugas de Clientes'. Traducimos el aburrido idioma de Google al idioma de tus ventas."
 date: "2026-05-27"
+dateModified: "2026-06-16"
 readTime: "4 min"
 author: "SeoJump"
 ---
@@ -54,3 +55,22 @@ Por eso, diseñamos nuestra aplicación para hablarte en tu idioma: el idioma de
 ---
 
 **Resumen:** En SEOJump nuestro objetivo es que no pierdas tiempo mirando gráficos técnicos. Si la app te dice que arregles una **Fuga de Cliente** o rescates el **Dinero sobre la mesa**, hacelo. Atrás de esos términos amigables hay motores técnicos súper potentes trabajando para tu posicionamiento.
+
+¿Querés profundizar en alguno de estos conceptos? Leé sobre [la zona de ataque y cómo explotar las oportunidades de venta](/blog/zona-de-ataque-posicion-google) o sobre [por qué las palabras clave de intención valen más que las de marca](/blog/palabras-clave-ventas).
+
+## Preguntas frecuentes sobre métricas SEO
+
+**¿Qué es el CTR en SEO y por qué importa?**
+CTR (Click Through Rate) es el porcentaje de personas que hacen clic en tu resultado de Google sobre el total que lo vieron. Si 100 personas vieron tu resultado y 5 hicieron clic, tu CTR es del 5%. Un CTR alto indica que tu título y descripción son atractivos. Mejorar el CTR sin cambiar tu posición puede duplicar tu tráfico.
+
+**¿Cuánto CTR es considerado bueno en Google?**
+Depende mucho de la posición. En posición 1, el CTR promedio ronda el 25–30%. En posición 3, baja a 10–12%. En posición 10, está alrededor del 2–3%. Si tu CTR está muy por debajo de esos valores para tu posición, el título o la meta descripción no están convenciendo al usuario de entrar.
+
+**¿Qué son las impresiones en Search Console?**
+Son las veces que tu sitio apareció en resultados de Google, aunque el usuario no haya hecho clic. Muchas impresiones con pocos clics = buen potencial, mal título. En SEO Jump llamamos a eso "Dinero sobre la mesa": tráfico que ya existe y solo necesita un mejor anzuelo para convertirse en visitas.
+
+**¿Qué es el PageRank y todavía importa?**
+PageRank es el sistema original de Google para medir la autoridad de una página basado en cuántos y cuáles sitios la enlazan. Google ya no publica el PageRank público, pero el concepto sigue siendo válido: los links de calidad hacia tu sitio (y entre tus propias páginas) siguen siendo uno de los factores de ranking más importantes.
+
+**¿Qué diferencia hay entre tráfico orgánico y tráfico de pago?**
+El tráfico orgánico viene de los resultados naturales de Google (gratuito, sostenible, más confianza del usuario). El tráfico de pago viene de Google Ads (inmediato, pero cuesta por clic y para cuando dejás de pagar). SEO Jump trabaja exclusivamente con tráfico orgánico.

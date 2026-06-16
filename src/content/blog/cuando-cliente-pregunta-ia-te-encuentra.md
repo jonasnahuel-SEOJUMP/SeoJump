@@ -2,6 +2,7 @@
 title: "Cuando tu cliente pregunta, la IA tiene que encontrarte (SEO + AEO + GEO)"
 description: "Tus clientes ya no solo googlean: le preguntan a ChatGPT y a Google IA. Aprendé cómo preparar tu web para que te recomienden en las tres fronteras del buscador."
 date: "2026-06-08"
+dateModified: "2026-06-16"
 readTime: "6 min"
 author: "SeoJump"
 ---
@@ -125,3 +126,22 @@ Si las tres son "sí", tu página está preparada para Google, para la IA y para
 ### 🏁 Empezá con una misión hoy
 
 ¿No sabés por dónde arrancar? En [SEOJump](/), conectá tu Search Console y andá a **Fase 3**. El Búho ya analizó tus páginas y te dice si necesitás SEO, AEO o las dos cosas. Cada misión viene con el texto sugerido listo para copiar y pegar en tu web. Sin jerga. Sin curva de aprendizaje. Solo resultados.
+
+Para profundizar en cada capa, leé: [¿Qué es el AEO en detalle?](/blog/que-es-aeo-y-por-que-aparecer-en-inteligencia-artificial) y [cómo resolver el problema si tu web no aparece en Google](/blog/por-que-no-aparezco-en-google).
+
+## Preguntas frecuentes sobre SEO, AEO y GEO
+
+**¿SEO, AEO y GEO son lo mismo?**
+No. Son tres capas distintas de visibilidad online. SEO = aparecer en los resultados clásicos de Google (links). AEO = aparecer en respuestas directas generadas por IA dentro del buscador. GEO = ser recomendado por ChatGPT, Gemini y otros asistentes conversacionales cuando alguien pregunta algo de tu sector. Las tres se refuerzan entre sí pero requieren acciones específicas.
+
+**¿Necesito contratar a alguien para hacer AEO y GEO?**
+No necesariamente. Las acciones básicas —estructurar bien el contenido con preguntas y respuestas, agregar FAQ a las páginas más importantes, actualizar los contenidos con regularidad— las podés hacer vos mismo. Lo que sí conviene es tener datos para saber dónde enfocar el esfuerzo, que es exactamente para lo que sirve SEO Jump.
+
+**¿El GEO funciona para negocios locales o pequeños?**
+Sí, y especialmente bien. ChatGPT y Gemini tienden a citar negocios o expertos que tienen contenido específico sobre su nicho o zona. Un contador de Rosario con un blog sobre "monotributo en Argentina" tiene muchas más chances de ser citado por una IA que un portal genérico sin foco geográfico.
+
+**¿Cuánto tiempo tarda el GEO en dar resultados?**
+Es difícil de medir con exactitud, pero en general: si publicás contenido nuevo y bien estructurado hoy, las IAs pueden indexarlo en semanas. El impacto en citas o recomendaciones de ChatGPT puede verse en 1 a 3 meses. Es una estrategia de mediano plazo, pero con cero costo por clic y alta confianza del usuario.
+
+**¿Qué pasa si no hago nada y solo me enfoco en Google clásico?**
+En el corto plazo, seguís visible. Pero la tendencia es clara: cada año más búsquedas se resuelven dentro del buscador (sin clic) o en asistentes conversacionales. Los negocios que empiecen a trabajar AEO y GEO hoy van a tener una ventaja enorme frente a los que lo ignoren. No es urgente, pero sí estratégico.
