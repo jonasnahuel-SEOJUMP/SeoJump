@@ -2,7 +2,7 @@
 title: "¿Por qué no aparezco en Google? Las 7 razones reales (y cómo solucionarlas)"
 description: "Tu web existe, pero Google no la muestra. Descubrí las 7 causas más comunes por las que un negocio no aparece en Google y qué hacer en cada caso, sin contratar a nadie."
 date: "2026-06-16"
-dateModified: "2026-06-16"
+dateModified: "2026-06-17"
 readTime: "7 min"
 author: "SeoJump"
 ---
@@ -130,6 +130,9 @@ Depende. Un sitio sin indexación previa puede tardar entre 1 semana y 3 meses e
 
 **¿Necesito pagar para aparecer en Google?**
 No. Los resultados orgánicos (los que no son anuncios) son gratuitos. Pagar en Google Ads solo sirve para aparecer en los anuncios de arriba, no en los resultados naturales.
+
+**¿Merece la pena pagar Semrush o Ahrefs si tengo una web chica?**
+En general, no al principio. Esas herramientas brillan cuando gestionás muchos sitios o clientes. Con 1–2 webs pequeñas, Search Console y cambios concretos alcanzan para empezar. Lo explicamos en detalle en [¿Merece la pena Semrush o Ahrefs con una web pequeña?](/blog/merece-la-pena-semrush-ahrefs-web-pequena).
 
 **¿Cuántas páginas de mi sitio debería optimizar?**
 Empezá por las más importantes: tu página principal, tu página de servicio o producto estrella y cualquier categoría con alto tráfico. Después expandís al resto.
