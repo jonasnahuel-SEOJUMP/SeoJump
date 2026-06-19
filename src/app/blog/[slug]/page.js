@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getPostBySlug, getAllPosts, renderMarkdown } from "../../../lib/blog";
 
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
   const posts = getAllPosts();
   return posts.map((post) => ({

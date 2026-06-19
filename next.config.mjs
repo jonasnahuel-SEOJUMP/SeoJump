@@ -5,6 +5,10 @@ const nextConfig = {
       bodySizeLimit: '2mb',
     },
   },
+  outputFileTracingIncludes: {
+    '/blog/[slug]': ['./src/content/blog/**/*'],
+    '/blog': ['./src/content/blog/**/*'],
+  },
 };
 
 export default nextConfig;
