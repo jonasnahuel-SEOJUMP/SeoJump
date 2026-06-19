@@ -11,6 +11,12 @@ import UpgradeModal from "../../components/UpgradeModal";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 
+const SPY_LOADING_MESSAGES = [
+  "Estoy leyendo la web de tu competidor...",
+  "Ahora comparo título, H1 y temas con tu sitio...",
+  "Buscando brechas que podés cerrar hoy...",
+];
+
 export default function DetectiveDeEnlaces() {
   const { data: session, status } = useSession();
   const { isMuted, toggleMute, playClick, playThemeToggle, playSuccess } = useAudio();
@@ -45,6 +51,7 @@ export default function DetectiveDeEnlaces() {
   const [spyResult, setSpyResult] = useState(null);
   const [spyError, setSpyError] = useState(null);
   const [showSpyOwl, setShowSpyOwl] = useState(true);
+  const [spyLoadingMsg, setSpyLoadingMsg] = useState(0);
 
   // ── Indexation State (kept from original) ──
   const [h1Checked, setH1Checked] = useState(false);
@@ -189,6 +196,18 @@ export default function DetectiveDeEnlaces() {
   useEffect(() => {
     localStorage.setItem("seojump_detective_fixes", JSON.stringify(Array.from(completedFixes)));
   }, [completedFixes]);
+
+  // Rotating owl messages while spying
+  useEffect(() => {
+    if (!spyLoading) {
+      setSpyLoadingMsg(0);
+      return;
+    }
+    const interval = setInterval(() => {
+      setSpyLoadingMsg((i) => (i + 1) % SPY_LOADING_MESSAGES.length);
+    }, 2800);
+    return () => clearInterval(interval);
+  }, [spyLoading]);
 
   // Auth protection
   useEffect(() => {
@@ -1095,8 +1114,37 @@ export default function DetectiveDeEnlaces() {
                 </div>
               </div>
 
+              {/* Búho investigando (loading) */}
+              {spyLoading && (
+                <div className="text-center py-12 px-6 card-3d bg-slate-900 border-2 border-purple-500/30 rounded-3xl shadow-[0_0_40px_rgba(168,85,247,0.15)] relative overflow-hidden animate-in fade-in duration-300">
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent animate-pulse" />
+                  <div className="flex justify-center mb-5">
+                    <img
+                      src="/images/logo-owl.png"
+                      alt="Búho investigando"
+                      className="w-16 h-16 md:w-20 md:h-20 object-contain animate-bounce drop-shadow-lg"
+                    />
+                  </div>
+                  <div className="flex justify-center mb-4">
+                    <svg className="animate-spin h-10 w-10 text-purple-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    </svg>
+                  </div>
+                  <h3 className="text-xl md:text-2xl font-black text-purple-400 mb-2">
+                    El Búho está espiando...
+                  </h3>
+                  <p className="text-base font-bold text-slate-300 max-w-md mx-auto leading-relaxed min-h-[3rem] transition-opacity duration-500">
+                    {SPY_LOADING_MESSAGES[spyLoadingMsg]}
+                  </p>
+                  <p className="text-xs text-slate-500 font-bold mt-4">
+                    Puede tardar unos segundos mientras la IA analiza las dos webs.
+                  </p>
+                </div>
+              )}
+
               {/* Resultados */}
-              {spyResult && (
+              {spyResult && !spyLoading && (
                 <div className="space-y-5 animate-in fade-in duration-300">
                   {/* Cambios detectados (si ya se había espiado antes) */}
                   {!spyResult.firstTime && spyResult.changes?.length > 0 && (
