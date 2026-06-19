@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
@@ -22,6 +22,7 @@ export default function DetectiveDeEnlaces() {
   const { isMuted, toggleMute, playClick, playThemeToggle, playSuccess } = useAudio();
   const { theme, toggleTheme } = useTheme();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   // ── Core State ──
   const [xp, setXp] = useState(0);
@@ -52,6 +53,12 @@ export default function DetectiveDeEnlaces() {
   const [spyError, setSpyError] = useState(null);
   const [showSpyOwl, setShowSpyOwl] = useState(true);
   const [spyLoadingMsg, setSpyLoadingMsg] = useState(0);
+
+  useEffect(() => {
+    if (searchParams.get("view") === "spy") {
+      setDetectiveView("spy");
+    }
+  }, [searchParams]);
 
   // ── Indexation State (kept from original) ──
   const [h1Checked, setH1Checked] = useState(false);

@@ -2,7 +2,7 @@
 title: "¿Merece la pena pagar Semrush o Ahrefs si tenés una web chica?"
 description: "Tenés uno o dos sitios pequeños y te preguntás si conviene gastar 200 €/mes en Semrush o Ahrefs. Guía honesta: qué te dan, qué podés hacer gratis y cuándo tiene sentido cada opción."
 date: "2026-06-17"
-dateModified: "2026-06-17"
+dateModified: "2026-06-18"
 readTime: "8 min"
 author: "SeoJump"
 ---
@@ -98,9 +98,10 @@ Las suites de pago resuelven otra cosa: te dejan **investigar mercados enteros**
 - Conecta tu **Search Console**
 - Detecta tu [zona de ataque](/blog/zona-de-ataque-posicion-google) (posiciones 4–20 con demanda real)
 - Te asigna **misiones** concretas: H1, meta, FAQ, verificación
+- **Espía de la Competencia:** pegás la URL de un rival y la IA compara su web con la tuya (título, H1, temas) y te da brechas accionables — sin dashboard de Semrush
 - **No cuesta 200 €/mes** — plan gratis para empezar, PRO accesible para PyMEs
 
-No reemplaza a Semrush en backlinks ni keyword research masivo. **Te saca de la parálisis** y te pone a ejecutar.
+No reemplaza a Semrush en backlinks ni keyword research masivo a escala de mercado. **Te saca de la parálisis** y te pone a ejecutar — incluido el clásico *"¿qué hace mejor mi competidor en esta URL?"*.
 
 ## Cuándo SÍ merece la pena pagar Semrush o Ahrefs
 
@@ -121,7 +122,8 @@ Un consultor con 15 clientes que paga Semrush y Ahrefs no está loco: **le ahorr
 | Precio | ~139–400+ USD/mes | $0 | Gratis / PRO accesible |
 | Para quién | Agencias, equipos SEO | Principiantes muy disciplinados | PyMEs, freelancers, 1–3 sitios |
 | Keyword research masivo | ✅ | ❌ | Parcial (desde tus datos GSC) |
-| Backlinks / competencia | ✅ | Muy limitado | ❌ |
+| Backlinks / link building | ✅ | Muy limitado | ❌ |
+| Comparar tu web vs un rival (título, H1, brechas) | ✅ (suite completa) | Manual (mirar Google) | ✅ [Espía de la Competencia](/detective-de-enlaces?view=spy) |
 | "Qué cambio hoy en mi web" | Tenés que interpretar vos | Tenés que interpretar vos | ✅ Misiones guiadas |
 | Search Console integrado | Importás / conectás | Manual | ✅ Nativo |
 | Curva de aprendizaje | Alta | Media-alta | Baja |
@@ -142,7 +144,8 @@ Un consultor con 15 clientes que paga Semrush y Ahrefs no está loco: **le ahorr
 ### Etapa 2: Empezás a ver tráfico y querés acelerar
 1. Explorá la [zona de ataque](/blog/zona-de-ataque-posicion-google)
 2. Sumá bloques de FAQ ([AEO](/blog/que-es-aeo-y-por-que-aparecer-en-inteligencia-artificial))
-3. Considerá SEO Jump PRO si necesitás más consultas IA y misiones
+3. Espiá a tu competidor directo con el [Espía de la Competencia](/detective-de-enlaces?view=spy) (Fase 4 del Detective)
+4. Considerá SEO Jump PRO si necesitás más consultas IA y misiones
 
 **Semrush/Ahrefs solo si ya facturás con el SEO o tenés clientes.**
 
@@ -201,7 +204,10 @@ Sí: Ubersuggest, Mangools (KWFinder), SE Ranking, Moz y otras. Siguen siendo he
 El plan gratuito y Ahrefs Webmaster Tools sirven para revisar **tu propio sitio** de forma limitada. No reemplazan un plan de pago para investigar competencia o hacer seguimiento serio de rankings.
 
 **¿SEO Jump reemplaza a Semrush?**
-No. SEO Jump no hace keyword research masivo ni análisis de backlinks. Te ayuda a **actuar** con los datos que ya tenés en Search Console: misiones, Quick Wins, sugerencias de título y verificación. Es complemento para ejecutar, no suite de investigación.
+No al 100 %. SEO Jump no hace keyword research masivo ni análisis de backlinks a escala de agencia. Sí te ayuda a **actuar** con los datos que ya tenés en Search Console: misiones, Quick Wins, sugerencias de título y verificación. Y con el **Espía de la Competencia** podés comparar tu web con la de un rival concreto (título, H1, brechas) sin pagar una suite profesional. Es complemento para ejecutar, no reemplazo del laboratorio completo.
+
+**¿Puedo espiar a mi competencia sin Semrush?**
+Para una URL rival concreta, sí: el Espía de SEO Jump scrapea su página, la compara con la tuya vía IA y te da hasta 3 brechas accionables. No te muestra todas las keywords que rankean en Brasil ni su perfil de backlinks — eso sigue siendo territorio de Semrush/Ahrefs. Para el dueño de una web chica que pregunta *"¿qué hace mejor este competidor?"*, alcanza.
 
 **¿Cuánto debería gastar en herramientas SEO al empezar?**
 Cero. Conectá Search Console, corregí lo básico (H1, meta, indexación) y medí durante 2–3 meses. Si después querés acelerar con IA y misiones guiadas, un plan accesible como SEO Jump PRO tiene más sentido que 200 €/mes en Semrush.

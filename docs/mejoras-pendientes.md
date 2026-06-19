@@ -1,6 +1,40 @@
 # Mejoras pendientes — SEO Jump
 
-Lista de ideas y mejoras para implementar una vez que la app esté verificada y con usuarios reales.
+Lista de ideas y mejoras para implementar. Consultar este archivo cuando preguntes *"¿qué nos quedó pendiente?"*.
+
+---
+
+## Espía de la Competencia — marketing y visibilidad
+
+### Hecho ✅
+- Feature en `/detective-de-enlaces` (pestaña Espía, Fase 4)
+- Landing: barra superior, card de beneficio, misión gamificada (`10fb3d2`)
+- `/precios`: feature listada + nota de créditos IA
+- Post Semrush actualizado con Espía, tabla corregida, FAQ nueva (`Jun 2026`)
+- Banner en home para usuarios con Fase 4 (o admin) → link directo `?view=spy`
+- Deep link `?view=spy` en Detective abre pestaña Espía
+
+### Pendiente 📋
+| Prioridad | Tarea | Notas |
+|-----------|-------|-------|
+| Alta | **Post blog dedicado** | Título sugerido: *"Cómo espiar a tu competencia en Google sin pagar Semrush"* — SEO + conversión |
+| Media | **Landing `/espia-competencia`** | Página focal para ads y búsqueda orgánica |
+| Media | **Renombrar botón Fase 4** | Ej. *"Detective + Espía"* en nav del home |
+| Baja | **Copy para Google Ads / redes** | *"Pegá la web de tu rival. Te decimos qué hace mejor — sin Semrush."* |
+| Producto | **Desbloqueo temprano del Espía** | Evaluar si el Espía debería estar antes de completar Fase 3 (decisión de producto) |
+| UX | **Banner dismissible** | localStorage para no mostrar siempre el banner del home |
+
+---
+
+## Pagos e internacional
+
+### Pendiente 📋
+| Tarea | Estado |
+|-------|--------|
+| **Mercado Pago AR** — cuenta `cobros.seojump@...` con `billing.allow: false` (loop al pagar) | Usuario completando perfil MP |
+| **Plan B MP** | Token cuenta vieja 55 Detail Shop |
+| **Lemon Squeezy + Payoneer** (Fase 1 internacional, MoR) | Pausado unos días |
+| **Stripe + LLC** | Cuando escale facturación internacional |
 
 ---
 
@@ -21,4 +55,4 @@ Lista de ideas y mejoras para implementar una vez que la app esté verificada y 
 
 ---
 
-*Última actualización: Junio 2026*
+*Última actualización: 18 Jun 2026*

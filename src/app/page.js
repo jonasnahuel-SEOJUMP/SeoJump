@@ -101,6 +101,36 @@ function QuickWinsHighlight({ quickWins, completedQuickWins, playClick, router }
 }
 
 
+// Banner Espía de la Competencia (usuarios con Fase 4 desbloqueada)
+function CompetitorSpyHighlight({ playClick }) {
+  return (
+    <div className="w-full mb-8 relative rounded-3xl border-2 border-red-500/40 bg-gradient-to-r from-red-950/80 via-purple-950/85 to-slate-900/90 p-6 md:p-8 shadow-[0_0_40px_rgba(239,68,68,0.25)] hover:scale-[1.01] transition-transform duration-300">
+      <div className="relative z-10 flex flex-col gap-5">
+        <div className="text-left space-y-2">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="px-2.5 py-0.5 bg-red-500/30 border border-red-400/50 rounded-full text-red-200 text-xs font-black uppercase tracking-wider">🕵️ Nuevo</span>
+            <span className="text-purple-300 text-xs font-bold">Espía de la Competencia</span>
+          </div>
+          <h2 className="text-2xl md:text-3xl font-black text-white">
+            Compará tu web con un rival en segundos
+          </h2>
+          <p className="text-slate-200 text-sm md:text-base font-semibold leading-relaxed">
+            Pegá la URL de tu competencia y la IA te dice qué hace mejor (título, H1, temas) y qué brechas podés cerrar hoy — sin pagar Semrush.
+          </p>
+        </div>
+        <Link
+          href="/detective-de-enlaces?view=spy"
+          onClick={playClick}
+          className="btn-3d btn-yellow w-full !text-sm md:!text-base font-black px-6 py-3.5 text-center"
+        >
+          ABRIR ESPÍA DE LA COMPETENCIA
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+
 export default function Home() {
   const { data: session, status } = useSession();
   const { isMuted, toggleMute, playClick, playThemeToggle, playSuccess, playLevelUp } = useAudio();
@@ -1158,6 +1188,10 @@ export default function Home() {
                       playClick={playClick} 
                       router={router} 
                     />
+
+                    {(prog?.p4?.unlocked || isAdmin) && (
+                      <CompetitorSpyHighlight playClick={playClick} />
+                    )}
 
                     {/* --- BANNER EDUCATIVO + UPSELL A SEARCH CONSOLE (solo sin GSC) --- */}
                     {missions.length > 0 && missions.some((m) => m.source === 'web') && (
