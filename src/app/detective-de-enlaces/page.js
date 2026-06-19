@@ -44,6 +44,7 @@ export default function DetectiveDeEnlaces() {
   const [spyLoading, setSpyLoading] = useState(false);
   const [spyResult, setSpyResult] = useState(null);
   const [spyError, setSpyError] = useState(null);
+  const [showSpyOwl, setShowSpyOwl] = useState(true);
 
   // ── Indexation State (kept from original) ──
   const [h1Checked, setH1Checked] = useState(false);
@@ -1010,6 +1011,57 @@ export default function DetectiveDeEnlaces() {
                   <p className="text-base font-bold text-slate-400 max-w-lg mx-auto leading-relaxed">
                     Pegá la web de un competidor y la IA la compara con la tuya: te dice qué está haciendo mejor y qué cambiar para superarlo.
                   </p>
+
+                  {/* Explicación del Búho — qué es y cómo funciona */}
+                  <div className="max-w-lg mx-auto w-full text-left pt-2">
+                    <button
+                      type="button"
+                      onClick={() => { playClick(); setShowSpyOwl(!showSpyOwl); }}
+                      className={`w-full flex items-center justify-between p-4 rounded-xl border-2 font-black transition-all text-sm md:text-base ${
+                        showSpyOwl
+                          ? "bg-slate-800 border-purple-500/50 text-white"
+                          : "bg-slate-800/60 border-slate-700 text-slate-300 hover:border-slate-600"
+                      }`}
+                    >
+                      <span className="flex items-center gap-3">
+                        <span className="text-2xl">🦉</span>
+                        ¿Para qué sirve el Espía?
+                      </span>
+                      <span className="text-xl">{showSpyOwl ? "−" : "+"}</span>
+                    </button>
+                    <div
+                      className={`overflow-hidden transition-all duration-300 ease-in-out mt-2 ${
+                        showSpyOwl ? "max-h-[520px] opacity-100" : "max-h-0 opacity-0"
+                      }`}
+                    >
+                      <div className="bg-slate-900 p-4 rounded-xl border border-slate-700 shadow-xl flex gap-3 items-start">
+                        <img
+                          src="/images/logo-owl.png"
+                          alt="Búho SEO Jump"
+                          className="w-10 h-10 object-contain animate-bounce flex-shrink-0 drop-shadow-lg"
+                        />
+                        <div className="flex-1 space-y-3">
+                          <div className="bg-slate-800 text-slate-200 p-4 rounded-xl rounded-tl-none font-bold text-xs md:text-sm leading-relaxed border border-slate-700 relative">
+                            <p className="mb-2">
+                              <strong className="text-purple-300">El Espía</strong> mira la web de tu competencia y la compara con la tuya. No necesitás Semrush ni ser experto: te digo en castellano qué están haciendo mejor para aparecer en Google.
+                            </p>
+                            <p className="mb-2 text-slate-300">
+                              <strong className="text-duo-yellow">Cómo funciona:</strong>
+                            </p>
+                            <ol className="list-decimal list-inside space-y-1 text-slate-300 mb-2">
+                              <li>Pegás la URL del rival (ej: <span className="text-slate-400">otrotaller.com</span>).</li>
+                              <li>Leo el título, el H1 y los temas de las dos webs.</li>
+                              <li>Te doy hasta 3 cosas concretas para copiar o mejorar en tu sitio.</li>
+                            </ol>
+                            <p className="text-slate-400 text-xs">
+                              Si volvés a espiar al mismo rival más adelante, te aviso si cambió el título o sumó contenido nuevo. Cada espionaje usa <strong className="text-slate-300">1 consulta IA</strong> (como Quick Wins o AEO).
+                            </p>
+                            <div className="absolute top-0 -left-2 w-0 h-0 border-t-[10px] border-t-slate-800 border-l-[10px] border-l-transparent" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
 
                   <div className="max-w-lg mx-auto space-y-3 pt-2">
                     <input
