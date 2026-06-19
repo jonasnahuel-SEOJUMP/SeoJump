@@ -10,6 +10,7 @@ import StripeCheckoutButton from "../../components/StripeCheckoutButton";
 const FEATURES = [
   "Quick Wins con IA",
   "Oportunidades AEO",
+  "Espía de la Competencia",
   "Buscador de Oro",
   "Detective de Enlaces",
   "Misiones y verificación",
@@ -217,7 +218,7 @@ export default function PreciosPage() {
         <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-4">
           <h3 className="text-lg font-black text-white">¿Qué es una consulta IA?</h3>
           <p className="text-slate-400 font-semibold text-sm leading-relaxed">
-            Cada vez que la app analiza con Gemini (Quick Wins, AEO, Buscador de Oro o Detective de Enlaces)
+            Cada vez que la app analiza con Gemini (Quick Wins, AEO, Espía de la Competencia, Buscador de Oro o Detective de Enlaces)
             cuenta como 1 consulta. Las misiones de optimización y la verificación de cambios en tu web
             <strong className="text-slate-200"> no consumen</strong> consultas.
           </p>

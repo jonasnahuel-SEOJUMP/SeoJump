@@ -10,8 +10,8 @@ export default function LandingPage({ onStart, playClick }) {
     <div className="w-full text-slate-100 font-fredoka flex flex-col items-center max-w-7xl mx-auto animate-in fade-in zoom-in duration-500">
       
       {/* BARRA DE ANUNCIO SUPERIOR */}
-      <div className="w-full bg-duo-green/20 border-b border-duo-green/40 text-duo-green font-bold text-center py-2 px-4 mb-8 text-sm md:text-base animate-pulse">
-        ✨ Nuevo módulo AEO: Detectá oportunidades ocultas en tu web para aparecer en las respuestas de ChatGPT, Gemini y Google AI.
+      <div className="w-full bg-purple-500/20 border-b border-purple-400/40 text-purple-200 font-bold text-center py-2 px-4 mb-8 text-sm md:text-base">
+        🕵️ <strong className="text-white">Nuevo:</strong> Espía de la Competencia — pegá la web de un rival y te decimos qué hace mejor (sin pagar Semrush).
       </div>
 
       {/* SECCIÓN 1: HERO */}
@@ -168,6 +168,13 @@ export default function LandingPage({ onStart, playClick }) {
             <h3 className="text-xl font-bold text-white mb-3">Score de Visibilidad</h3>
             <p className="text-slate-400 leading-relaxed">Un indicador en tiempo real que mide la salud de tu posicionamiento y tu optimización para IA. Tu Score te dice de un vistazo si estás ganando autoridad.</p>
           </div>
+          <div className="bg-slate-800/50 p-8 rounded-2xl border border-slate-700 hover:border-purple-500/50 transition-colors md:col-span-2">
+            <div className="text-4xl mb-4">🕵️</div>
+            <h3 className="text-xl font-bold text-white mb-3">Espía de la Competencia</h3>
+            <p className="text-slate-400 leading-relaxed max-w-3xl">
+              Pegá la URL de un rival y la IA compara su web con la tuya: título, H1, temas y brechas concretas para superarlo. Si vuelve a cambiar algo, te avisamos. Todo sin dashboards de Semrush ni ser consultor SEO.
+            </p>
+          </div>
         </div>
       </section>
 
@@ -225,10 +232,23 @@ export default function LandingPage({ onStart, playClick }) {
 
           <div className="bg-slate-800 border-2 border-slate-700 rounded-xl p-5 flex items-center justify-between shadow-lg">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 bg-red-500/20 text-red-500 rounded-lg flex items-center justify-center text-2xl border border-red-500/30">⚔️</div>
+              <div className="w-12 h-12 bg-red-500/20 text-red-500 rounded-lg flex items-center justify-center text-2xl border border-red-500/30">🕵️</div>
+              <div>
+                <h4 className="font-bold text-white text-lg">Espía de la Competencia</h4>
+                <p className="text-slate-400 text-sm">Compará tu web con la de un rival y cerrá las brechas que te están costando clientes.</p>
+              </div>
+            </div>
+            <div className="bg-slate-900 px-3 py-1.5 rounded-full border border-slate-700 text-yellow-500 font-black text-sm whitespace-nowrap">
+              +15 XP
+            </div>
+          </div>
+
+          <div className="bg-slate-800 border-2 border-slate-700 rounded-xl p-5 flex items-center justify-between shadow-lg">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 bg-orange-500/20 text-orange-400 rounded-lg flex items-center justify-center text-2xl border border-orange-500/30">⚔️</div>
               <div>
                 <h4 className="font-bold text-white text-lg">Ataque a la Competencia</h4>
-                <p className="text-slate-400 text-sm">Aprovechá esta keyword de oportunidad antes de que tu competidor principal la note.</p>
+                <p className="text-slate-400 text-sm">Aprovechá una keyword de oportunidad antes de que tu rival principal la note.</p>
               </div>
             </div>
             <div className="bg-slate-900 px-3 py-1.5 rounded-full border border-slate-700 text-yellow-500 font-black text-sm whitespace-nowrap">
