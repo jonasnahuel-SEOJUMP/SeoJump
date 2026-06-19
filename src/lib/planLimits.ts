@@ -54,7 +54,8 @@ export type AiFeature =
   | 'aeo'
   | 'buscador_oro'
   | 'detective_enlaces'
-  | 'title_suggestion';
+  | 'title_suggestion'
+  | 'competitor_spy';
 
 export const AI_FEATURE_LABELS: Record<AiFeature, string> = {
   quick_wins: 'Quick Wins',
@@ -62,6 +63,14 @@ export const AI_FEATURE_LABELS: Record<AiFeature, string> = {
   buscador_oro: 'Buscador de Oro',
   detective_enlaces: 'Detective de Enlaces',
   title_suggestion: 'Sugerencia de Título',
+  competitor_spy: 'Espía de la Competencia',
+};
+
+/** Máximo de competidores rastreables por plan (Espía de la Competencia). */
+export const MAX_COMPETITORS_BY_PLAN: Record<PlanId, number> = {
+  free: 1,
+  pro: 3,
+  agency: 8,
 };
 
 export function getPlanLimits(plan: PlanId): PlanLimits {

@@ -19,7 +19,7 @@ import Stripe from 'stripe';
 const secretKey = process.env.STRIPE_SECRET_KEY;
 
 export const stripe: Stripe | null = secretKey
-  ? new Stripe(secretKey, { apiVersion: '2025-05-28.basil' })
+  ? new Stripe(secretKey, { apiVersion: '2026-05-27.dahlia' })
   : null;
 
 // ─── Constantes ──────────────────────────────────────────────────────────────

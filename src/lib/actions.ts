@@ -5,7 +5,7 @@ import path from "path"
 import { signIn, signOut, auth } from "../auth"
 import { getSearchConsoleData, submitGoogleIndexing } from "./google"
 import { GoogleGenerativeAI } from "@google/generative-ai"
-import { completeMission, getMissionsByEmail, deleteProfileByEmail, updateSubscriptionPlan, type MissionType } from './supabase'
+import { completeMission, getMissionsByEmail, deleteProfileByEmail, updateSubscriptionPlan, getCompetitorSnapshot, saveCompetitorSnapshot, listCompetitorUrls, type MissionType, type CompetitorSnapshot } from './supabase'
 import { normalizePagePath, pathSlug, buildAeoKey } from './missionMemory'
 import {
   checkAndConsumeAiCredit,
@@ -17,6 +17,7 @@ import {
   type AiCreditsStatus,
 } from './aiCredits'
 import type { AiFeature } from './planLimits'
+import { MAX_COMPETITORS_BY_PLAN } from './planLimits'
 import { decodeHtmlEntities } from './textUtils'
 
 export async function login() {
@@ -3768,4 +3769,277 @@ export async function verifyAeoMission(pageUrl: string, headingText: string, opt
       message: `No detectamos el texto optimizado en tu web. ¿Ya lo pegaste y borraste la caché? El heading "${headingText}" todavía tiene el contenido anterior.`,
     };
   }
+}
+
+// ════════════════════════════════════════════════════════════════════════════
+// ESPÍA DE LA COMPETENCIA (Fase 1 — on-demand)
+// Compara la web del usuario con la de un rival y detecta brechas accionables.
+// Guarda un snapshot por rival para detección de cambios al volver a espiar.
+// ════════════════════════════════════════════════════════════════════════════
+
+type SpyGap = {
+  area: string;
+  problem: string;
+  suggestion: string;
+};
+
+type SpyChange = {
+  field: string;
+  before: string;
+  after: string;
+};
+
+/** Scrapea un sitio y arma el snapshot (título, H1, headings) reusando los scrapers existentes. */
+async function buildCompetitorSnapshot(url: string): Promise<CompetitorSnapshot> {
+  const [meta, sections] = await Promise.all([
+    scrapeMetadata(url),
+    scrapeHeadingSections(url),
+  ]);
+  return {
+    title: meta.title || '',
+    h1: meta.h1 || '',
+    headings: sections.map((s) => s.heading).slice(0, 8),
+    scrapedAt: new Date().toISOString(),
+  };
+}
+
+/** Compara dos snapshots y devuelve los cambios significativos (título/H1/headings nuevos). */
+function diffSnapshots(prev: CompetitorSnapshot, next: CompetitorSnapshot): SpyChange[] {
+  const changes: SpyChange[] = [];
+
+  if (prev.title && next.title && prev.title.trim() !== next.title.trim()) {
+    changes.push({ field: 'Título (SEO)', before: prev.title, after: next.title });
+  }
+  if (prev.h1 && next.h1 && prev.h1.trim() !== next.h1.trim()) {
+    changes.push({ field: 'Encabezado H1', before: prev.h1, after: next.h1 });
+  }
+
+  const prevSet = new Set((prev.headings || []).map((h) => h.trim().toLowerCase()));
+  const newHeadings = (next.headings || []).filter((h) => !prevSet.has(h.trim().toLowerCase()));
+  if (newHeadings.length > 0) {
+    changes.push({
+      field: 'Contenido nuevo',
+      before: `${prev.headings?.length || 0} secciones`,
+      after: `Sumó: ${newHeadings.slice(0, 3).join(' · ')}`,
+    });
+  }
+
+  return changes;
+}
+
+/**
+ * Espía on-demand a un competidor: scrapea su web, la compara con la del usuario
+ * vía Gemini y devuelve brechas accionables. Detecta cambios si ya se había espiado antes.
+ */
+export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, goldKeyword?: string) {
+  // ── Auth ──────────────────────────────────────────────────────────────────
+  const session = await auth();
+  const userEmail = (session?.user?.email || '').toLowerCase().trim();
+  const isAdmin = await checkIsAdmin();
+  if (!userEmail && !isAdmin) {
+    return { success: false, error: 'Tenés que iniciar sesión para usar el Espía.', code: 'NOT_AUTHENTICATED' };
+  }
+
+  // ── Validación de URLs ──────────────────────────────────────────────────────
+  const rivalSanit = sanitizeInput(competitorUrl, 'url');
+  if (!rivalSanit.isValid) {
+    return { success: false, error: rivalSanit.error || 'La URL del competidor no es válida.' };
+  }
+  let rivalUrl = rivalSanit.sanitized;
+  if (!rivalUrl.startsWith('http://') && !rivalUrl.startsWith('https://')) {
+    rivalUrl = 'https://' + rivalUrl;
+  }
+
+  let ownUrl = (ownSiteUrl || '').trim();
+  if (ownUrl && !ownUrl.startsWith('http://') && !ownUrl.startsWith('https://')) {
+    ownUrl = 'https://' + ownUrl;
+  }
+
+  // No dejar que se espíe a sí mismo (no aporta nada).
+  const sameHost = (a: string, b: string) => {
+    try {
+      return new URL(a).hostname.replace(/^www\./, '') === new URL(b).hostname.replace(/^www\./, '');
+    } catch {
+      return false;
+    }
+  };
+  if (ownUrl && sameHost(rivalUrl, ownUrl)) {
+    return { success: false, error: 'Esa es tu propia web. Ingresá la URL de un competidor.' };
+  }
+
+  // ── Límite de competidores por plan ─────────────────────────────────────────
+  if (userEmail && !isAdmin) {
+    try {
+      const snapshot = await getUserPlanSnapshot(userEmail, { isAdmin });
+      const limit = MAX_COMPETITORS_BY_PLAN[snapshot.plan] ?? 1;
+      const existing = await listCompetitorUrls(userEmail);
+      const alreadyTracked = existing.some((u) => u === rivalUrl);
+      if (!alreadyTracked && existing.length >= limit) {
+        return {
+          success: false,
+          upgrade: true,
+          code: 'COMPETITOR_LIMIT',
+          error: `Tu plan ${snapshot.planLabel} permite espiar ${limit} competidor${limit === 1 ? '' : 'es'}. Pasate a un plan superior para sumar más.`,
+        };
+      }
+    } catch (err) {
+      console.warn('[spyCompetitor] No se pudo verificar el límite de competidores:', err);
+    }
+  }
+
+  // ── Scrape del rival ────────────────────────────────────────────────────────
+  let rivalSnapshot: CompetitorSnapshot;
+  try {
+    rivalSnapshot = await buildCompetitorSnapshot(rivalUrl);
+  } catch (err) {
+    console.error('[spyCompetitor] Error scraping rival:', err);
+    return { success: false, error: 'No pudimos leer la web del competidor. Verificá que la URL sea pública y esté online.' };
+  }
+
+  if (!rivalSnapshot.title && !rivalSnapshot.h1 && rivalSnapshot.headings.length === 0) {
+    return { success: false, error: 'La web del competidor no devolvió contenido legible (puede bloquear bots o estar caída).' };
+  }
+
+  // ── Snapshot propio (para comparar) ─────────────────────────────────────────
+  let ownSnapshot: CompetitorSnapshot | null = null;
+  if (ownUrl) {
+    try {
+      ownSnapshot = await buildCompetitorSnapshot(ownUrl);
+    } catch {
+      ownSnapshot = null;
+    }
+  }
+
+  // ── Detección de cambios vs último espionaje ────────────────────────────────
+  let changes: SpyChange[] = [];
+  let firstTime = true;
+  if (userEmail) {
+    try {
+      const prev = await getCompetitorSnapshot(userEmail, rivalUrl);
+      if (prev) {
+        firstTime = false;
+        changes = diffSnapshots(prev, rivalSnapshot);
+      }
+    } catch (err) {
+      console.warn('[spyCompetitor] No se pudo leer snapshot previo:', err);
+    }
+  }
+
+  // ── Análisis de brechas con Gemini (consume crédito IA) ─────────────────────
+  const apiKey = readGeminiApiKey();
+  if (!apiKey) {
+    return { success: false, error: 'GEMINI_API_KEY no configurada en el servidor.' };
+  }
+
+  let cleanKeyword = '';
+  if (goldKeyword) {
+    const kwSanit = sanitizeInput(goldKeyword, 'keyword');
+    if (kwSanit.isValid) cleanKeyword = kwSanit.sanitized;
+  }
+
+  const systemInstructions = `Sos un consultor SEO senior que ayuda a dueños de PyMES (sin conocimientos técnicos) a entender qué hace mejor su competencia y cómo superarla. Hablás en español rioplatense, claro y directo, sin jerga.
+
+Te paso dos webs: la del USUARIO y la de un COMPETIDOR. Compará el posicionamiento on-page (título SEO, H1 y temas que cubre cada uno).
+
+Devolvé ESTRICTAMENTE un JSON (sin markdown) con esta forma:
+{
+  "verdict": "1 frase resumen honesta de quién está mejor parado y por qué",
+  "gaps": [
+    {
+      "area": "Título SEO" | "Encabezado H1" | "Contenido/Temas" | "Intención de búsqueda",
+      "problem": "Qué hace mejor el competidor o qué le falta al usuario (concreto, 1-2 frases)",
+      "suggestion": "Acción exacta que el usuario puede copiar/hacer hoy para cerrar la brecha"
+    }
+  ]
+}
+
+Reglas:
+- Máximo 3 gaps, los más importantes. Si el usuario ya está mejor, devolvé menos gaps y un verdict positivo.
+- No inventes datos que no estén en la info provista. Si no tenés la web del usuario, basá las sugerencias en buenas prácticas vs el competidor.
+- Las sugerencias deben ser accionables y específicas (ej: "Cambiá tu H1 a 'X' para atacar la búsqueda Y"), nunca genéricas como "mejorá tu SEO".`;
+
+  const userPrompt = `Palabra clave objetivo del usuario: "${cleanKeyword || 'no especificada'}"
+
+WEB DEL USUARIO:
+${ownSnapshot ? JSON.stringify({ title: ownSnapshot.title, h1: ownSnapshot.h1, headings: ownSnapshot.headings }, null, 2) : '(no disponible — analizá solo al competidor y sugerí cómo competirle)'}
+
+WEB DEL COMPETIDOR (${rivalUrl}):
+${JSON.stringify({ title: rivalSnapshot.title, h1: rivalSnapshot.h1, headings: rivalSnapshot.headings }, null, 2)}`;
+
+  const cacheKey = buildGeminiCacheKey([
+    'competitor_spy_v1',
+    userEmail || 'dev@localhost',
+    rivalUrl,
+    ownUrl,
+    cleanKeyword,
+    JSON.stringify(rivalSnapshot.headings.slice(0, 8)),
+    rivalSnapshot.title,
+    rivalSnapshot.h1,
+  ]);
+
+  const geminiResult = await invokeGeminiWithCredits({
+    email: userEmail || 'dev@localhost',
+    isAdmin,
+    feature: 'competitor_spy',
+    cacheKey,
+    prompt: systemInstructions + '\n\n' + userPrompt,
+    apiKey,
+  });
+
+  if (geminiResult.ok === false) {
+    return {
+      success: false,
+      error: geminiResult.error,
+      code: geminiResult.code,
+      credits: geminiResult.credits,
+      upgrade: geminiResult.upgrade,
+    };
+  }
+
+  // ── Parseo de la respuesta ──────────────────────────────────────────────────
+  let verdict = '';
+  let gaps: SpyGap[] = [];
+  try {
+    const raw = geminiResult.text;
+    const jsonStart = raw.indexOf('{');
+    const jsonEnd = raw.lastIndexOf('}');
+    const parsed = JSON.parse(jsonStart !== -1 ? raw.substring(jsonStart, jsonEnd + 1) : raw);
+    verdict = String(parsed.verdict || '').trim();
+    if (Array.isArray(parsed.gaps)) {
+      gaps = parsed.gaps
+        .filter((g: any) => g && (g.problem || g.suggestion))
+        .slice(0, 3)
+        .map((g: any) => ({
+          area: String(g.area || 'Oportunidad').trim(),
+          problem: String(g.problem || '').trim(),
+          suggestion: String(g.suggestion || '').trim(),
+        }));
+    }
+  } catch (err) {
+    console.error('[spyCompetitor] Error parseando respuesta IA:', err);
+    return { success: false, error: 'Error al interpretar el análisis de la IA. Intentá de nuevo.' };
+  }
+
+  // ── Guardar snapshot para detección de cambios futura ───────────────────────
+  if (userEmail) {
+    try {
+      await saveCompetitorSnapshot(userEmail, rivalUrl, rivalSnapshot);
+    } catch (err) {
+      console.warn('[spyCompetitor] No se pudo guardar el snapshot:', err);
+    }
+  }
+
+  return {
+    success: true,
+    data: {
+      competitorUrl: rivalUrl,
+      competitor: { title: rivalSnapshot.title, h1: rivalSnapshot.h1, headings: rivalSnapshot.headings },
+      you: ownSnapshot ? { title: ownSnapshot.title, h1: ownSnapshot.h1 } : null,
+      verdict,
+      gaps,
+      changes,
+      firstTime,
+    },
+    credits: geminiResult.credits,
+  };
 }

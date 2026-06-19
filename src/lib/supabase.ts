@@ -290,6 +290,95 @@ export async function updateSubscriptionPlan(
   return true;
 }
 
+// ─── Espía de la Competencia (Fase 1) ───────────────────────────────────────
+
+export type CompetitorSnapshot = {
+  title: string;
+  h1: string;
+  headings: string[];
+  scrapedAt: string;
+};
+
+/** Resuelve (o crea) el profile id por email. Devuelve null si Supabase no está. */
+async function resolveProfileId(email: string): Promise<string | null> {
+  if (!supabaseAdmin) return null;
+  const { data, error } = await supabaseAdmin.rpc('upsert_profile', {
+    p_email: email.trim().toLowerCase(),
+    p_website_url: null,
+    p_business_name: null,
+  });
+  if (error) {
+    console.error('[Supabase] resolveProfileId:', error.message);
+    return null;
+  }
+  return (data as Profile | null)?.id ?? null;
+}
+
+/** Lista las URLs de competidores ya guardadas para un usuario. */
+export async function listCompetitorUrls(email: string): Promise<string[]> {
+  if (!supabaseAdmin) return [];
+  const profileId = await resolveProfileId(email);
+  if (!profileId) return [];
+
+  const { data, error } = await supabaseAdmin
+    .from('competitors')
+    .select('competitor_url')
+    .eq('profile_id', profileId);
+
+  if (error) {
+    console.error('[Supabase] listCompetitorUrls:', error.message);
+    return [];
+  }
+  return (data ?? []).map((r: { competitor_url: string }) => r.competitor_url);
+}
+
+/** Devuelve el último snapshot guardado de un rival, o null si nunca se espió. */
+export async function getCompetitorSnapshot(
+  email: string,
+  competitorUrl: string
+): Promise<CompetitorSnapshot | null> {
+  if (!supabaseAdmin) return null;
+  const profileId = await resolveProfileId(email);
+  if (!profileId) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from('competitors')
+    .select('last_snapshot')
+    .eq('profile_id', profileId)
+    .eq('competitor_url', competitorUrl)
+    .maybeSingle();
+
+  if (error || !data?.last_snapshot) return null;
+  return data.last_snapshot as CompetitorSnapshot;
+}
+
+/** Guarda (upsert) el snapshot del rival para detección de cambios futura. */
+export async function saveCompetitorSnapshot(
+  email: string,
+  competitorUrl: string,
+  snapshot: CompetitorSnapshot
+): Promise<boolean> {
+  if (!supabaseAdmin) return false;
+  const profileId = await resolveProfileId(email);
+  if (!profileId) return false;
+
+  const { error } = await supabaseAdmin.from('competitors').upsert(
+    {
+      profile_id: profileId,
+      competitor_url: competitorUrl,
+      last_snapshot: snapshot,
+      last_checked_at: new Date().toISOString(),
+    },
+    { onConflict: 'profile_id,competitor_url', ignoreDuplicates: false }
+  );
+
+  if (error) {
+    console.error('[Supabase] saveCompetitorSnapshot:', error.message);
+    return false;
+  }
+  return true;
+}
+
 export async function deleteProfileByEmail(email: string): Promise<boolean> {
   if (!supabaseAdmin) {
     console.warn('[Supabase] deleteProfileByEmail: Supabase no configurado.');

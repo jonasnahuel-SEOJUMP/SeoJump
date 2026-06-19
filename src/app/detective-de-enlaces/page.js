@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { auditSiteLinks, requestGoogleIndexing, checkIsAdmin } from "../../lib/actions";
+import { auditSiteLinks, requestGoogleIndexing, checkIsAdmin, spyCompetitor } from "../../lib/actions";
 import UpgradeModal from "../../components/UpgradeModal";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
@@ -37,6 +37,13 @@ export default function DetectiveDeEnlaces() {
   const [activeTab, setActiveTab] = useState("internalLinking");
   const [completedFixes, setCompletedFixes] = useState(new Set());
   const [showConfetti, setShowConfetti] = useState(false);
+
+  // ── Spy (Espía de la Competencia) State ──
+  const [detectiveView, setDetectiveView] = useState("links"); // links | spy
+  const [competitorUrl, setCompetitorUrl] = useState("");
+  const [spyLoading, setSpyLoading] = useState(false);
+  const [spyResult, setSpyResult] = useState(null);
+  const [spyError, setSpyError] = useState(null);
 
   // ── Indexation State (kept from original) ──
   const [h1Checked, setH1Checked] = useState(false);
@@ -259,6 +266,34 @@ export default function DetectiveDeEnlaces() {
       setTimeout(() => { syncStateWithServer(); }, 100);
       return updated;
     });
+  };
+
+  const handleSpy = async () => {
+    if (!competitorUrl.trim()) {
+      setSpyError("Ingresá la URL de tu competidor (ej: competencia.com).");
+      return;
+    }
+    playClick();
+    setSpyLoading(true);
+    setSpyError(null);
+    setSpyResult(null);
+
+    try {
+      const res = await spyCompetitor(competitorUrl.trim(), siteUrl || "", goldKeyword || undefined);
+      if (res.success && res.data) {
+        setSpyResult(res.data);
+        if (playSuccess) playSuccess();
+      } else {
+        if (res.upgrade) {
+          setUpgradeMessage(res.error || "");
+          setShowUpgradeModal(true);
+        }
+        setSpyError(res.error || "No pudimos espiar a tu competidor. Intentá de nuevo.");
+      }
+    } catch (err) {
+      setSpyError("Error de conexión. Verificá tu internet e intentá de nuevo.");
+    }
+    setSpyLoading(false);
   };
 
   const allChecked = h1Checked && keywordChecked && savedChecked;
@@ -530,6 +565,32 @@ export default function DetectiveDeEnlaces() {
         {/* Center Content */}
         <div className="w-full lg:flex-1 min-w-0 flex flex-col gap-8">
 
+          {/* ═══ VIEW TOGGLE: Enlaces | Espía ═══ */}
+          <div className="flex gap-2 bg-slate-900/60 border border-slate-700 rounded-2xl p-1.5">
+            <button
+              onClick={() => { playClick(); setDetectiveView("links"); }}
+              className={`flex-1 py-3 rounded-xl font-black text-sm transition-all ${
+                detectiveView === "links"
+                  ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              🔗 Enlaces del Sitio
+            </button>
+            <button
+              onClick={() => { playClick(); setDetectiveView("spy"); }}
+              className={`flex-1 py-3 rounded-xl font-black text-sm transition-all ${
+                detectiveView === "spy"
+                  ? "bg-gradient-to-r from-purple-500 to-indigo-500 text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]"
+                  : "text-slate-400 hover:text-white"
+              }`}
+            >
+              🕵️ Espía Competencia
+            </button>
+          </div>
+
+          {detectiveView === "links" && (
+          <>
           {/* ═══ STATE: PRESTIGE COMPLETE ═══ */}
           {prog?.cycleCompleted ? (
             <div className="w-full bg-gradient-to-br from-amber-600 to-yellow-500 border-4 border-yellow-400 rounded-3xl p-8 md:p-12 text-center space-y-6 shadow-2xl animate-in zoom-in-95 duration-500 text-slate-900">
@@ -932,6 +993,161 @@ export default function DetectiveDeEnlaces() {
             </div>
 
           ) : null}
+          </>
+          )}
+
+          {/* ═══ VIEW: ESPÍA DE LA COMPETENCIA ═══ */}
+          {detectiveView === "spy" && (
+            <div className="w-full space-y-6">
+              {/* Intro + input */}
+              <div className="w-full bg-slate-900 rounded-3xl border-2 border-slate-700 shadow-2xl overflow-hidden relative p-8 md:p-10 space-y-6">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-purple-700 opacity-10 rounded-full blur-3xl -mr-32 -mt-32 pointer-events-none" />
+                <div className="relative z-10 text-center space-y-4">
+                  <div className="text-6xl">🕵️</div>
+                  <h2 className="text-2xl md:text-3xl font-black text-white">
+                    Espiá a tu competencia
+                  </h2>
+                  <p className="text-base font-bold text-slate-400 max-w-lg mx-auto leading-relaxed">
+                    Pegá la web de un competidor y la IA la compara con la tuya: te dice qué está haciendo mejor y qué cambiar para superarlo.
+                  </p>
+
+                  <div className="max-w-lg mx-auto space-y-3 pt-2">
+                    <input
+                      type="text"
+                      value={competitorUrl}
+                      onChange={(e) => setCompetitorUrl(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter" && !spyLoading) handleSpy(); }}
+                      placeholder="competencia.com"
+                      disabled={spyLoading}
+                      className="w-full rounded-xl border-2 border-slate-600 bg-slate-800 px-4 py-3.5 text-base font-bold text-white placeholder:text-slate-500 focus:border-purple-500 focus:outline-none text-center"
+                    />
+                    <button
+                      onClick={handleSpy}
+                      disabled={spyLoading}
+                      className="w-full btn-3d bg-purple-500 border-purple-600 border-b-4 hover:bg-purple-450 active:border-b-0 active:translate-y-1 text-white font-black py-4 text-lg flex items-center justify-center gap-2.5 shadow-lg shadow-purple-500/20 transition-all disabled:opacity-60"
+                    >
+                      {spyLoading ? "🕵️ INVESTIGANDO..." : "🔍 ESPIAR COMPETIDOR"}
+                    </button>
+                    {siteUrl && (
+                      <p className="text-xs text-slate-500 font-bold">
+                        Comparando contra tu sitio: <span className="text-slate-400">{siteUrl}</span>
+                      </p>
+                    )}
+                  </div>
+
+                  {spyError && (
+                    <div className="p-4 bg-red-950/30 border-2 border-red-800 text-red-400 rounded-xl font-bold text-sm text-center max-w-lg mx-auto">
+                      ⚠️ {spyError}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Resultados */}
+              {spyResult && (
+                <div className="space-y-5 animate-in fade-in duration-300">
+                  {/* Cambios detectados (si ya se había espiado antes) */}
+                  {!spyResult.firstTime && spyResult.changes?.length > 0 && (
+                    <div className="card-3d bg-amber-950/30 border-2 border-amber-500/50 p-5 md:p-6 space-y-3">
+                      <div className="flex items-center gap-3">
+                        <span className="text-3xl">🚨</span>
+                        <h3 className="text-lg font-black text-amber-300">¡Tu competencia se movió!</h3>
+                      </div>
+                      {spyResult.changes.map((c, i) => (
+                        <div key={i} className="bg-slate-900/50 border border-amber-800/40 rounded-xl p-4 text-sm">
+                          <p className="font-black text-amber-300 uppercase text-xs mb-1">{c.field}</p>
+                          <p className="text-slate-400 font-bold"><span className="text-red-400">Antes:</span> {c.before}</p>
+                          <p className="text-slate-300 font-bold"><span className="text-emerald-400">Ahora:</span> {c.after}</p>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Veredicto */}
+                  {spyResult.verdict && (
+                    <div className="card-3d bg-slate-800 border-purple-500/40 p-5 md:p-6">
+                      <div className="flex items-start gap-3">
+                        <span className="text-3xl flex-shrink-0">🦉</span>
+                        <div>
+                          <h3 className="text-sm font-black text-purple-300 uppercase mb-1">Veredicto del Búho</h3>
+                          <p className="text-base font-bold text-white leading-relaxed">{spyResult.verdict}</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Comparación rápida título/H1 */}
+                  {spyResult.you && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="card-3d bg-slate-800/60 border-slate-700 p-4 space-y-2">
+                        <p className="text-xs font-black text-emerald-400 uppercase">🟢 Vos</p>
+                        <p className="text-xs text-slate-500 font-bold">Título: <span className="text-slate-300">{spyResult.you.title || "(vacío)"}</span></p>
+                        <p className="text-xs text-slate-500 font-bold">H1: <span className="text-slate-300">{spyResult.you.h1 || "(vacío)"}</span></p>
+                      </div>
+                      <div className="card-3d bg-slate-800/60 border-slate-700 p-4 space-y-2">
+                        <p className="text-xs font-black text-purple-400 uppercase">🕵️ Competidor</p>
+                        <p className="text-xs text-slate-500 font-bold">Título: <span className="text-slate-300">{spyResult.competitor.title || "(vacío)"}</span></p>
+                        <p className="text-xs text-slate-500 font-bold">H1: <span className="text-slate-300">{spyResult.competitor.h1 || "(vacío)"}</span></p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Brechas accionables */}
+                  {spyResult.gaps?.length > 0 ? (
+                    spyResult.gaps.map((gap, index) => {
+                      const identifier = `${spyResult.competitorUrl}-${gap.area}-${index}`;
+                      const completed = isFixCompleted("spy", identifier);
+                      return (
+                        <div key={index} className={`card-3d p-5 md:p-6 space-y-4 ${completed ? 'bg-emerald-950/30 border-emerald-500/40' : 'bg-slate-800 border-slate-700/50'}`}>
+                          <div className="flex items-center gap-3">
+                            <span className="text-3xl">{completed ? '✅' : '🎯'}</span>
+                            <h3 className="text-lg font-black text-white">{gap.area}</h3>
+                          </div>
+                          <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
+                            <p className="text-slate-300 font-bold text-sm leading-relaxed">{gap.problem}</p>
+                          </div>
+                          {gap.suggestion && (
+                            <div className="bg-purple-950/30 border border-purple-800/50 rounded-xl p-3">
+                              <p className="text-xs font-black text-purple-300 uppercase mb-1">Qué hacer:</p>
+                              <p className="text-base font-black text-white">{gap.suggestion}</p>
+                            </div>
+                          )}
+                          {completed ? (
+                            <button disabled className="w-full py-3 rounded-xl border border-green-500/35 bg-green-950/20 text-green-400 font-black cursor-not-allowed text-base">
+                              ✅ Aplicado (+15 XP)
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleVerifyFix("spy", identifier)}
+                              className="w-full btn-3d bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white font-black py-3 text-base transition-all"
+                            >
+                              ✅ YA LO APLIQUÉ
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })
+                  ) : (
+                    <div className="text-center py-10 card-3d bg-slate-800/50 border-slate-700">
+                      <div className="text-5xl mb-3">🏆</div>
+                      <p className="text-lg font-black text-emerald-400">¡Vas bien parado!</p>
+                      <p className="text-sm font-bold text-slate-400 mt-2">No detectamos brechas grandes contra este competidor.</p>
+                    </div>
+                  )}
+
+                  {/* Re-espiar */}
+                  <div className="text-center">
+                    <button
+                      onClick={() => { setSpyResult(null); setSpyError(null); playClick(); }}
+                      className="btn-3d btn-white !py-2 !px-4 text-xs font-black text-slate-500 hover:text-purple-500 transition-colors uppercase tracking-wider"
+                    >
+                      🔄 Espiar otro competidor
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
         </div>
       </div>
