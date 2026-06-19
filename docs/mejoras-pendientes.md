@@ -18,7 +18,7 @@ Lista de ideas y mejoras para implementar. Consultar este archivo cuando pregunt
 | Prioridad | Tarea | Notas |
 |-----------|-------|-------|
 | Alta | **Post blog dedicado** | ✅ `como-espiar-competencia-google-sin-semrush.md` (18 Jun 2026) |
-| Media | **Landing `/espia-competencia`** | Página focal para ads y búsqueda orgánica |
+| Media | **Landing `/espia-competencia`** | ✅ Hero Espía en home + ruta `/espia-competencia` para ads (Jun 2026) |
 | Media | **Renombrar botón Fase 4** | Ej. *"Detective + Espía"* en nav del home |
 | Baja | **Copy para Google Ads / redes** | *"Pegá la web de tu rival. Te decimos qué hace mejor — sin Semrush."* |
 | Producto | **Desbloqueo temprano del Espía** | Evaluar si el Espía debería estar antes de completar Fase 3 (decisión de producto) |
