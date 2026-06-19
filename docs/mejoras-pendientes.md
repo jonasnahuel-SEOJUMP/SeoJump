@@ -17,7 +17,7 @@ Lista de ideas y mejoras para implementar. Consultar este archivo cuando pregunt
 ### Pendiente 📋
 | Prioridad | Tarea | Notas |
 |-----------|-------|-------|
-| Alta | **Post blog dedicado** | Título sugerido: *"Cómo espiar a tu competencia en Google sin pagar Semrush"* — SEO + conversión |
+| Alta | **Post blog dedicado** | ✅ `como-espiar-competencia-google-sin-semrush.md` (18 Jun 2026) |
 | Media | **Landing `/espia-competencia`** | Página focal para ads y búsqueda orgánica |
 | Media | **Renombrar botón Fase 4** | Ej. *"Detective + Espía"* en nav del home |
 | Baja | **Copy para Google Ads / redes** | *"Pegá la web de tu rival. Te decimos qué hace mejor — sin Semrush."* |

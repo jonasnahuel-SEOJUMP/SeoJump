@@ -98,7 +98,7 @@ Las suites de pago resuelven otra cosa: te dejan **investigar mercados enteros**
 - Conecta tu **Search Console**
 - Detecta tu [zona de ataque](/blog/zona-de-ataque-posicion-google) (posiciones 4–20 con demanda real)
 - Te asigna **misiones** concretas: H1, meta, FAQ, verificación
-- **Espía de la Competencia:** pegás la URL de un rival y la IA compara su web con la tuya (título, H1, temas) y te da brechas accionables — sin dashboard de Semrush
+- **Espía de la Competencia:** pegás la URL de un rival y la IA compara su web con la tuya (título, H1, brechas) — sin dashboard de Semrush. Guía completa: [cómo espiar competencia sin Semrush](/blog/como-espiar-competencia-google-sin-semrush)
 - **No cuesta 200 €/mes** — plan gratis para empezar, PRO accesible para PyMEs
 
 No reemplaza a Semrush en backlinks ni keyword research masivo a escala de mercado. **Te saca de la parálisis** y te pone a ejecutar — incluido el clásico *"¿qué hace mejor mi competidor en esta URL?"*.
