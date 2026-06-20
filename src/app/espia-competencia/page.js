@@ -23,7 +23,7 @@ export default function EspiaCompetenciaPage() {
 
   return (
     <div className="min-h-screen bg-[#07070d] w-full font-fredoka">
-      <LandingPage onStart={handleStart} playClick={playClick} />
+      <LandingPage onStart={handleStart} playClick={playClick} variant="spy" />
     </div>
   );
 }

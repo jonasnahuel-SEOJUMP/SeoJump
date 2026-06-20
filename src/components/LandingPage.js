@@ -1,7 +1,8 @@
 import React from "react";
 import Link from "next/link";
 
-export default function LandingPage({ onStart, playClick }) {
+/** Landing principal (AEO + misiones diarias). variant="spy" solo para /espia-competencia (ads). */
+export default function LandingPage({ onStart, playClick, variant = "default" }) {
   const handleStart = () => {
     if (playClick) playClick();
     onStart();
@@ -13,39 +14,65 @@ export default function LandingPage({ onStart, playClick }) {
     document.getElementById("como-funciona")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  if (variant === "spy") {
+    return (
+      <div className="w-full text-slate-100 font-fredoka flex flex-col items-center max-w-7xl mx-auto animate-in fade-in zoom-in duration-500">
+        <section className="w-full flex flex-col items-center text-center py-12 md:py-20 px-4 relative">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-red-500/10 blur-[120px] rounded-full pointer-events-none" />
+          <span className="relative px-4 py-1.5 bg-red-500/20 border border-red-400/40 rounded-full text-red-200 text-xs md:text-sm font-black uppercase tracking-widest mb-6">
+            🕵️ Espía de la Competencia
+          </span>
+          <img src="/images/logo-full.png" alt="SEO Jump" className="relative w-40 md:w-52 h-auto object-contain mb-6 drop-shadow-2xl" />
+          <h1 className="relative text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.08] max-w-4xl mb-6">
+            Pegá la web de tu rival.{" "}
+            <span className="text-duo-green">Te decimos qué hace mejor</span> — y qué cambiar hoy en la tuya.
+          </h1>
+          <p className="relative text-slate-300 font-semibold text-lg md:text-xl leading-relaxed max-w-2xl mb-8">
+            Sin Semrush. Sin informes de 50 páginas. Comparación en castellano y misiones para ejecutar en minutos.
+          </p>
+          <button
+            onClick={handleStart}
+            className="btn-3d btn-green text-lg md:text-xl px-8 py-5 w-full sm:w-auto max-w-md transform hover:scale-105 transition-all"
+          >
+            🕵️ Espiar a mi competidor gratis
+          </button>
+          <p className="relative text-slate-500 text-sm font-bold mt-6">
+            Parte de <Link href="/" onClick={playClick} className="text-duo-green hover:underline">SEO Jump</Link> — mejorá tu web cada día con misiones y AEO.
+          </p>
+        </section>
+        <SpyFeatureBlock playClick={playClick} />
+        <LandingFooter playClick={playClick} />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full text-slate-100 font-fredoka flex flex-col items-center max-w-7xl mx-auto animate-in fade-in zoom-in duration-500">
 
-      {/* ═══ HERO — Espía como gancho principal ═══ */}
-      <section className="w-full flex flex-col items-center text-center py-12 md:py-20 px-4 relative">
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-red-500/10 blur-[120px] rounded-full pointer-events-none" />
-
-        <span className="relative px-4 py-1.5 bg-red-500/20 border border-red-400/40 rounded-full text-red-200 text-xs md:text-sm font-black uppercase tracking-widest mb-6">
-          🕵️ Espía de la Competencia
+      {/* HERO — Mejora diaria + AEO */}
+      <section className="w-full flex flex-col items-center text-center py-12 md:py-20 px-4">
+        <span className="px-4 py-1.5 bg-duo-green/20 border border-duo-green/40 rounded-full text-duo-green text-xs md:text-sm font-black uppercase tracking-widest mb-6">
+          Mejorá tu web cada día — sin ser experto en SEO
         </span>
-
-        <img src="/images/logo-full.png" alt="SEO Jump" className="relative w-40 md:w-52 h-auto object-contain mb-6 drop-shadow-2xl" />
-
-        <h1 className="relative text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.08] max-w-4xl mb-6">
-          Pegá la web de tu rival.{" "}
-          <span className="text-duo-green">Te decimos qué hace mejor</span>{" "}
-          — y qué cambiar hoy en la tuya.
+        <img src="/images/logo-full.png" alt="SEO Jump" className="w-48 md:w-64 h-auto object-contain mb-6 drop-shadow-2xl" />
+        <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.1] max-w-4xl mb-6">
+          Convertí tu web en una máquina de atraer <span className="text-duo-green">clientes reales.</span>
         </h1>
-
-        <p className="relative text-slate-300 font-semibold text-lg md:text-xl leading-relaxed max-w-2xl mb-8">
-          Sin Semrush. Sin informes de 50 páginas. Sin ser consultor SEO.
+        <p className="text-slate-300 font-semibold text-lg md:text-2xl leading-relaxed max-w-3xl mb-10">
+          SEO Jump conecta tu sitio, detecta oportunidades ocultas en Google y te asigna{" "}
+          <strong className="text-white">misiones diarias</strong> para que empresarios, profesionales y emprendedores
+          mejoren su web paso a paso — incluido aparecer en{" "}
+          <strong className="text-purple-400">ChatGPT, Gemini</strong> y las búsquedas con IA.
           <br />
-          <span className="text-slate-400 text-base md:text-lg">
-            Comparación en castellano, brechas accionables y misiones para ejecutar en minutos.
-          </span>
+          <span className="text-slate-400 text-base md:text-lg">Sin tecnicismos. Sin informes aburridos. 15 minutos por día.</span>
         </p>
 
-        <div className="relative flex flex-col sm:flex-row items-center gap-4 w-full justify-center mb-6">
+        <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
           <button
             onClick={handleStart}
-            className="btn-3d btn-green text-lg md:text-xl px-8 py-5 w-full sm:w-auto transform hover:scale-105 transition-all"
+            className="btn-3d btn-green text-xl md:text-2xl px-8 py-5 w-full sm:w-auto transform hover:scale-105 transition-all"
           >
-            🕵️ Espiar a mi competidor gratis
+            🚀 Analizar Mi Web Gratis
           </button>
           <a
             href="#como-funciona"
@@ -56,330 +83,392 @@ export default function LandingPage({ onStart, playClick }) {
           </a>
         </div>
 
-        <p className="relative text-slate-500 text-sm font-bold">
-          Plan gratis · 2 consultas IA/día · Sin tarjeta
-        </p>
-      </section>
-
-      {/* ═══ DEMO VISUAL — Resultado tipo Espía ═══ */}
-      <section className="w-full px-4 pb-16">
-        <div className="max-w-3xl mx-auto rounded-3xl border-2 border-purple-500/40 bg-gradient-to-br from-slate-900 via-purple-950/40 to-slate-900 p-6 md:p-8 shadow-[0_0_60px_rgba(139,92,246,0.2)]">
-          <div className="flex items-center gap-2 mb-4">
-            <span className="text-2xl">🦉</span>
-            <span className="text-xs font-black uppercase tracking-wider text-purple-300">Ejemplo de resultado</span>
-          </div>
-          <p className="text-white font-bold text-base md:text-lg mb-4 leading-relaxed">
-            &ldquo;Tu rival usa un título más claro con la ciudad y el servicio. Vos hablás de tu marca; ellos hablan de lo que busca el cliente.&rdquo;
+        <div className="mt-8 flex flex-col items-center">
+          <div className="flex text-yellow-400 text-xl mb-2">⭐⭐⭐⭐⭐</div>
+          <p className="text-slate-400 text-sm font-medium max-w-xl">
+            <strong className="text-slate-300">4.9/5</strong> – Negocios locales, e-commerce y profesionales que prefieren
+            una misión clara cada día antes que otro dashboard de SEO.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-            <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700">
-              <p className="text-[10px] font-black uppercase text-slate-500 mb-1">Tu web</p>
-              <p className="text-xs text-slate-300 font-bold">H1: &ldquo;Bienvenidos a Mi Taller&rdquo;</p>
-            </div>
-            <div className="bg-red-950/40 rounded-xl p-3 border border-red-500/30">
-              <p className="text-[10px] font-black uppercase text-red-400 mb-1">Rival</p>
-              <p className="text-xs text-slate-200 font-bold">H1: &ldquo;Detailing Profesional en Córdoba&rdquo;</p>
-            </div>
-          </div>
-          <div className="bg-duo-green/10 border border-duo-green/30 rounded-xl p-3">
-            <p className="text-xs font-black text-duo-green uppercase mb-1">✅ Tu misión de hoy</p>
-            <p className="text-sm text-slate-200 font-semibold">Cambiá el H1 para incluir servicio + zona. Te guiamos paso a paso en WordPress.</p>
-          </div>
         </div>
       </section>
 
-      {/* ═══ 3 PASOS — Espía ═══ */}
-      <section id="como-funciona" className="w-full py-16 px-4 flex flex-col items-center text-center scroll-mt-8">
-        <h2 className="text-3xl md:text-4xl font-black text-white mb-3">
-          Tres pasos. Cinco minutos. Sin dashboard.
-        </h2>
-        <p className="text-slate-400 text-lg max-w-xl mb-12">
-          No monitoreamos de noche ni te mandamos alertas mágicas. Vos pegás la URL cuando querés y la IA compara al toque.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-5xl text-left">
-          <div className="bg-slate-800/60 border-2 border-slate-700 rounded-2xl p-6">
-            <div className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center font-black text-lg mb-4">1</div>
-            <h3 className="text-lg font-black text-white mb-2">Pegás la URL del rival</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">
-              Ej: <span className="text-slate-300 font-bold">competencia.com</span>. Elegí al que te gana en Google para la búsqueda que te importa.
-            </p>
-          </div>
-          <div className="bg-slate-800/60 border-2 border-slate-700 rounded-2xl p-6">
-            <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-black text-lg mb-4">2</div>
-            <h3 className="text-lg font-black text-white mb-2">La IA compara las dos webs</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">
-              Lee título, H1 y temas de tu rival y los cruza con los tuyos. Sin gráficos raros: un veredicto en castellano.
-            </p>
-          </div>
-          <div className="bg-slate-800/60 border-2 border-duo-green/40 rounded-2xl p-6">
-            <div className="w-10 h-10 bg-duo-green text-white rounded-full flex items-center justify-center font-black text-lg mb-4">3</div>
-            <h3 className="text-lg font-black text-white mb-2">Ejecutás hasta 3 brechas</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">
-              Te dice qué cambiar y por qué. Si volvés a espiar al mismo rival, te avisamos si movió título o contenido.
-            </p>
-          </div>
-        </div>
-
-        <button
-          onClick={handleStart}
-          className="btn-3d btn-yellow text-base md:text-lg px-8 py-4 mt-10 font-black"
-        >
-          Probar el Espía gratis →
-        </button>
-      </section>
-
-      {/* ═══ VS — Tres columnas honestas ═══ */}
+      {/* EL PROBLEMA */}
       <section className="w-full py-16 px-4">
-        <h2 className="text-3xl md:text-4xl font-black text-center text-white mb-4">
-          No competimos con dashboards. Competimos con la parálisis.
+        <div className="bg-slate-900 p-8 md:p-12 rounded-3xl border-2 border-slate-700 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-red-500 opacity-5 rounded-full blur-3xl pointer-events-none" />
+
+          <h2 className="text-3xl md:text-4xl font-black text-white mb-6 text-center md:text-left">
+            Tu web pierde clientes ahora mismo. Y no sabés qué cambiar hoy.
+          </h2>
+          <p className="text-slate-300 text-lg mb-10 max-w-4xl text-center md:text-left">
+            Miles de personas buscan en Google o le preguntan a una IA exactamente lo que vos vendés. El problema no es tu
+            producto: es que nadie te traduce los datos en una acción concreta para esta semana.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 border border-red-500/30">❌</div>
+              <div>
+                <h3 className="text-lg font-black text-red-400">Potencial enterrado</h3>
+                <p className="text-slate-300 text-base mt-1.5">Páginas a un paso del Top 3 en Google que mueren en la página 2 porque nadie te dice qué título cambiar.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 border border-red-500/30">❌</div>
+              <div>
+                <h3 className="text-lg font-black text-red-400">Parálisis por análisis</h3>
+                <p className="text-slate-300 text-base mt-1.5">Search Console y herramientas caras te inundan de gráficos. Te quedás con la misma duda: ¿qué hago hoy?</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 border border-red-500/30">❌</div>
+              <div>
+                <h3 className="text-lg font-black text-red-400">El punto ciego de la IA (AEO)</h3>
+                <p className="text-slate-300 text-base mt-1.5">ChatGPT y Gemini ya recomiendan negocios. Si tu contenido no está estructurado para ellas, otro se queda con la cita.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 bg-red-500/20 rounded-xl flex items-center justify-center text-2xl flex-shrink-0 border border-red-500/30">❌</div>
+              <div>
+                <h3 className="text-lg font-black text-red-400">Sin hábito de mejora</h3>
+                <p className="text-slate-300 text-base mt-1.5">Sabés que tu web debería crecer, pero sin un plan diario termina siempre en "cuando tenga tiempo".</p>
+              </div>
+            </div>
+          </div>
+          <div className="mt-10 p-6 bg-duo-green/10 border border-duo-green/30 rounded-2xl text-center">
+            <p className="text-xl font-bold text-duo-green">
+              SEO Jump te da una misión por día: mejorás un poco, sumás XP, y tu web gana visibilidad en Google y en IA.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* CÓMO FUNCIONA */}
+      <section id="como-funciona" className="w-full py-16 px-4 flex flex-col items-center text-center scroll-mt-8">
+        <h2 className="text-3xl md:text-5xl font-black text-white mb-4">
+          De datos complejos a una misión simple al día.
         </h2>
-        <p className="text-slate-400 text-center max-w-2xl mx-auto mb-10 text-lg">
-          Semrush cuesta una fortuna. Otras apps SEO son otro panel más. SEO Jump te dice qué hacer hoy.
+        <p className="text-slate-300 text-lg md:text-xl max-w-2xl mb-12">
+          Pensado para dueños de negocio que valoran su tiempo, no para consultores SEO.
         </p>
 
+        <div className="flex flex-col lg:flex-row items-center gap-12 w-full max-w-6xl">
+          <div className="flex-1 w-full relative">
+            <div className="absolute inset-0 bg-duo-blue/20 blur-3xl rounded-full" />
+            <div className="relative bg-slate-800 border-2 border-slate-700 rounded-2xl shadow-2xl overflow-hidden aspect-[4/3] flex items-center justify-center">
+              <img
+                src="/images/landing-dashboard.jpg"
+                alt="Panel de SEO Jump con misiones, oportunidades AEO y sugerencias con IA"
+                className="w-full h-full object-cover object-top"
+              />
+            </div>
+          </div>
+
+          <div className="flex-1 space-y-8 text-left w-full">
+            <div className="flex gap-4 items-start">
+              <div className="w-10 h-10 bg-duo-blue text-white rounded-full flex items-center justify-center font-black shrink-0 text-xl shadow-lg border-2 border-blue-400">1</div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Conectás tu Search Console</h3>
+                <p className="text-slate-400 mt-2">En segundos, con tu cuenta de Google. Datos reales de tu web, no estimaciones.</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start">
+              <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-black shrink-0 text-xl shadow-lg border-2 border-purple-400">2</div>
+              <div>
+                <h3 className="text-xl font-bold text-white">La IA detecta oportunidades</h3>
+                <p className="text-slate-400 mt-2">Quick Wins en Google, oportunidades AEO para ChatGPT y Gemini, y prioridades claras.</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start">
+              <div className="w-10 h-10 bg-duo-green text-white rounded-full flex items-center justify-center font-black shrink-0 text-xl shadow-lg border-2 border-green-400">3</div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Completás misiones diarias</h3>
+                <p className="text-slate-400 mt-2">Cambiás un título, un H1, un FAQ. Verificamos que quedó en vivo. Sumás XP. Mañana, otra misión.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* BENEFICIOS — AEO primero */}
+      <section className="w-full py-16 px-4">
+        <h2 className="text-3xl md:text-5xl font-black text-center text-white mb-4">
+          Todo el poder de una agencia de SEO en un juego diario.
+        </h2>
+        <p className="text-slate-400 text-center max-w-2xl mx-auto mb-12 text-lg">
+          Cada herramienta te empuja a mejorar un poco tu web hoy — no a mirar gráficos toda la tarde.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
+          <div className="bg-slate-800/50 p-8 rounded-2xl border-2 border-purple-500/40 hover:border-purple-400/60 transition-colors">
+            <div className="text-4xl mb-4">🤖</div>
+            <h3 className="text-xl font-bold text-white mb-3">Oportunidades AEO</h3>
+            <p className="text-slate-400 leading-relaxed">
+              Detectamos qué páginas pueden ser citadas por ChatGPT, Gemini y Google AI. El futuro del tráfico pasa por
+              ser la respuesta — acá sabés cuál optimizar primero.
+            </p>
+          </div>
+          <div className="bg-slate-800/50 p-8 rounded-2xl border border-slate-700 hover:border-orange-500/50 transition-colors">
+            <div className="text-4xl mb-4">🔎</div>
+            <h3 className="text-xl font-bold text-white mb-3">Quick Wins (SEO)</h3>
+            <p className="text-slate-400 leading-relaxed">
+              Páginas en posición 8–15 con demanda real. La IA sugiere el título que te empuja al Top 3. Insight masticado,
+              acción inmediata.
+            </p>
+          </div>
+          <div className="bg-slate-800/50 p-8 rounded-2xl border border-slate-700 hover:border-yellow-500/50 transition-colors">
+            <div className="text-4xl mb-4">🎮</div>
+            <h3 className="text-xl font-bold text-white mb-3">Misiones inteligentes</h3>
+            <p className="text-slate-400 leading-relaxed">
+              H1, meta, FAQs, verificación en vivo. Cada tarea es una misión clara. Completás, mejorás, sumás XP.
+            </p>
+          </div>
+          <div className="bg-slate-800/50 p-8 rounded-2xl border border-slate-700 hover:border-cyan-500/50 transition-colors">
+            <div className="text-4xl mb-4">📈</div>
+            <h3 className="text-xl font-bold text-white mb-3">Score de visibilidad</h3>
+            <p className="text-slate-400 leading-relaxed">
+              Un indicador que muestra si vas ganando autoridad en Google y optimización para IA — de un vistazo.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* AEO — Bloque estratégico */}
+      <section className="w-full py-20 px-4">
+        <div className="bg-gradient-to-br from-indigo-900 to-purple-900 p-8 md:p-14 rounded-3xl border border-purple-500/30 shadow-[0_0_50px_rgba(139,92,246,0.15)] text-center relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-full h-full bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4IiBoZWlnaHQ9IjgiPgo8cmVjdCB3aWR0aD0iOCIgaGVpZ2h0PSI4IiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9IjAuMDUiLz4KPC9zdmc+')] opacity-20" />
+          <h2 className="text-3xl md:text-5xl font-black text-white mb-8 relative z-10">
+            El futuro no es solo aparecer en Google. Es <span className="text-purple-300">convertirse en la respuesta.</span>
+          </h2>
+          <p className="text-purple-100 text-lg md:text-xl max-w-4xl mx-auto leading-relaxed relative z-10 font-medium">
+            Antes, el usuario elegía entre diez enlaces. Hoy, millones le preguntan a una IA y reciben una sola respuesta.
+            Si alguien pregunta <em>«¿Cuál es el mejor servicio en mi zona?»</em>, la IA cita a quien demuestre claridad y
+            autoridad. SEO Jump te da las pautas para ser vos ese negocio — con misiones concretas, no teoria.
+            <br /><br />
+            <strong>Estar en Google y en las IA ya no es opcional: es supervivencia comercial.</strong>
+          </p>
+          <Link
+            href="/blog/que-es-aeo-y-por-que-aparecer-en-inteligencia-artificial"
+            onClick={playClick}
+            className="inline-block mt-8 relative z-10 text-purple-200 font-black text-sm hover:text-white underline underline-offset-4"
+          >
+            Leé qué es AEO y por qué importa →
+          </Link>
+        </div>
+      </section>
+
+      {/* GAMIFICACIÓN */}
+      <section className="w-full py-16 px-4 flex flex-col items-center">
+        <h2 className="text-3xl md:text-5xl font-black text-center text-white mb-4">
+          Olvidate de los tableros imposibles. Esto es un juego.
+        </h2>
+        <p className="text-slate-400 text-lg md:text-xl max-w-2xl text-center mb-12">
+          Las agencias te cobran fortunas por reportes. Vos resolvés misiones en 15 minutos y tu web sube de nivel.
+        </p>
+
+        <div className="flex flex-col gap-4 w-full max-w-3xl">
+          <MissionRow icon="🤖" color="purple" title="Blindaje contra IA" desc="Estructurá contenido para ser citado por Gemini." xp="+30 XP" />
+          <MissionRow icon="🏆" color="yellow" title="Captura de tráfico" desc="Optimizá el título de una página en zona de ataque." xp="+20 XP" />
+          <MissionRow icon="🕵️" color="red" title="Espía de la Competencia" desc="Compará tu web con un rival y cerrá brechas concretas." xp="+15 XP" />
+          <MissionRow icon="⚔️" color="orange" title="Ataque a la competencia" desc="Aprovechá una keyword de oportunidad antes que tu rival." xp="+25 XP" />
+        </div>
+      </section>
+
+      {/* ESPIA — Sección secundaria (no hero) */}
+      <SpyFeatureBlock playClick={playClick} compact />
+
+      {/* PARA QUIÉN ES */}
+      <section className="w-full py-16 px-4">
+        <h2 className="text-3xl md:text-5xl font-black text-center text-white mb-12">
+          Para empresarios, profesionales y emprendedores que quieren resultados, no reportes.
+        </h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          <AudienceCard emoji="📍" title="Negocios locales & PyMEs" desc="Mejorá tu web sin código ni agencia. Una misión por día." border="blue" />
+          <AudienceCard emoji="📦" title="E-commerce" desc="Optimizá fichas y categorías que pierden ventas por falta de SEO." border="orange" />
+          <AudienceCard emoji="💼" title="Profesionales & freelancers" desc="Tu web trabaja por vos mientras atendés clientes." border="purple" />
+          <AudienceCard emoji="✍️" title="Emprendedores & creadores" desc="Google + IA desde el día uno, sin volverte experto." border="green" />
+        </div>
+      </section>
+
+      {/* DIFERENCIAL */}
+      <section className="w-full py-16 px-4">
+        <div className="max-w-5xl mx-auto text-center">
+          <h2 className="text-3xl md:text-4xl font-black text-white mb-10">
+            La mayoría te inunda con datos. SEO Jump te da la misión de hoy.
+          </h2>
+          <div className="overflow-hidden rounded-2xl border border-slate-700 shadow-2xl">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr>
+                  <th className="bg-slate-800 p-4 md:p-6 text-slate-300 font-bold border-b border-slate-700 w-1/2">Otras plataformas (Semrush, Ahrefs)</th>
+                  <th className="bg-duo-green/10 p-4 md:p-6 text-duo-green font-bold border-b border-duo-green/20 w-1/2">SEO Jump</th>
+                </tr>
+              </thead>
+              <tbody className="bg-slate-900">
+                <tr>
+                  <td className="p-4 md:p-6 border-b border-slate-800 text-slate-400 text-sm md:text-base">Gráficos, keywords y dashboards para especialistas.</td>
+                  <td className="p-4 md:p-6 border-b border-slate-800 text-white font-medium text-sm md:text-base bg-duo-green/5">Una misión clara por día en castellano.</td>
+                </tr>
+                <tr>
+                  <td className="p-4 md:p-6 border-b border-slate-800 text-slate-400 text-sm md:text-base">Te dicen qué está mal; vos interpretás.</td>
+                  <td className="p-4 md:p-6 border-b border-slate-800 text-white font-medium text-sm md:text-base bg-duo-green/5">Te decimos qué cambiar, por qué, y verificamos que lo hiciste.</td>
+                </tr>
+                <tr>
+                  <td className="p-4 md:p-6 text-slate-400 text-sm md:text-base">$140+/mes y curva de aprendizaje alta.</td>
+                  <td className="p-4 md:p-6 text-white font-medium text-sm md:text-base bg-duo-green/5">Gratis para empezar. Mejorás tu web un poco cada día.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      {/* TESTIMONIOS */}
+      <section className="w-full py-16 px-4">
+        <h2 className="text-3xl md:text-4xl font-black text-center text-white mb-12">Lo que dicen los primeros jugadores</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6">
-            <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-3">Semrush / Ahrefs</p>
-            <h3 className="text-lg font-black text-slate-300 mb-4">El laboratorio (~$140+/mes)</h3>
-            <ul className="space-y-2 text-sm text-slate-400">
-              <li>✓ Keywords y backlinks a escala</li>
-              <li>✓ Para agencias y consultores</li>
-              <li className="text-red-400/90">✗ Abrumador para una PyME</li>
-              <li className="text-red-400/90">✗ Te da datos, no la tarea del martes</li>
-            </ul>
-          </div>
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6">
-            <p className="text-xs font-black uppercase tracking-wider text-slate-500 mb-3">Otra app SEO</p>
-            <h3 className="text-lg font-black text-slate-300 mb-4">Otro dashboard más</h3>
-            <ul className="space-y-2 text-sm text-slate-400">
-              <li>✓ Gráficos y métricas bonitas</li>
-              <li>✓ IA que resume cosas</li>
-              <li className="text-red-400/90">✗ Mismo problema: ¿y ahora qué?</li>
-              <li className="text-red-400/90">✗ Hecho por devs, para devs</li>
-            </ul>
-          </div>
-          <div className="bg-duo-green/5 border-2 border-duo-green/40 rounded-2xl p-6 relative">
-            <p className="text-xs font-black uppercase tracking-wider text-duo-green mb-3">SEO Jump</p>
-            <h3 className="text-lg font-black text-white mb-4">Tu socio de ejecución</h3>
-            <ul className="space-y-2 text-sm text-slate-200">
-              <li>✓ Espía: rival vs vos en segundos</li>
-              <li>✓ Misiones concretas (H1, meta, FAQ)</li>
-              <li>✓ Datos reales de Search Console</li>
-              <li>✓ Gratis para empezar · PRO accesible</li>
-            </ul>
-            <Link
-              href="/precios"
-              onClick={playClick}
-              className="inline-block mt-4 text-duo-green text-sm font-black hover:underline"
+          <Testimonial quote="Tenía pánico de Search Console. Con SEO Jump descubrí páginas a nada del Top 3. Apliqué el cambio y el tráfico subió a la semana." author="Juan M., Tienda Online" />
+          <Testimonial quote="Las oportunidades AEO son una locura. ChatGPT nos citó en dos artículos de servicios. El retorno fue inmediato." author="Carlos T., Consultor" />
+          <Testimonial quote="El Espía de la Competencia me mostró en claro qué hacía mejor mi rival. Cambié el H1 y entendí por fin qué atacar." author="Usuario SEO Jump" />
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="w-full py-16 px-4 max-w-4xl mx-auto">
+        <h2 className="text-3xl md:text-4xl font-black text-center text-white mb-10">Preguntas frecuentes</h2>
+        <div className="space-y-6">
+          <Faq q="¿Tengo que ser experto en SEO?" a="No. SEO Jump traduce todo a instrucciones simples. Si sabés copiar, pegar y editar un texto en tu web, alcanza." />
+          <Faq q="¿Qué diferencia hay entre SEO y AEO?" a="SEO = aparecer en los enlaces de Google. AEO = que ChatGPT y Gemini te citen como respuesta. SEO Jump trabaja ambos con misiones concretas." />
+          <Faq q="¿Por qué conectar Search Console?" a="Es la fuente oficial de Google sobre tu web. Sin adivinar: usamos tus datos reales de clics, impresiones y posiciones." />
+          <Faq q="¿Y el Espía de la Competencia?" a="Es una herramienta extra: pegás la URL de un rival y la IA compara su web con la tuya. Útil, pero el corazón de SEO Jump son las misiones diarias y el AEO." />
+          <Faq q="¿Es seguro conectar Google?" a="Sí. OAuth oficial de Google. No vemos tu contraseña." />
+        </div>
+      </section>
+
+      {/* CTA FINAL */}
+      <section className="w-full py-20 px-4 mb-10">
+        <div className="max-w-4xl mx-auto bg-slate-900 border-2 border-duo-green/30 p-10 md:p-16 rounded-3xl text-center shadow-2xl relative overflow-hidden">
+          <div className="absolute inset-0 bg-duo-green/5 blur-xl pointer-events-none" />
+          <h3 className="text-2xl md:text-4xl font-black text-white mb-6 relative z-10">
+            Tu próximo cliente ya está buscando una respuesta.
+          </h3>
+          <p className="text-slate-300 text-lg md:text-xl mb-10 relative z-10">
+            Empezá hoy con una misión. Mañana, otra. En un mes, una web que trabaja por vos en Google y en IA.
+          </p>
+          <div className="relative z-10 w-full max-w-md mx-auto">
+            <button
+              onClick={handleStart}
+              className="btn-3d btn-green text-xl md:text-2xl px-6 py-5 w-full transform hover:scale-105 transition-all"
             >
-              Ver planes →
+              🚀 Empezar Gratis Ahora
+            </button>
+            <p className="text-slate-500 text-xs mt-6">
+              Al registrarte aceptás nuestros{" "}
+              <a href="/terminos" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-300">Términos</a>
+              {" "}y{" "}
+              <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-300">Privacidad</a>.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <LandingFooter playClick={playClick} />
+    </div>
+  );
+}
+
+function MissionRow({ icon, color, title, desc, xp }) {
+  const bg = { purple: "bg-purple-500/20 text-purple-400 border-purple-500/30", yellow: "bg-yellow-500/20 text-yellow-500 border-yellow-500/30", red: "bg-red-500/20 text-red-500 border-red-500/30", orange: "bg-orange-500/20 text-orange-400 border-orange-500/30" }[color];
+  return (
+    <div className="bg-slate-800 border-2 border-slate-700 rounded-xl p-5 flex items-center justify-between shadow-lg gap-3">
+      <div className="flex items-center gap-4 min-w-0">
+        <div className={`w-12 h-12 rounded-lg flex items-center justify-center text-2xl border flex-shrink-0 ${bg}`}>{icon}</div>
+        <div className="min-w-0">
+          <h4 className="font-bold text-white text-lg">{title}</h4>
+          <p className="text-slate-400 text-sm">{desc}</p>
+        </div>
+      </div>
+      <div className="bg-slate-900 px-3 py-1.5 rounded-full border border-slate-700 text-yellow-500 font-black text-sm whitespace-nowrap flex-shrink-0">{xp}</div>
+    </div>
+  );
+}
+
+function AudienceCard({ emoji, title, desc, border }) {
+  const b = { blue: "border-l-blue-500", orange: "border-l-orange-500", purple: "border-l-purple-500", green: "border-l-duo-green" }[border];
+  return (
+    <div className={`bg-slate-900 p-6 rounded-2xl border-l-4 ${b} border border-slate-800`}>
+      <h3 className="text-xl font-bold text-white flex items-center gap-2 mb-2">{emoji} {title}</h3>
+      <p className="text-slate-400">{desc}</p>
+    </div>
+  );
+}
+
+function Testimonial({ quote, author }) {
+  return (
+    <div className="bg-slate-800 p-6 rounded-2xl border border-slate-700">
+      <div className="text-yellow-400 text-sm mb-3">⭐⭐⭐⭐⭐</div>
+      <p className="text-slate-300 italic mb-4">&ldquo;{quote}&rdquo;</p>
+      <p className="font-bold text-white text-sm">— {author}</p>
+    </div>
+  );
+}
+
+function Faq({ q, a }) {
+  return (
+    <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800">
+      <h3 className="text-lg font-bold text-white mb-2">{q}</h3>
+      <p className="text-slate-400">{a}</p>
+    </div>
+  );
+}
+
+/** Bloque Espía — secundario en home, principal en /espia-competencia */
+function SpyFeatureBlock({ playClick, compact = false }) {
+  return (
+    <section className={`w-full px-4 ${compact ? "py-12" : "py-16"}`}>
+      <div className="max-w-4xl mx-auto rounded-3xl border-2 border-red-500/30 bg-gradient-to-br from-slate-900 via-red-950/20 to-slate-900 p-8 md:p-10">
+        <div className="flex flex-col md:flex-row md:items-center gap-6">
+          <div className="flex-1 space-y-3">
+            <span className="text-xs font-black uppercase tracking-wider text-red-400">También incluido · Fase Detective</span>
+            <h2 className="text-2xl md:text-3xl font-black text-white">
+              🕵️ Espía de la Competencia
+            </h2>
+            <p className="text-slate-300 leading-relaxed">
+              ¿Querés saber qué hace mejor un rival en Google? Pegá su URL y la IA compara título, H1 y temas con tu web —
+              sin pagar Semrush. Es un complemento de las misiones diarias, no el centro de la app.
+            </p>
+            <Link
+              href="/blog/como-espiar-competencia-google-sin-semrush"
+              onClick={playClick}
+              className="inline-block text-cyan-400 font-bold text-sm hover:underline"
+            >
+              Guía: espiar competencia sin Semrush →
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* ═══ EL PROBLEMA — Reframed ═══ */}
-      <section className="w-full py-16 px-4">
-        <div className="bg-slate-900 p-8 md:p-12 rounded-3xl border-2 border-slate-700 shadow-2xl max-w-5xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-black text-white mb-6 text-center">
-            Tenés datos. Tenés rival. No tenés tiempo para ser consultor SEO.
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">😰</span>
-              <div>
-                <h3 className="font-black text-red-400">Parálisis</h3>
-                <p className="text-slate-400 text-sm mt-1">Abrís Search Console, ves números, cerrás la pestaña. Nadie te traduce eso a una acción.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">🥊</span>
-              <div>
-                <h3 className="font-black text-orange-400">Rival invisible</h3>
-                <p className="text-slate-400 text-sm mt-1">Sabés que te ganan en Google pero no qué hacen distinto en su web. Semrush es overkill para averiguarlo.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">📊</span>
-              <div>
-                <h3 className="font-black text-amber-400">Informes que generan trabajo</h3>
-                <p className="text-slate-400 text-sm mt-1">50 páginas de auditoría. Cero claridad sobre el único cambio que movería la aguja esta semana.</p>
-              </div>
-            </div>
-            <div className="flex items-start gap-3">
-              <span className="text-2xl">⏱️</span>
-              <div>
-                <h3 className="font-black text-purple-400">Cero tiempo</h3>
-                <p className="text-slate-400 text-sm mt-1">Sos dueño de negocio, no especialista. Necesitás 15 minutos libres y una misión clara.</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ SISTEMA COMPLETO — Después del gancho ═══ */}
-      <section className="w-full py-16 px-4">
-        <h2 className="text-3xl md:text-4xl font-black text-center text-white mb-3">
-          El Espía abre la puerta. El juego te hace quedarte.
-        </h2>
-        <p className="text-slate-400 text-center max-w-2xl mx-auto mb-12">
-          SEO Jump no es solo espiar rivales: es un sistema para ejecutar SEO sin volverte experto.
-        </p>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 max-w-5xl mx-auto">
-          <div className="bg-slate-800/50 p-6 rounded-2xl border border-red-500/30">
-            <div className="text-3xl mb-3">🕵️</div>
-            <h3 className="text-lg font-black text-white mb-2">Espía de la Competencia</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">Compará tu web con un rival. Brechas accionables en castellano. Incluido en PRO, sin cargo extra.</p>
-          </div>
-          <div className="bg-slate-800/50 p-6 rounded-2xl border border-orange-500/30">
-            <div className="text-3xl mb-3">🔎</div>
-            <h3 className="text-lg font-black text-white mb-2">Quick Wins</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">Páginas en posición 8–15 con demanda real. La IA sugiere el título que te empuja al Top 3.</p>
-          </div>
-          <div className="bg-slate-800/50 p-6 rounded-2xl border border-purple-500/30">
-            <div className="text-3xl mb-3">🤖</div>
-            <h3 className="text-lg font-black text-white mb-2">Oportunidades AEO</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">Contenido listo para ser citado por ChatGPT y Gemini. El SEO del futuro, sin jerga.</p>
-          </div>
-          <div className="bg-slate-800/50 p-6 rounded-2xl border border-duo-green/30">
-            <div className="text-3xl mb-3">🎮</div>
-            <h3 className="text-lg font-black text-white mb-2">Misiones + verificación</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">H1, meta, FAQs. Aplicás el cambio, verificamos que quedó en vivo, sumás XP. Acción, no PDF.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ GAMIFICACIÓN — Espía primero ═══ */}
-      <section className="w-full py-16 px-4 flex flex-col items-center">
-        <h2 className="text-2xl md:text-3xl font-black text-center text-white mb-8">
-          Misiones que cualquiera entiende
-        </h2>
-        <div className="flex flex-col gap-3 w-full max-w-2xl">
-          <div className="bg-slate-800 border-2 border-red-500/40 rounded-xl p-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center text-xl flex-shrink-0">🕵️</div>
-              <div className="min-w-0">
-                <h4 className="font-black text-white text-sm md:text-base">Espía de la Competencia</h4>
-                <p className="text-slate-400 text-xs md:text-sm">Compará tu web con un rival y cerrá brechas.</p>
-              </div>
-            </div>
-            <span className="bg-slate-900 px-2 py-1 rounded-full border border-slate-700 text-yellow-500 font-black text-xs flex-shrink-0">+15 XP</span>
-          </div>
-          <div className="bg-slate-800 border-2 border-slate-700 rounded-xl p-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 bg-yellow-500/20 rounded-lg flex items-center justify-center text-xl flex-shrink-0">🏆</div>
-              <div className="min-w-0">
-                <h4 className="font-black text-white text-sm md:text-base">Captura de Tráfico</h4>
-                <p className="text-slate-400 text-xs md:text-sm">Optimizá el título de una página en zona de ataque.</p>
-              </div>
-            </div>
-            <span className="bg-slate-900 px-2 py-1 rounded-full border border-slate-700 text-yellow-500 font-black text-xs flex-shrink-0">+20 XP</span>
-          </div>
-          <div className="bg-slate-800 border-2 border-slate-700 rounded-xl p-4 flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 bg-purple-500/20 rounded-lg flex items-center justify-center text-xl flex-shrink-0">🤖</div>
-              <div className="min-w-0">
-                <h4 className="font-black text-white text-sm md:text-base">Blindaje AEO</h4>
-                <p className="text-slate-400 text-xs md:text-sm">Estructurá contenido para que la IA te cite.</p>
-              </div>
-            </div>
-            <span className="bg-slate-900 px-2 py-1 rounded-full border border-slate-700 text-yellow-500 font-black text-xs flex-shrink-0">+30 XP</span>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══ PARA QUIÉN ═══ */}
-      <section className="w-full py-12 px-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
-          {[
-            { emoji: "📍", title: "PyMEs y negocios locales", desc: "Showroom, taller, tienda online — sin agencia ni Semrush." },
-            { emoji: "📦", title: "E-commerce chico", desc: "Sabé qué hace mejor la ficha de producto del rival." },
-            { emoji: "💼", title: "Agencias", desc: "Onboarding rápido de clientes con Search Console." },
-            { emoji: "✍️", title: "Freelancers", desc: "Entregá acciones, no informes kilométricos." },
-          ].map((item) => (
-            <div key={item.title} className="bg-slate-900/80 p-5 rounded-xl border border-slate-800">
-              <h3 className="font-black text-white text-sm mb-1">{item.emoji} {item.title}</h3>
-              <p className="text-slate-400 text-xs">{item.desc}</p>
-            </div>
-          ))}
-        </div>
-      </section>
-
-      {/* ═══ FAQ ═══ */}
-      <section className="w-full py-16 px-4 max-w-3xl mx-auto">
-        <h2 className="text-2xl md:text-3xl font-black text-center text-white mb-8">Preguntas frecuentes</h2>
-        <div className="space-y-4">
-          {[
-            {
-              q: "¿El Espía reemplaza a Semrush?",
-              a: "No para keyword research masivo ni backlinks. Sí para la pregunta típica de una PyME: «¿qué hace mejor este competidor en su web y qué cambio yo?». Eso cuesta $140/mes en suites pro; acá está incluido en el plan.",
-            },
-            {
-              q: "¿Monitorean mi competencia de noche?",
-              a: "No. El Espía es on-demand: vos pegás la URL cuando querés. Si volvés a espiar al mismo rival, comparamos con la visita anterior y te avisamos si cambió algo.",
-            },
-            {
-              q: "¿Necesito conectar Search Console?",
-              a: "Para el Espía podés comparar dos webs sin GSC. Para Quick Wins y misiones con tus datos reales de Google, sí — es la fuente de verdad y la conexión es segura vía OAuth.",
-            },
-            {
-              q: "¿Cuánto cuesta?",
-              a: "Gratis para empezar (1 rival, 2 consultas IA/día). PRO incluye Espía + más rivales y consultas, sin módulos extra. Ver precios en /precios.",
-            },
-          ].map((item) => (
-            <div key={item.q} className="bg-slate-900 p-5 rounded-xl border border-slate-800">
-              <h3 className="font-black text-white text-sm md:text-base mb-2">{item.q}</h3>
-              <p className="text-slate-400 text-sm leading-relaxed">{item.a}</p>
-            </div>
-          ))}
-        </div>
-        <p className="text-center mt-6">
           <Link
-            href="/blog/como-espiar-competencia-google-sin-semrush"
+            href="/espia-competencia"
             onClick={playClick}
-            className="text-cyan-400 font-bold text-sm hover:underline"
+            className="btn-3d btn-yellow text-center font-black px-6 py-4 text-sm md:text-base whitespace-nowrap flex-shrink-0"
           >
-            Leé la guía completa: espiar competencia sin Semrush →
+            Conocer el Espía →
           </Link>
-        </p>
-      </section>
-
-      {/* ═══ CTA FINAL ═══ */}
-      <section className="w-full py-16 px-4 mb-8">
-        <div className="max-w-3xl mx-auto bg-gradient-to-br from-red-950/50 via-slate-900 to-purple-950/50 border-2 border-red-500/30 p-10 md:p-14 rounded-3xl text-center shadow-2xl">
-          <h3 className="text-2xl md:text-4xl font-black text-white mb-4">
-            Tu rival ya está en Google. ¿Vos qué estás esperando?
-          </h3>
-          <p className="text-slate-300 text-base md:text-lg mb-8 max-w-lg mx-auto">
-            Pegá su URL. Enter. Tres brechas. Una misión. Sin dashboard de la NASA.
-          </p>
-          <button
-            onClick={handleStart}
-            className="btn-3d btn-green text-lg md:text-xl px-8 py-5 w-full max-w-md mx-auto block transform hover:scale-105 transition-all"
-          >
-            🕵️ Espiar a mi competidor gratis
-          </button>
-          <p className="text-slate-500 text-xs mt-6">
-            Al registrarte aceptás nuestros{" "}
-            <a href="/terminos" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-300">Términos</a>
-            {" "}y{" "}
-            <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-300">Privacidad</a>.
-          </p>
         </div>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      <footer className="w-full border-t border-slate-800 py-8 text-center text-slate-500 text-sm">
-        <p>© {new Date().getFullYear()} SEO Jump. Todos los derechos reservados.</p>
-        <div className="flex flex-wrap gap-4 justify-center mt-4">
-          <Link href="/precios" onClick={playClick} className="hover:text-slate-300 transition-colors">Precios</Link>
-          <Link href="/blog" onClick={playClick} className="hover:text-slate-300 transition-colors">Academia SEO</Link>
-          <a href="/terminos" target="_blank" rel="noopener noreferrer" className="hover:text-slate-300 transition-colors">Términos</a>
-          <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="hover:text-slate-300 transition-colors">Privacidad</a>
-          <a href="mailto:nahuel@seo-jump.ai" className="hover:text-slate-300 transition-colors">Contacto</a>
-        </div>
-      </footer>
-    </div>
+function LandingFooter({ playClick }) {
+  return (
+    <footer className="w-full border-t border-slate-800 py-8 text-center text-slate-500 text-sm">
+      <p>© {new Date().getFullYear()} SEO Jump. Todos los derechos reservados.</p>
+      <div className="flex flex-wrap gap-4 justify-center mt-4">
+        <Link href="/precios" onClick={playClick} className="hover:text-slate-300 transition-colors">Precios</Link>
+        <Link href="/blog" onClick={playClick} className="hover:text-slate-300 transition-colors">Academia SEO</Link>
+        <Link href="/espia-competencia" onClick={playClick} className="hover:text-slate-300 transition-colors">Espía de la Competencia</Link>
+        <a href="/terminos" target="_blank" rel="noopener noreferrer" className="hover:text-slate-300 transition-colors">Términos</a>
+        <a href="/privacidad" target="_blank" rel="noopener noreferrer" className="hover:text-slate-300 transition-colors">Privacidad</a>
+        <a href="mailto:nahuel@seo-jump.ai" className="hover:text-slate-300 transition-colors">Contacto</a>
+      </div>
+    </footer>
   );
 }
