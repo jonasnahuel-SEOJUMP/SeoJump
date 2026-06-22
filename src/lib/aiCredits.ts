@@ -173,7 +173,7 @@ function limitErrorMessage(code: 'AI_CREDIT_DAILY' | 'AI_CREDIT_MONTHLY', status
   }
 
   if (status.plan === 'free') {
-    return `Usaste tus ${status.limitDay} consultas IA gratis de hoy. Volvé mañana o pasate a PRO por $35.000/mes.`;
+    return `Usaste tus ${status.limitDay} consultas IA gratis de hoy. Volvé mañana o pasate a PRO.`;
   }
   if (status.plan === 'pro') {
     return `Llegaste al límite de hoy (${status.limitDay} consultas IA). Mañana se renuevan.`;

@@ -29,12 +29,15 @@ export default function PaywallModal({ onClose, totalHiddenMissions, playClick }
           </div>
 
           <h2 className="text-2xl md:text-3xl font-black text-white mb-4 leading-tight">
-            Desbloqueá el análisis completo y activá las{" "}
+            Desbloqueá las{" "}
             <span className="text-duo-green">{totalHiddenMissions}</span> oportunidades ocultas de tu web
           </h2>
 
-          <p className="text-slate-400 font-medium text-base mb-6">
-            Con el plan PRO tenés todas las misiones, más consultas IA por día y sin candados en Quick Wins y AEO.
+          <p className="text-slate-400 font-medium text-base mb-2">
+            En el plan gratis ves <strong className="text-slate-200">2 a la vez</strong> en cada sección (misiones, Quick Wins y AEO). Con PRO se abren todas.
+          </p>
+          <p className="text-slate-500 font-bold text-sm mb-6">
+            Completar y verificar misiones en tu web no gasta consultas IA.
           </p>
 
           <div className="bg-slate-800 border-2 border-slate-700 rounded-2xl p-6 mb-6 relative overflow-hidden text-left space-y-3">
@@ -42,8 +45,8 @@ export default function PaywallModal({ onClose, totalHiddenMissions, playClick }
             <p className="text-sm font-black text-white">Plan PRO — {proPrice}/mes · IVA incluido</p>
             <ul className="text-sm font-bold text-slate-400 space-y-1">
               <li>✓ {PLANS.pro.aiPerDay} consultas IA por día</li>
-              <li>✓ Todas las misiones desbloqueadas</li>
-              <li>✓ Quick Wins y AEO sin límite de cantidad</li>
+              <li>✓ Todas las misiones y oportunidades visibles</li>
+              <li>✓ Quick Wins, AEO y Espía sin candados</li>
             </ul>
           </div>
 
@@ -51,7 +54,7 @@ export default function PaywallModal({ onClose, totalHiddenMissions, playClick }
             onBeforeRedirect={() => { if (playClick) playClick(); onClose(); }}
             className="w-full btn-3d btn-green !py-4 text-lg md:text-xl font-black flex justify-center items-center gap-3 disabled:opacity-60"
           >
-            SUSCRIBIRME CON MERCADO PAGO
+            SUSCRIBIRME A PRO
           </SubscribeProButton>
 
           <Link

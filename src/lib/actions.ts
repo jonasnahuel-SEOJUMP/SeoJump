@@ -3,7 +3,7 @@
 import fs from "fs"
 import path from "path"
 import { signIn, signOut, auth } from "../auth"
-import { getSearchConsoleData, submitGoogleIndexing } from "./google"
+import { getSearchConsoleData, submitGoogleIndexing, getSearchConsoleConnectionStatus } from "./google"
 import { GoogleGenerativeAI } from "@google/generative-ai"
 import { completeMission, getMissionsByEmail, deleteProfileByEmail, updateSubscriptionPlan, getCompetitorSnapshot, saveCompetitorSnapshot, listCompetitorUrls, type MissionType, type CompetitorSnapshot } from './supabase'
 import { normalizePagePath, pathSlug, buildAeoKey } from './missionMemory'
@@ -50,6 +50,31 @@ export async function checkIsAdmin(): Promise<boolean> {
     return isAdmin;
   } catch {
     return false;
+  }
+}
+
+/**
+ * Diagnóstico de conexión con Search Console para el sitio del usuario.
+ * Aditivo y sin efectos: solo informa a la UI para guiar al usuario.
+ * Devuelve 'connected' | 'no_property' | 'no_scope' | 'error' | 'no_site'.
+ */
+export async function checkSearchConsoleStatus(
+  siteUrl: string
+): Promise<{ status: string; matchedProperty: string | null; properties: string[] }> {
+  try {
+    const cleanSite = (siteUrl || '').trim();
+    if (!cleanSite) {
+      return { status: 'no_site', matchedProperty: null, properties: [] };
+    }
+    const session = await auth();
+    if (!session?.user?.email) {
+      return { status: 'no_scope', matchedProperty: null, properties: [] };
+    }
+    const normalized = cleanSite.startsWith('http') ? cleanSite : `https://${cleanSite}`;
+    return await getSearchConsoleConnectionStatus(session.accessToken, normalized);
+  } catch (err) {
+    console.warn('[checkSearchConsoleStatus]', err);
+    return { status: 'error', matchedProperty: null, properties: [] };
   }
 }
 
@@ -3828,10 +3853,37 @@ function diffSnapshots(prev: CompetitorSnapshot, next: CompetitorSnapshot): SpyC
 }
 
 /**
+ * Busca en Search Console la página propia que mejor rankea para una keyword.
+ * Devuelve la URL (preferentemente una página interna, no la home) o null.
+ */
+async function findOwnPageForKeyword(
+  accessToken: string,
+  ownSiteUrl: string,
+  keyword: string
+): Promise<string | null> {
+  try {
+    const rows = await getSearchConsoleData(accessToken, ownSiteUrl, keyword, 5);
+    if (!Array.isArray(rows) || rows.length === 0) return null;
+    // Dimensiones [page, query] → keys[0] = URL de la página.
+    const pages = rows
+      .map((r: any) => (Array.isArray(r.keys) ? r.keys[0] : null))
+      .filter((u: any): u is string => typeof u === 'string' && u.length > 0);
+    if (pages.length === 0) return null;
+    const nonHome = pages.find((u) => {
+      try { return new URL(u).pathname.replace(/\/+$/, '') !== ''; } catch { return false; }
+    });
+    return nonHome || pages[0];
+  } catch (err) {
+    console.warn('[findOwnPageForKeyword] error:', err);
+    return null;
+  }
+}
+
+/**
  * Espía on-demand a un competidor: scrapea su web, la compara con la del usuario
  * vía Gemini y devuelve brechas accionables. Detecta cambios si ya se había espiado antes.
  */
-export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, goldKeyword?: string) {
+export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, goldKeyword?: string, ownComparisonUrl?: string) {
   // ── Auth ──────────────────────────────────────────────────────────────────
   const session = await auth();
   const userEmail = (session?.user?.email || '').toLowerCase().trim();
@@ -3854,6 +3906,35 @@ export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, g
   if (ownUrl && !ownUrl.startsWith('http://') && !ownUrl.startsWith('https://')) {
     ownUrl = 'https://' + ownUrl;
   }
+
+  // Página propia equivalente (opcional): si el usuario la pega, comparamos
+  // manzana-con-manzana (producto vs producto) en vez de su home vs el producto rival.
+  let ownComparison = (ownComparisonUrl || '').trim();
+  if (ownComparison) {
+    const cmpSanit = sanitizeInput(ownComparison, 'url');
+    if (cmpSanit.isValid) {
+      ownComparison = cmpSanit.sanitized;
+      if (!ownComparison.startsWith('http://') && !ownComparison.startsWith('https://')) {
+        ownComparison = 'https://' + ownComparison;
+      }
+    } else {
+      ownComparison = '';
+    }
+  }
+  // Helpers de clasificación de URL (home vs página específica).
+  const isHomeUrl = (u: string): boolean => {
+    try { return new URL(u).pathname.replace(/\/+$/, '') === ''; } catch { return false; }
+  };
+  const isSpecificUrl = (u: string): boolean => {
+    try { return new URL(u).pathname.replace(/\/+$/, '').split('/').filter(Boolean).length >= 1; } catch { return false; }
+  };
+
+  // URL propia efectiva a comparar. Prioridad:
+  //   1) la que el usuario pegó manualmente
+  //   2) (más abajo) la que auto-detectamos en su Search Console
+  //   3) su home como último recurso
+  let effectiveOwnUrl = ownComparison || ownUrl;
+  let autoMatchedOwnUrl = '';
 
   // No dejar que se espíe a sí mismo (no aporta nada).
   const sameHost = (a: string, b: string) => {
@@ -3900,15 +3981,46 @@ export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, g
     return { success: false, error: 'La web del competidor no devolvió contenido legible (puede bloquear bots o estar caída).' };
   }
 
+  // ── Keyword/tema en juego (del usuario o derivado del rival) ────────────────
+  let cleanKeyword = '';
+  if (goldKeyword) {
+    const kwSanit = sanitizeInput(goldKeyword, 'keyword');
+    if (kwSanit.isValid) cleanKeyword = kwSanit.sanitized;
+  }
+  // Si no hay keyword, derivamos el tema desde el H1/título del rival.
+  const effectiveKeyword =
+    cleanKeyword || (rivalSnapshot.h1 || rivalSnapshot.title || '').trim().slice(0, 80);
+
+  // ── Auto-detección de tu página equivalente vía Search Console ──────────────
+  // Si NO pasaste una página propia y el rival es una página específica,
+  // buscamos en tu GSC qué página tuya rankea para ese tema y comparamos ESA
+  // (producto vs producto) en vez de tu home. Silencioso si no hay match.
+  if (!ownComparison && session?.accessToken && isSpecificUrl(rivalUrl) && effectiveKeyword) {
+    try {
+      const found = await findOwnPageForKeyword(session.accessToken, ownUrl, effectiveKeyword);
+      if (found && !isHomeUrl(found) && sameHost(found, ownUrl)) {
+        autoMatchedOwnUrl = found;
+        effectiveOwnUrl = found;
+      }
+    } catch (err) {
+      console.warn('[spyCompetitor] Auto-match GSC falló:', err);
+    }
+  }
+
   // ── Snapshot propio (para comparar) ─────────────────────────────────────────
   let ownSnapshot: CompetitorSnapshot | null = null;
-  if (ownUrl) {
+  if (effectiveOwnUrl) {
     try {
-      ownSnapshot = await buildCompetitorSnapshot(ownUrl);
+      ownSnapshot = await buildCompetitorSnapshot(effectiveOwnUrl);
     } catch {
       ownSnapshot = null;
     }
   }
+
+  // Desajuste real: caímos a la home porque no hubo URL manual NI auto-match,
+  // pero el rival es una página específica. Ahí la IA no debe penalizar generalidad.
+  const pageTypeMismatch =
+    !ownComparison && !autoMatchedOwnUrl && isSpecificUrl(rivalUrl) && isHomeUrl(effectiveOwnUrl);
 
   // ── Detección de cambios vs último espionaje ────────────────────────────────
   let changes: SpyChange[] = [];
@@ -3929,12 +4041,6 @@ export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, g
   const apiKey = readGeminiApiKey();
   if (!apiKey) {
     return { success: false, error: 'GEMINI_API_KEY no configurada en el servidor.' };
-  }
-
-  let cleanKeyword = '';
-  if (goldKeyword) {
-    const kwSanit = sanitizeInput(goldKeyword, 'keyword');
-    if (kwSanit.isValid) cleanKeyword = kwSanit.sanitized;
   }
 
   const systemInstructions = `Sos un consultor SEO senior que ayuda a dueños de PyMES (sin conocimientos técnicos) a entender qué hace mejor su competencia y cómo superarla. Hablás en español rioplatense, claro y directo, sin jerga.
@@ -3958,20 +4064,26 @@ Reglas:
 - No inventes datos que no estén en la info provista. Si no tenés la web del usuario, basá las sugerencias en buenas prácticas vs el competidor.
 - Las sugerencias deben ser accionables y específicas (ej: "Cambiá tu H1 a 'X' para atacar la búsqueda Y"), nunca genéricas como "mejorá tu SEO".`;
 
-  const userPrompt = `Palabra clave objetivo del usuario: "${cleanKeyword || 'no especificada'}"
+  const mismatchNote = pageTypeMismatch
+    ? `
+ATENCIÓN — DESAJUSTE DE PÁGINAS: La web del USUARIO que recibís es su PÁGINA DE INICIO (home), que por naturaleza es general y representa la marca y todas las categorías. La del COMPETIDOR es una PÁGINA DE PRODUCTO ESPECÍFICA. NO penalices al usuario por ser "genérico" ni le digas que su título/H1 es demasiado amplio: en una home eso es correcto. La brecha REAL y tu sugerencia PRINCIPAL deben ser que el usuario probablemente NO tiene una página dedicada para este producto/búsqueda específica, y que para competirle debe CREAR u OPTIMIZAR una página de producto propia que ataque esa keyword. Compará la home solo a nivel marca/confianza, no producto contra producto.`
+    : '';
 
-WEB DEL USUARIO:
+  const userPrompt = `Tema/keyword en juego: "${effectiveKeyword || 'no especificada'}"
+${mismatchNote}
+WEB DEL USUARIO (${pageTypeMismatch ? 'PÁGINA DE INICIO / HOME' : effectiveOwnUrl || 'no disponible'}):
 ${ownSnapshot ? JSON.stringify({ title: ownSnapshot.title, h1: ownSnapshot.h1, headings: ownSnapshot.headings }, null, 2) : '(no disponible — analizá solo al competidor y sugerí cómo competirle)'}
 
 WEB DEL COMPETIDOR (${rivalUrl}):
 ${JSON.stringify({ title: rivalSnapshot.title, h1: rivalSnapshot.h1, headings: rivalSnapshot.headings }, null, 2)}`;
 
   const cacheKey = buildGeminiCacheKey([
-    'competitor_spy_v1',
+    'competitor_spy_v2',
     userEmail || 'dev@localhost',
     rivalUrl,
-    ownUrl,
-    cleanKeyword,
+    effectiveOwnUrl,
+    effectiveKeyword,
+    pageTypeMismatch ? 'mismatch' : 'match',
     JSON.stringify(rivalSnapshot.headings.slice(0, 8)),
     rivalSnapshot.title,
     rivalSnapshot.h1,
@@ -4035,6 +4147,10 @@ ${JSON.stringify({ title: rivalSnapshot.title, h1: rivalSnapshot.h1, headings: r
       competitorUrl: rivalUrl,
       competitor: { title: rivalSnapshot.title, h1: rivalSnapshot.h1, headings: rivalSnapshot.headings },
       you: ownSnapshot ? { title: ownSnapshot.title, h1: ownSnapshot.h1 } : null,
+      comparedAgainst: effectiveOwnUrl || null,
+      pageTypeMismatch,
+      autoMatched: !!autoMatchedOwnUrl,
+      autoMatchedUrl: autoMatchedOwnUrl || null,
       verdict,
       gaps,
       changes,

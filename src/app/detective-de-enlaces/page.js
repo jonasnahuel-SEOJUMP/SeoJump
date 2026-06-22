@@ -10,6 +10,7 @@ import { auditSiteLinks, requestGoogleIndexing, checkIsAdmin, spyCompetitor } fr
 import UpgradeModal from "../../components/UpgradeModal";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
+import { useSubscription } from "../../hooks/useSubscription";
 
 const SPY_LOADING_MESSAGES = [
   "Estoy leyendo la web de tu competidor...",
@@ -47,11 +48,13 @@ export default function DetectiveDeEnlaces() {
   // ── Spy (Espía de la Competencia) State ──
   const [detectiveView, setDetectiveView] = useState("links"); // links | spy
   const [competitorUrl, setCompetitorUrl] = useState("");
+  const [ownComparisonUrl, setOwnComparisonUrl] = useState("");
   const [spyLoading, setSpyLoading] = useState(false);
   const [spyResult, setSpyResult] = useState(null);
   const [spyError, setSpyError] = useState(null);
   const [showSpyOwl, setShowSpyOwl] = useState(true);
   const [spyLoadingMsg, setSpyLoadingMsg] = useState(0);
+  const { refresh: refreshCredits } = useSubscription();
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -250,6 +253,7 @@ export default function DetectiveDeEnlaces() {
         setAuditResults(res);
         setScanState("results");
         localStorage.setItem("seojump_detective_audit", JSON.stringify(res));
+        refreshCredits();
       } else {
         if (res.upgrade) {
           setUpgradeMessage(res.error || "");
@@ -306,10 +310,11 @@ export default function DetectiveDeEnlaces() {
     setSpyResult(null);
 
     try {
-      const res = await spyCompetitor(competitorUrl.trim(), siteUrl || "", goldKeyword || undefined);
+      const res = await spyCompetitor(competitorUrl.trim(), siteUrl || "", goldKeyword || undefined, ownComparisonUrl.trim() || undefined);
       if (res.success && res.data) {
         setSpyResult(res.data);
         if (playSuccess) playSuccess();
+        refreshCredits();
       } else {
         if (res.upgrade) {
           setUpgradeMessage(res.error || "");
@@ -1090,15 +1095,37 @@ export default function DetectiveDeEnlaces() {
                   </div>
 
                   <div className="max-w-lg mx-auto space-y-3 pt-2">
-                    <input
-                      type="text"
-                      value={competitorUrl}
-                      onChange={(e) => setCompetitorUrl(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter" && !spyLoading) handleSpy(); }}
-                      placeholder="competencia.com"
-                      disabled={spyLoading}
-                      className="w-full rounded-xl border-2 border-slate-600 bg-slate-800 px-4 py-3.5 text-base font-bold text-white placeholder:text-slate-500 focus:border-purple-500 focus:outline-none text-center"
-                    />
+                    <div className="text-left space-y-1">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Página del competidor</label>
+                      <input
+                        type="text"
+                        value={competitorUrl}
+                        onChange={(e) => setCompetitorUrl(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter" && !spyLoading) handleSpy(); }}
+                        placeholder="competencia.com/productos/desengrasante"
+                        disabled={spyLoading}
+                        className="w-full rounded-xl border-2 border-slate-600 bg-slate-800 px-4 py-3.5 text-base font-bold text-white placeholder:text-slate-500 focus:border-purple-500 focus:outline-none text-center"
+                      />
+                    </div>
+
+                    <div className="text-left space-y-1">
+                      <label className="text-xs font-black text-slate-400 uppercase tracking-wider">
+                        Tu página equivalente <span className="text-slate-600 normal-case">(opcional, recomendado)</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={ownComparisonUrl}
+                        onChange={(e) => setOwnComparisonUrl(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter" && !spyLoading) handleSpy(); }}
+                        placeholder="tusitio.com/productos/tu-producto-similar"
+                        disabled={spyLoading}
+                        className="w-full rounded-xl border-2 border-slate-700 bg-slate-800/70 px-4 py-3 text-sm font-bold text-white placeholder:text-slate-600 focus:border-emerald-500 focus:outline-none text-center"
+                      />
+                      <p className="text-[11px] text-slate-500 font-bold leading-snug">
+                        Si comparás un <strong className="text-slate-400">producto puntual</strong>, pegá tu página equivalente para una comparación justa (producto vs producto). Si lo dejás vacío, comparamos contra tu home.
+                      </p>
+                    </div>
+
                     <button
                       onClick={handleSpy}
                       disabled={spyLoading}
@@ -1106,9 +1133,9 @@ export default function DetectiveDeEnlaces() {
                     >
                       {spyLoading ? "🕵️ INVESTIGANDO..." : "🔍 ESPIAR COMPETIDOR"}
                     </button>
-                    {siteUrl && (
+                    {(ownComparisonUrl.trim() || siteUrl) && (
                       <p className="text-xs text-slate-500 font-bold">
-                        Comparando contra tu sitio: <span className="text-slate-400">{siteUrl}</span>
+                        Comparando contra: <span className="text-slate-400">{ownComparisonUrl.trim() || siteUrl}</span>
                       </p>
                     )}
                   </div>
@@ -1167,6 +1194,33 @@ export default function DetectiveDeEnlaces() {
                           <p className="text-slate-300 font-bold"><span className="text-emerald-400">Ahora:</span> {c.after}</p>
                         </div>
                       ))}
+                    </div>
+                  )}
+
+                  {/* Aviso de auto-detección vía Search Console */}
+                  {spyResult.autoMatched && spyResult.autoMatchedUrl && (
+                    <div className="card-3d bg-emerald-950/30 border-2 border-emerald-500/40 p-4 md:p-5 flex items-start gap-3">
+                      <span className="text-2xl flex-shrink-0">🎯</span>
+                      <div className="space-y-1">
+                        <p className="text-sm font-black text-emerald-300">Encontramos tu página equivalente automáticamente</p>
+                        <p className="text-xs font-bold text-slate-400 leading-relaxed">
+                          No pegaste una página propia, así que usamos tu Search Console para detectar la tuya que ya rankea para este tema y comparamos producto contra producto:{" "}
+                          <a href={spyResult.autoMatchedUrl} target="_blank" rel="noopener noreferrer" className="text-emerald-300 underline break-all">{spyResult.autoMatchedUrl}</a>.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Aviso de desajuste: home vs producto */}
+                  {spyResult.pageTypeMismatch && (
+                    <div className="card-3d bg-sky-950/30 border-2 border-sky-500/40 p-4 md:p-5 flex items-start gap-3">
+                      <span className="text-2xl flex-shrink-0">ℹ️</span>
+                      <div className="space-y-1">
+                        <p className="text-sm font-black text-sky-300">Comparamos tu HOME contra una página de producto</p>
+                        <p className="text-xs font-bold text-slate-400 leading-relaxed">
+                          El competidor apunta a un producto específico y vos no pasaste una página equivalente, así que usamos tu home (general por naturaleza). Para una comparación exacta, volvé a espiar pegando <strong className="text-slate-300">tu página de ese mismo producto</strong> en el campo "Tu página equivalente".
+                        </p>
+                      </div>
                     </div>
                   )}
 

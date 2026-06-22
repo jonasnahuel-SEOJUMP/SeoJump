@@ -1,18 +1,18 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession, signOut } from "next-auth/react";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { verifyContentMission } from "../../lib/actions";
+import { verifyContentMission, getAiCreditsStatusForSession } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import AICatch from "../../components/AICatch";
 import Header from "../../components/Header";
 import UpgradeModal from "../../components/UpgradeModal";
 import AiCreditsBadge from "../../components/AiCreditsBadge";
-import { getAiCreditsStatusForSession } from "../../lib/actions";
+import { notifyAiCreditUsed } from "../../lib/aiCreditToast";
 
 // Filtro Purificador Universal (UI-safe and encoding-safe parser)
 const purifyText = (text) => {
@@ -96,6 +96,7 @@ export default function BuscadorDeOro() {
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [aiCredits, setAiCredits] = useState(null);
   const [creditsLoading, setCreditsLoading] = useState(true);
+  const prevUsedTodayRef = useRef(null);
   const [upgradeMessage, setUpgradeMessage] = useState("");
   const [discardedSuggestions, setDiscardedSuggestions] = useState(new Set());
   const [dismissingIndex, setDismissingIndex] = useState(null);
@@ -133,6 +134,10 @@ export default function BuscadorDeOro() {
     setCreditsLoading(true);
     getAiCreditsStatusForSession()
       .then((status) => {
+        if (status && prevUsedTodayRef.current !== null && status.usedToday > prevUsedTodayRef.current) {
+          notifyAiCreditUsed(status);
+        }
+        if (status) prevUsedTodayRef.current = status.usedToday;
         setAiCredits(status);
         if (status) setDailyCredits(status.usedToday);
       })

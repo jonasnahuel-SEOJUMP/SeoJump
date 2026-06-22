@@ -35,7 +35,10 @@ export default function AiCreditsBadge({ credits, loading, compact = false }) {
 
   if (compact) {
     return (
-      <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-black ${color}`}>
+      <span
+        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-black ${color}`}
+        title={`Consultas IA hoy: ${used}/${limit}. Los análisis con Gemini cuentan 1 cada uno; verificar misiones no.`}
+      >
         🤖 {used}/{limit}
       </span>
     );

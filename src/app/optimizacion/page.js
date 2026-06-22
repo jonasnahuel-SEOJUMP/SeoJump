@@ -18,6 +18,7 @@ import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, 
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
+import SearchConsoleStatusBanner from "../../components/SearchConsoleStatusBanner";
 
 const CLIENT_FETCH_TIMEOUT_MS = 40000;
 
@@ -1193,6 +1194,13 @@ export default function Optimizacion() {
                   </div>
                 )}
                 
+                {/* Banner inteligente de Search Console (solo si faltan datos reales) */}
+                {isQuickWinsMock && (
+                  <div className="mt-4 text-left">
+                    <SearchConsoleStatusBanner siteUrl={siteUrl} playClick={playClick} callbackUrl="/optimizacion" />
+                  </div>
+                )}
+
                 {/* Tab Selector */}
                 <div className="flex flex-wrap justify-center gap-3 mt-4">
                   <button

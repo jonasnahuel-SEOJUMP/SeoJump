@@ -4,7 +4,6 @@ import { useState, useEffect, useRef } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import Header from "../components/Header";
 import LandingPage from "../components/LandingPage";
 
 import PrivacyModal from '../components/PrivacyModal';
@@ -22,6 +21,8 @@ import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
 import { getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getStoredPlatform, getCurrentValueFromPreview } from "../lib/cmsGuide";
 import { textsMatchLoosely } from "../lib/textUtils";
+import AiCreditsBadge from "../components/AiCreditsBadge";
+import SearchConsoleStatusBanner from "../components/SearchConsoleStatusBanner";
 import { useSubscription } from "../hooks/useSubscription";
 
 const getBadgeInfo = (url) => {
@@ -150,7 +151,7 @@ export default function Home() {
   const [missionError, setMissionError] = useState(null);
   const [selectedMission, setSelectedMission] = useState(null);
   const [showPaywallModal, setShowPaywallModal] = useState(false);
-  const { hasPremiumAccess } = useSubscription();
+  const { hasPremiumAccess, credits, loading: creditsLoading, refresh: refreshCredits } = useSubscription();
 
   useEffect(() => {
     localStorage.removeItem("isPremium");
@@ -497,6 +498,7 @@ export default function Home() {
               localStorage.setItem("seojump_quick_wins", JSON.stringify(qwRes.quickWins));
               localStorage.setItem("seojump_quick_wins_url", url);
             }
+            refreshCredits();
           }).catch(err => console.error("Fallo al precargar quick wins:", err));
 
           getRealMissions(url, goldKeyword, goal || undefined).then(res => {
@@ -1049,6 +1051,10 @@ export default function Home() {
                 <p className="text-slate-600 font-bold italic text-base">
                   "Tu sitio tiene potencial, pero faltan algunos detalles técnicos para llegar a la cima."
                 </p>
+                <p className="text-slate-500 font-bold text-sm mt-4 border-t border-slate-200 pt-4">
+                  Tenés <strong className="text-slate-700">2 análisis con IA por día</strong> en el plan gratis.
+                  Completar misiones en tu web no gasta consultas.
+                </p>
              </div>
               <button 
                  onClick={() => {
@@ -1085,6 +1091,13 @@ export default function Home() {
                       <span className="text-2xl lg:text-3xl font-black text-orange-500">{Math.floor(xp / 100) + 1}</span>
                    </div>
                    <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                     {session?.user && (
+                       <AiCreditsBadge
+                         credits={credits}
+                         loading={creditsLoading}
+                         compact
+                       />
+                     )}
                      <Link
                        href="/blog"
                        onClick={playClick}
@@ -1193,54 +1206,9 @@ export default function Home() {
                       <CompetitorSpyHighlight playClick={playClick} />
                     )}
 
-                    {/* --- BANNER EDUCATIVO + UPSELL A SEARCH CONSOLE (solo sin GSC) --- */}
+                    {/* --- BANNER INTELIGENTE DE SEARCH CONSOLE (detecta el caso real) --- */}
                     {missions.length > 0 && missions.some((m) => m.source === 'web') && (
-                      <div className="card-3d p-5 md:p-6 border-2 border-amber-500/40 bg-gradient-to-br from-amber-950/30 to-slate-900/60 space-y-4">
-                        <div className="flex items-start gap-3">
-                          <span className="text-3xl flex-shrink-0">🚀</span>
-                          <div className="space-y-1">
-                            <h3 className="text-lg md:text-xl font-black text-amber-200">
-                              Estas misiones las armamos mirando tu web
-                            </h3>
-                            <p className="text-sm font-bold text-slate-300 leading-relaxed">
-                              Ya podés empezar a mejorar tu sitio ahora mismo. Y cuando conectes <span className="text-amber-200">Google Search Console</span> (es gratis y te guiamos), tus misiones van a usar <span className="text-amber-200">datos reales de Google</span>: por qué búsquedas ya aparecés, cuáles están a un paso de la primera página y dónde estás dejando ventas sobre la mesa.
-                            </p>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                          <div className="rounded-xl bg-slate-900/60 border border-slate-700/60 p-3">
-                            <p className="text-xs font-black text-emerald-300 uppercase tracking-wide mb-1">📈 Más ventas</p>
-                            <p className="text-xs font-bold text-slate-400 leading-snug">Detectamos las páginas a punto de explotar en Google para que les des el empujón final.</p>
-                          </div>
-                          <div className="rounded-xl bg-slate-900/60 border border-slate-700/60 p-3">
-                            <p className="text-xs font-black text-sky-300 uppercase tracking-wide mb-1">🎯 Datos reales</p>
-                            <p className="text-xs font-bold text-slate-400 leading-snug">Dejás de adivinar: ves las búsquedas exactas por las que te encuentran tus clientes.</p>
-                          </div>
-                          <div className="rounded-xl bg-slate-900/60 border border-slate-700/60 p-3">
-                            <p className="text-xs font-black text-purple-300 uppercase tracking-wide mb-1">🤖 Te cita la IA (AEO)</p>
-                            <p className="text-xs font-bold text-slate-400 leading-snug">Que ChatGPT y Google IA te recomienden es el nuevo aparecer primero. Y vale cada vez más.</p>
-                          </div>
-                        </div>
-
-                        <button
-                          onClick={() => {
-                            playClick();
-                            signIn("google", {
-                              callbackUrl: "/",
-                              authorizationParams: {
-                                scope: "openid email profile https://www.googleapis.com/auth/webmasters"
-                              }
-                            });
-                          }}
-                          className="w-full btn-3d bg-green-500 border-green-600 border-b-4 hover:bg-green-450 active:border-b-0 active:translate-y-1 text-white text-sm md:text-base font-black py-3 flex items-center justify-center gap-2"
-                        >
-                          🔓 Conectar Search Console y desbloquear datos reales
-                        </button>
-                        <p className="text-[11px] font-bold text-slate-500 text-center">
-                          Conexión 100% segura y de solo lectura. Nunca modificamos tu sitio.
-                        </p>
-                      </div>
+                      <SearchConsoleStatusBanner siteUrl={url} playClick={playClick} callbackUrl="/" />
                     )}
 
                     <div className="space-y-4">

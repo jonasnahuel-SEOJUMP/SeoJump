@@ -29,6 +29,9 @@ export default function UpgradeModal({ open, onClose, playClick, message }) {
             {message ||
               "Usaste tus consultas IA de hoy. Pasate a PRO para más análisis y seguir optimizando tu web."}
           </p>
+          <p className="text-sm font-bold text-slate-500 dark:text-slate-400">
+            Los análisis con Gemini cuentan 1 consulta cada uno. Verificar misiones en tu web no gasta.
+          </p>
         </div>
         <div className="flex flex-col gap-3">
           <SubscribeProButton

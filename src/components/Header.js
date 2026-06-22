@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
 import NotificationBell from "./NotificationBell";
+import AiCreditsBadge from "./AiCreditsBadge";
+import { useSubscription } from "../hooks/useSubscription";
 
 export default function Header({
   xp,
@@ -21,6 +23,7 @@ export default function Header({
 }) {
   const { data: session } = useSession();
   const router = useRouter();
+  const { credits, loading: creditsLoading } = useSubscription();
 
   const handleLinkClick = () => {
     if (playClick) playClick();
@@ -45,6 +48,13 @@ export default function Header({
         )}
 
         <div className="flex items-center gap-2 md:gap-4 flex-shrink-0">
+          {session?.user && (
+            <AiCreditsBadge
+              credits={credits}
+              loading={creditsLoading}
+              compact
+            />
+          )}
           <div className="flex items-center gap-1">
             <span className="text-2xl md:text-3xl">🔥</span>
             <span className="font-black text-lg md:text-2xl text-orange-500">

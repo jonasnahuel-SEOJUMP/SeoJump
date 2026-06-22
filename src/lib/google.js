@@ -74,6 +74,68 @@ async function getVerifiedSiteProperty(accessToken, userInputUrl) {
   return null;
 }
 
+/**
+ * Diagnostica el estado de conexión con Search Console para un sitio.
+ * No lanza: devuelve un objeto con el estado para que la UI guíe al usuario.
+ *
+ * status:
+ *  - 'no_scope'    → el permiso de webmasters no fue concedido (403) o no hay token
+ *  - 'no_property' → permiso OK, pero el sitio no está dado de alta/verificado en GSC
+ *  - 'connected'   → el sitio está verificado y accesible
+ *  - 'error'       → fallo inesperado (red, timeout)
+ */
+export async function getSearchConsoleConnectionStatus(accessToken, siteUrl) {
+  if (!accessToken) {
+    return { status: 'no_scope', matchedProperty: null, properties: [] };
+  }
+
+  let response;
+  try {
+    response = await fetch('https://www.googleapis.com/webmasters/v3/sites', {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: AbortSignal.timeout(5000),
+    });
+  } catch (err) {
+    console.warn('[GSC Status] fetch falló:', err?.message || err);
+    return { status: 'error', matchedProperty: null, properties: [] };
+  }
+
+  if (!response.ok) {
+    if (response.status === 403 || response.status === 401) {
+      return { status: 'no_scope', matchedProperty: null, properties: [] };
+    }
+    return { status: 'error', matchedProperty: null, properties: [] };
+  }
+
+  const data = await response.json().catch(() => ({}));
+  const siteEntry = data.siteEntry || [];
+  const properties = siteEntry.map((s) => s.siteUrl);
+
+  const normalizedInput = normalizeUrl(siteUrl);
+  const domainOnly = (siteUrl || '')
+    .replace(/^https?:\/\//, '')
+    .replace(/\/$/, '')
+    .replace(/^www\./, '')
+    .toLowerCase();
+
+  const match = siteEntry.find((site) => normalizeUrl(site.siteUrl) === normalizedInput)
+    || siteEntry.find((site) => {
+      const cleanSite = site.siteUrl
+        .replace(/^sc-domain:/, '')
+        .replace(/^https?:\/\//, '')
+        .replace(/\/$/, '')
+        .replace(/^www\./, '')
+        .toLowerCase();
+      return cleanSite === domainOnly;
+    });
+
+  if (match) {
+    return { status: 'connected', matchedProperty: match.siteUrl, properties };
+  }
+
+  return { status: 'no_property', matchedProperty: null, properties };
+}
+
 async function querySearchConsole(accessToken, siteUrl, body) {
   const response = await fetch(
     `https://www.googleapis.com/webmasters/v3/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
