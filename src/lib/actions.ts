@@ -2739,6 +2739,89 @@ export async function verifyQuickWin(pageUrl: string, suggestedTitle: string) {
 // DETECTIVE DE ENLACES — Phase 4: Link Auditing
 // ═══════════════════════════════════════════════════════════════════════════
 
+/** Rutas de catálogo/hub: mal origen para inyectar anclas contextuales (rompe UX ecommerce). */
+const CATALOG_HUB_PATH_PATTERNS = [
+  /\/tienda(?:\/|$)/i,
+  /\/productos?(?:\/|$)/i,
+  /\/categor[ií]as?(?:\/|$)/i,
+  /\/catalogo(?:\/|$)/i,
+  /\/cat[aá]logo(?:\/|$)/i,
+  /\/shop(?:\/|$)/i,
+  /\/store(?:\/|$)/i,
+  /\/colecci[oó]n(?:es)?(?:\/|$)/i,
+  /\/collection(?:s)?(?:\/|$)/i,
+];
+
+/** Rutas de contenido informativo: buen origen para traspaso de fuerza con texto natural. */
+const CONTENT_PATH_PATTERNS = [
+  /\/blog(?:\/|$)/i,
+  /\/articulos?(?:\/|$)/i,
+  /\/posts?(?:\/|$)/i,
+  /\/gu[ií]as?(?:\/|$)/i,
+  /\/noticias?(?:\/|$)/i,
+  /\/news(?:\/|$)/i,
+  /\/magazine(?:\/|$)/i,
+  /\/consejos(?:\/|$)/i,
+  /\/recursos(?:\/|$)/i,
+  /\/aprende(?:\/|$)/i,
+];
+
+function isCatalogHubPage(pageUrl: string, siteUrl: string): boolean {
+  if (isHomePage(pageUrl, siteUrl)) return true;
+  try {
+    const path = new URL(pageUrl).pathname;
+    return CATALOG_HUB_PATH_PATTERNS.some((p) => p.test(path));
+  } catch {
+    return false;
+  }
+}
+
+function isContentPage(pageUrl: string): boolean {
+  try {
+    const path = new URL(pageUrl).pathname;
+    return CONTENT_PATH_PATTERNS.some((p) => p.test(path));
+  } catch {
+    return false;
+  }
+}
+
+/** Página válida como ORIGEN de un enlace contextual (no hub/catálogo). */
+function isValidLinkSourcePage(pageUrl: string, siteUrl: string): boolean {
+  return !!pageUrl && !isCatalogHubPage(pageUrl, siteUrl);
+}
+
+function filterInternalLinkingRecs(
+  items: Array<{ fromPage?: string; toPage?: string; suggestedAnchor?: string; reason?: string }>,
+  siteUrl: string
+) {
+  return (items || [])
+    .filter(
+      (item) =>
+        item.fromPage &&
+        item.toPage &&
+        isValidLinkSourcePage(item.fromPage, siteUrl)
+    )
+  // Priorizar orígenes de blog/contenido sobre otras páginas válidas (ej. landing genérica).
+    .sort((a, b) => {
+      const aContent = isContentPage(a.fromPage!) ? 1 : 0;
+      const bContent = isContentPage(b.fromPage!) ? 1 : 0;
+      return bContent - aContent;
+    });
+}
+
+function filterAnchorTextRecs(
+  items: Array<{ page?: string; currentAnchor?: string; linkTo?: string; suggestedAnchor?: string; reason?: string }>,
+  siteUrl: string
+) {
+  return (items || [])
+    .filter((item) => item.page && isValidLinkSourcePage(item.page, siteUrl))
+    .sort((a, b) => {
+      const aContent = isContentPage(a.page!) ? 1 : 0;
+      const bContent = isContentPage(b.page!) ? 1 : 0;
+      return bContent - aContent;
+    });
+}
+
 const GENERIC_ANCHOR_PATTERNS = [
   /^click\s?aqu[ií]$/i, /^hac[eé]\s?clic$/i, /^clic\s?aqu[ií]$/i,
   /^ver\s?m[aá]s$/i, /^leer\s?m[aá]s$/i, /^ac[aá]$/i, /^aqu[ií]$/i,
@@ -2989,10 +3072,25 @@ export async function auditSiteLinks(siteUrl: string, goldKeyword?: string) {
     }
 
     const pagesSummary = crawlData.pages.map(p => `- ${p.url} (título: "${p.title}", ${p.links.length} enlaces)`).join('\n');
+
+    const contentPages = crawlData.pages.filter((p) => isContentPage(p.url));
+    const hubPages = crawlData.pages.filter((p) => isCatalogHubPage(p.url, cleanSiteUrl));
+    const contentPagesSummary = contentPages.length
+      ? contentPages.map((p) => `- ${p.url} (título: "${p.title}")`).join('\n')
+      : '(ninguna detectada en este crawl — no inventes URLs de blog)';
+    const hubPagesSummary = hubPages.length
+      ? hubPages.map((p) => `- ${p.url}`).join('\n')
+      : '(ninguna)';
+
+    // Anclas genéricas solo desde páginas válidas como origen (excluye home/catálogo).
+    const genericAnchorsForPrompt = crawlData.genericAnchors.filter(
+      (g) => isValidLinkSourcePage(g.page, cleanSiteUrl)
+    );
+
     const brokenSummary = crawlData.brokenLinks.slice(0, 10).map(b =>
       `- En "${b.page}" → enlace roto: "${b.href}" (texto: "${b.anchorText}", error: ${b.statusCode})`
     ).join('\n');
-    const genericSummary = crawlData.genericAnchors.slice(0, 10).map(g =>
+    const genericSummary = genericAnchorsForPrompt.slice(0, 10).map(g =>
       `- En "${g.page}" → enlace a "${g.href}" con texto genérico: "${g.anchorText}"`
     ).join('\n');
     const orphanSummary = crawlData.orphanPages.slice(0, 5).map(o => `- ${o}`).join('\n');
@@ -3007,6 +3105,12 @@ Analizá estos datos del sitio web "${cleanSiteUrl}":
 
 PÁGINAS ESCANEADAS:
 ${pagesSummary}
+
+PÁGINAS DE CONTENIDO (PRIORIDAD para traspaso de fuerza — blog, guías, artículos):
+${contentPagesSummary}
+
+PÁGINAS CATÁLOGO/HUB (PROHIBIDO usar como origen de enlaces contextuales):
+${hubPagesSummary}
 
 ${brokenSummary ? `ENLACES ROTOS (fugas de clientes):
 ${brokenSummary}` : ''}
@@ -3054,6 +3158,13 @@ REGLAS ESTRICTAS:
 - Máximo 5 recomendaciones por categoría
 - Si una categoría no tiene problemas, devolvé un array vacío []
 - El JSON debe ser válido, sin comentarios ni texto extra
+
+REGLAS DE TRASPASO DE FUERZA (internalLinking) Y TEXTO DE ANCLAJE (anchorText):
+- PROHIBIDO usar como página de ORIGEN (fromPage / page): la Home, /tienda, /productos, /categoria, /catalogo, /shop o cualquier página listada como CATÁLOGO/HUB arriba. En esas páginas meter anclas contextuales rompe el diseño del ecommerce.
+- PRIORIZÁ como origen solo páginas de CONTENIDO (blog, guías, artículos informativos) donde un enlace de texto fluye natural en el cuerpo del texto.
+- Si no hay páginas de contenido escaneadas para originar el enlace, devolvé "internalLinking": [] en vez de sugerir enlaces desde catálogo o home.
+- Las páginas de destino (toPage) SÍ pueden ser categorías o productos que necesitan más visibilidad.
+- En "anchorText", solo sugerí cambios en páginas de contenido, nunca en home ni catálogo.
 `;
 
     const session = await auth();
@@ -3064,7 +3175,7 @@ REGLAS ESTRICTAS:
     }
 
     const cacheKey = buildGeminiCacheKey([
-      'detective_enlaces',
+      'detective_enlaces_v2',
       userEmail || 'dev@localhost',
       cleanSiteUrl,
       goldKeyword || '',
@@ -3110,12 +3221,21 @@ REGLAS ESTRICTAS:
       }
     }
 
+    const internalLinking = filterInternalLinkingRecs(
+      Array.isArray(parsed.internalLinking) ? parsed.internalLinking : [],
+      cleanSiteUrl
+    ).slice(0, 5);
+    const anchorText = filterAnchorTextRecs(
+      Array.isArray(parsed.anchorText) ? parsed.anchorText : [],
+      cleanSiteUrl
+    ).slice(0, 5);
+
     return {
       success: true,
       audit: {
-        internalLinking: Array.isArray(parsed.internalLinking) ? parsed.internalLinking.slice(0, 5) : [],
+        internalLinking,
         brokenLinks: Array.isArray(parsed.brokenLinks) ? parsed.brokenLinks.slice(0, 5) : [],
-        anchorText: Array.isArray(parsed.anchorText) ? parsed.anchorText.slice(0, 5) : [],
+        anchorText,
       },
       stats,
     };
