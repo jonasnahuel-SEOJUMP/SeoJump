@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../../auth';
-import { syncProSubscriptionForEmail } from '../../../../lib/mercadopago';
+import { syncProSubscriptionForEmail } from '../../../../lib/mobbex';
 
 export const maxDuration = 30;
 
-/** POST /api/mercadopago/sync — activa PRO si MP ya autorizó la suscripción (backup del webhook). */
+/** POST /api/mobbex/sync — activa PRO si Mobbex ya cobró (backup del webhook). */
 export async function POST() {
   const session = await auth();
   const email = session?.user?.email?.trim().toLowerCase();
@@ -17,7 +17,7 @@ export async function POST() {
     const status = await syncProSubscriptionForEmail(email);
     return NextResponse.json({ status });
   } catch (err) {
-    console.error('[MP sync]', err);
+    console.error('[Mobbex sync]', err);
     return NextResponse.json({ status: 'error' }, { status: 500 });
   }
 }

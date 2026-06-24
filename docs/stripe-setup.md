@@ -101,7 +101,7 @@ Esto imprime un `whsec_...` temporal para usar en desarrollo.
 
 ## 6. Precios configurados
 
-| Plan | ARS (Mercado Pago) | USD (Stripe) |
+| Plan | ARS (Mobbex) | USD (Stripe) |
 |---|---|---|
 | Gratis | $0 | $0 |
 | PRO | $39.000/mes | $27/mes |

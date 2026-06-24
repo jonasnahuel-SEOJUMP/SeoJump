@@ -37,6 +37,8 @@ helpers puros NO viven ahí: están en módulos sin `"use server"` y se importan
 | `supabase.ts` | Acceso a Supabase y tipos de datos | No |
 | `aiCredits.ts` | Lógica de créditos IA (consumo, límites, caché de Gemini) | No |
 | `planLimits.ts` | Límites por plan (free/pro/agencia) | No |
+| `paymentsStub.ts` | Modo prueba de pagos ARS en local (activa PRO sin Mobbex) | No |
+| `mobbex.ts` | Integración Mobbex (o delega a stub si faltan credenciales en local) | No |
 
 **Regla:** si vas a agregar un helper puro (sin sesión/créditos), ponelo en el módulo de dominio
 que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando dominios, partilo.
@@ -82,8 +84,10 @@ que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando d
 ## 6. Pagos
 
 - **Mobbex** es la pasarela para Argentina (reemplaza a Mercado Pago, abandonado por problemas de seguridad).
-- Estado actual: código de Mobbex en local a la espera de credenciales (`MOBBEX_API_KEY`,
-  `MOBBEX_ACCESS_TOKEN`). NO está deployado todavía.
+- Estado actual: integración en `src/lib/mobbex.ts` + rutas `/api/mobbex/*`.
+- **Modo prueba local** (`src/lib/paymentsStub.ts`): si estás en `localhost` y **no** hay
+  `MOBBEX_API_KEY` / `MOBBEX_ACCESS_TOKEN`, el checkout ARS simula éxito y activa PRO en Supabase
+  (sin llamar a Mobbex). En Vercel producción esto **no** ocurre salvo `PAYMENTS_STUB=true` explícito.
 - **Stripe** para pagos internacionales (USD).
 - Las suscripciones actualizan `subscription_status` en Supabase vía webhook.
 - El panel admin permite activar PRO/Agencia manualmente como backup si falla el webhook.

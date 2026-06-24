@@ -115,7 +115,7 @@ export async function getUserPlanForSession() {
 }
 
 /**
- * Activa plan PRO o Agencia manualmente (solo admin). Útil hasta integrar Mercado Pago.
+ * Activa plan PRO o Agencia manualmente (solo admin). Backup si falla webhook de pagos.
  */
 export async function activateUserPlan(
   targetEmail: string,

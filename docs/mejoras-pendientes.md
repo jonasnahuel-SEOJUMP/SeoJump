@@ -31,7 +31,7 @@ Lista de ideas y mejoras para implementar. Consultar este archivo cuando pregunt
 ### Pendiente 📋
 | Tarea | Estado |
 |-------|--------|
-| **Mercado Pago AR** — cuenta `cobros.seojump@...` con `billing.allow: false` (loop al pagar) | Usuario completando perfil MP |
+| **Mobbex AR** — credenciales en consola + webhook | Usuario dando de alta comercio Mobbex |
 | **Plan B MP** | Token cuenta vieja 55 Detail Shop |
 | **Lemon Squeezy + Payoneer** (Fase 1 internacional, MoR) | Pausado unos días |
 | **Stripe + LLC** | Cuando escale facturación internacional |

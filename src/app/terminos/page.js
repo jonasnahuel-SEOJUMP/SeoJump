@@ -42,9 +42,9 @@ export default function TerminosPage() {
             <h2 className="text-white font-black text-lg">4. Suscripciones, Pagos y Precios</h2>
             <div className="space-y-3">
               <p><strong className="text-white">Modelo de Servicio:</strong> SEO Jump ofrece acceso limitado de forma gratuita ("Versión Gratuita") y acceso completo a todas las misiones y sugerencias mediante una suscripción de pago mensual ("Plan Premium" o "Beta Fundadores").</p>
-              <p><strong className="text-white">Procesamiento de Pagos:</strong> Todos los pagos y suscripciones recurrentes se procesan de manera externa y segura a través de la plataforma de Mercado Pago. SEO Jump no almacena ni tiene acceso a los datos de tus tarjetas de crédito o débito.</p>
-              <p><strong className="text-white">Renovación Automática:</strong> La suscripción mensual se renovará automáticamente cada mes a menos que el usuario cancele el servicio antes de la fecha de facturación correspondiente.</p>
-              <p><strong className="text-white">Política de Cancelación:</strong> El usuario puede cancelar su suscripción en cualquier momento desde su panel de control en la plataforma. Al cancelar, mantendrá el acceso Premium hasta finalizar el período facturado en curso.</p>
+              <p><strong className="text-white">Procesamiento de Pagos:</strong> Los pagos en Argentina se procesan de forma externa y segura a través de Mobbex. Los pagos internacionales pueden procesarse vía Stripe. SEO Jump no almacena ni tiene acceso a los datos de tus tarjetas de crédito o débito.</p>
+              <p><strong className="text-white">Renovación Automática:</strong> La suscripción mensual se renovará automáticamente cada mes a menos que canceles antes de la fecha de facturación correspondiente.</p>
+              <p><strong className="text-white">Política de Cancelación:</strong> Podés cancelar tu suscripción en cualquier momento desde tu cuenta de Mobbex o escribiendo a nahuel@seo-jump.ai. Al cancelar, mantendrás el acceso Premium hasta finalizar el período facturado en curso.</p>
               <p className="text-slate-400 bg-slate-800/50 border border-slate-700 rounded-xl p-4"><strong className="text-white">Reembolsos:</strong> Debido a la naturaleza digital del software y al acceso inmediato a los análisis e insights automatizados desde el momento del pago, no se realizan reembolsos ni devoluciones de dinero por períodos de suscripción ya facturados o parcialmente utilizados.</p>
             </div>
           </div>

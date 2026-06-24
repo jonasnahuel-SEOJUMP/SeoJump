@@ -131,7 +131,7 @@ export default function PrivacidadPage() {
               </li>
             </ul>
             <p className="text-slate-400 bg-slate-800/50 border border-slate-700 rounded-xl p-4">
-              <strong className="text-white">Importante:</strong> eliminar tu cuenta en SEO Jump no cancela automáticamente una suscripción de pago en Mercado Pago, si la tuvieras activa. Eso debés gestionarlo por separado en Mercado Pago.
+              <strong className="text-white">Importante:</strong> eliminar tu cuenta en SEO Jump no cancela automáticamente una suscripción de pago en Mobbex, si la tuvieras activa. Eso debés gestionarlo por separado en Mobbex o contactándonos.
             </p>
           </div>
 

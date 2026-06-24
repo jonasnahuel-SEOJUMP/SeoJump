@@ -1,7 +1,7 @@
 /**
  * Plan de suscripción — tipos y helpers compartidos (cliente + servidor).
  * Fuente de verdad en Supabase: profiles.subscription_status
- * (Mercado Pago actualizará ese campo cuando esté integrado).
+ * (Mobbex/Stripe actualizan ese campo vía webhook).
  */
 
 import type { PlanId } from './planLimits';

@@ -224,18 +224,18 @@ export default function Perfil() {
                 </Link>
               )}
               <p className="text-xs font-bold text-slate-500 dark:text-slate-500">
-                El cobro con Mercado Pago se activará pronto. Hoy el plan se gestiona desde acá o por nahuel@seo-jump.ai.
+                El cobro con Mobbex está en preparación para Argentina. En local, sin credenciales, el botón PRO activa el plan en modo prueba. Dudas: nahuel@seo-jump.ai.
               </p>
             </div>
           )}
         </div>
 
-        {/* Panel admin: activar planes manualmente (hasta Mercado Pago) */}
+        {/* Panel admin: activar planes manualmente (backup si falla webhook) */}
         {isAdmin && (
           <div className="bg-purple-950/30 rounded-2xl border-2 border-purple-700/50 p-6 space-y-4">
             <h3 className="text-lg font-black text-purple-200">🛠️ Admin — activar plan</h3>
             <p className="text-sm font-bold text-slate-400">
-              Asigná PRO o Agencia a un usuario por email. Cuando integremos Mercado Pago, esto lo hará el pago automático.
+              Asigná PRO o Agencia a un usuario por email. El pago automático vía Mobbex también activa PRO al confirmarse.
             </p>
             <input
               type="email"
@@ -437,7 +437,7 @@ export default function Perfil() {
               <li>Tu progreso, XP y sitio guardado en este navegador</li>
             </ul>
             <p className="text-xs font-bold text-slate-500 dark:text-slate-450">
-              Esto no cancela una suscripción de Mercado Pago si la tuvieras activa — hacelo aparte. Para revocar el acceso a Google, andá a{" "}
+              Esto no cancela una suscripción de Mobbex si la tuvieras activa — hacelo aparte en Mobbex o contactándonos. Para revocar el acceso a Google, andá a{" "}
               <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer" className="text-red-500 underline">myaccount.google.com/permissions</a>.
             </p>
             {deleteError && (
