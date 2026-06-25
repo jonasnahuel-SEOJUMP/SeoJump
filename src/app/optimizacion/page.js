@@ -20,7 +20,7 @@ import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
 import SearchConsoleStatusBanner from "../../components/SearchConsoleStatusBanner";
 
-const CLIENT_FETCH_TIMEOUT_MS = 40000;
+const CLIENT_FETCH_TIMEOUT_MS = 58000;
 
 /**
  * Ejemplos rotativos para los placeholders de "¿Qué vendés?" y "Mis marcas".
@@ -714,7 +714,7 @@ export default function Optimizacion() {
       setHasFetchedQuickWins(true);
       quickWinsFetchRef.current = false;
       setQuickWinsError("El análisis tardó demasiado. Tocá Reintentar.");
-    }, 55000);
+    }, 60000);
     return () => clearTimeout(timer);
   }, [quickWinsLoading]);
 
@@ -724,7 +724,7 @@ export default function Optimizacion() {
       setAeoLoading(false);
       setHasFetchedAeo(true);
       setAeoError("El análisis AEO tardó demasiado. Tocá Reintentar.");
-    }, 30000);
+    }, 38000);
     return () => clearTimeout(timer);
   }, [aeoLoading]);
 

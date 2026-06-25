@@ -153,7 +153,13 @@ async function querySearchConsole(accessToken, siteUrl, body) {
   return response;
 }
 
-export async function getSearchConsoleData(accessToken, siteUrl, goldKeyword, rowLimit = 10) {
+export async function getSearchConsoleData(
+  accessToken,
+  siteUrl,
+  goldKeyword,
+  rowLimit = 10,
+  options = {}
+) {
   const endDate = new Date().toISOString().split('T')[0];
   const startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
@@ -214,6 +220,8 @@ export async function getSearchConsoleData(accessToken, siteUrl, goldKeyword, ro
         console.log(`⚠️ Tier 1 returned 0 rows for "${goldKeyword}". Trying broader search...`);
       }
 
+      // Modo rápido (Quick Wins): saltear tier 2 para ahorrar ~5s en Vercel/móvil
+      if (!options?.fastMode) {
       // ── Tier 2: First word only (broader match) ──
       const firstWord = goldKeyword.trim().split(/\s+/)[0];
       if (firstWord && firstWord !== goldKeyword.trim()) {
@@ -229,10 +237,12 @@ export async function getSearchConsoleData(accessToken, siteUrl, goldKeyword, ro
           console.log(`⚠️ Tier 2 also returned 0 rows.`);
         }
       }
+      }
 
       // ── Tier 3: No keyword filter at all — get site's top queries ──
-      console.log(`🔄 Tier 3: Fetching top queries without any keyword filter (limit ${Math.max(rowLimit, 50)})...`);
-      const response3 = await querySearchConsole(accessToken, verifiedProperty, buildBody(null, Math.max(rowLimit, 50)));
+      const tier3Limit = options?.fastMode ? rowLimit : Math.max(rowLimit, 50);
+      console.log(`🔄 Tier 3: Fetching top queries without any keyword filter (limit ${tier3Limit})...`);
+      const response3 = await querySearchConsole(accessToken, verifiedProperty, buildBody(null, tier3Limit));
       if (response3.ok) {
         const data3 = await response3.json();
         const rows3 = data3.rows || [];

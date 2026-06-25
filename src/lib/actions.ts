@@ -1997,7 +1997,7 @@ export async function getQuickWins(
 
   // Hard timeout: Quick Wins = GSC + scrape (3 URLs) + Gemini — needs headroom on Vercel
   const timeoutPromise = new Promise<{ success: false; error: string; code: string }>((resolve) =>
-    setTimeout(() => resolve({ success: false, error: "El análisis tardó demasiado. Tocá Reintentar.", code: 'TIMEOUT' }), 50000)
+    setTimeout(() => resolve({ success: false, error: "El análisis tardó demasiado. Tocá Reintentar.", code: 'TIMEOUT' }), 55000)
   );
 
   return Promise.race([
@@ -2051,14 +2051,32 @@ async function _getQuickWinsCore(
     let gscRows: any[] = [];
 
     // Home scrape + GSC in parallel (saves ~3-4s vs sequential)
+    const GSC_QUICK_WINS_LIMIT = 40;
+    const GSC_FETCH_MS = 14000;
+
+    const gscPromise = session?.accessToken
+      ? getSearchConsoleData(
+          session.accessToken,
+          cleanSiteUrl,
+          cleanGoldKeyword || undefined,
+          GSC_QUICK_WINS_LIMIT,
+          { fastMode: true }
+        ).catch((err: any) => {
+          console.warn("Fallo al obtener datos de GSC para Quick Wins:", err.message);
+          return null;
+        })
+      : Promise.resolve(null);
+
+    const gscTimeout = new Promise<null>((resolve) =>
+      setTimeout(() => {
+        console.warn('[QuickWins] GSC superó el límite de tiempo, continuando sin datos GSC');
+        resolve(null);
+      }, GSC_FETCH_MS)
+    );
+
     const [scrapedHome, fetchedGsc] = await Promise.all([
       scrapeMetadata(cleanSiteUrl).catch(() => ({ title: '', description: '', h1: '', pageType: '' })),
-      session?.accessToken
-        ? getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined, 100).catch((err: any) => {
-            console.warn("Fallo al obtener datos de GSC para Quick Wins:", err.message);
-            return null;
-          })
-        : Promise.resolve(null),
+      Promise.race([gscPromise, gscTimeout]),
     ]);
     homeMeta = scrapedHome;
     if (fetchedGsc === null) {
