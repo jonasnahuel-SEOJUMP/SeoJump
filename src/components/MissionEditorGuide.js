@@ -9,7 +9,7 @@ import {
   detectPageType,
   buildDesignerInstructions,
 } from "../lib/cmsGuide";
-import { textsMatchLoosely } from "../lib/textUtils";
+import { isMissionChangeFullyApplied, getMissionSuggestionAddon } from "../lib/textUtils";
 import { getSmartMissionSuggestion } from "../lib/actions";
 
 function CopyButton({ text, label, playClick, variant = "green", className = "" }) {
@@ -155,7 +155,10 @@ export default function MissionEditorGuide({
 
   // Lo que se muestra: IA si está disponible, plantilla como respaldo.
   const suggested = aiSuggestion || templateSuggested;
-  const alreadyApplied = !previewLoading && current && textsMatchLoosely(current, suggested);
+  const alreadyApplied = !previewLoading && current && isMissionChangeFullyApplied(current, suggested);
+  const suggestionAddon = !previewLoading && current && !alreadyApplied
+    ? getMissionSuggestionAddon(current, suggested)
+    : null;
   const isAeo = mission.type === 'AEO';
   const beforeLabel = isAeo ? '¿Tenés preguntas y respuestas?' : 'Ahora Google ve';
   const beforeEmpty = isAeo
@@ -204,6 +207,14 @@ export default function MissionEditorGuide({
               <span className="text-xl">✅</span>
               <p className="text-sm font-bold text-duo-green leading-snug">
                 Detectamos que tu web ya tiene este cambio aplicado. Pegá el texto en el campo de abajo y tocá <strong>Verificar</strong> para guardar el progreso.
+              </p>
+            </div>
+          )}
+          {!alreadyApplied && suggestionAddon && (
+            <div className="p-4 rounded-xl bg-sky-500/10 border border-sky-500/40 flex gap-3 items-start">
+              <span className="text-xl">💡</span>
+              <p className="text-sm font-bold text-sky-200 leading-snug">
+                Tu título ya incluye lo principal. SEO Jump sugiere sumar: <strong>«{suggestionAddon}»</strong>. Copiá la sugerencia completa, aplicala y tocá <strong>Verificar</strong>.
               </p>
             </div>
           )}

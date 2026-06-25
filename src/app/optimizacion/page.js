@@ -12,7 +12,7 @@ import AiCreditsBadge from "../../components/AiCreditsBadge";
 import PlatformSelector from "../../components/PlatformSelector";
 import MissionEditorGuide from "../../components/MissionEditorGuide";
 import { getStoredPlatform, detectPageType, getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getCurrentValueFromPreview } from "../../lib/cmsGuide";
-import { textsMatchLoosely } from "../../lib/textUtils";
+import { isMissionChangeFullyApplied } from "../../lib/textUtils";
 import { useSubscription } from "../../hooks/useSubscription";
 import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, buildAeoKey, isAeoCompleted, normQuickWinPage, isQuickWinCompleted, completedPagePathsFromSet } from "../../lib/missionMemory";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
@@ -896,7 +896,7 @@ export default function Optimizacion() {
             setPagePreview(res.preview);
             const suggested = getMissionDisplayPlain(mission, goldKeyword, siteUrl).suggestedText;
             const current = getCurrentValueFromPreview(mission.type, res.preview);
-            if (current && textsMatchLoosely(current, suggested)) {
+            if (current && isMissionChangeFullyApplied(current, suggested)) {
               setH1Value(suggested);
             }
           }

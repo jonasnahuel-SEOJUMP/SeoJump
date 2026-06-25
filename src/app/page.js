@@ -20,7 +20,7 @@ import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
 import { getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getStoredPlatform, getCurrentValueFromPreview } from "../lib/cmsGuide";
-import { textsMatchLoosely } from "../lib/textUtils";
+import { isMissionChangeFullyApplied } from "../lib/textUtils";
 import AiCreditsBadge from "../components/AiCreditsBadge";
 import SearchConsoleStatusBanner from "../components/SearchConsoleStatusBanner";
 import { useSubscription } from "../hooks/useSubscription";
@@ -668,7 +668,7 @@ export default function Home() {
             setPagePreview(res.preview);
             const suggested = getMissionDisplayPlain(mission, mission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '') || '', url).suggestedText;
             const current = getCurrentValueFromPreview(mission.type, res.preview);
-            if (current && textsMatchLoosely(current, suggested)) {
+            if (current && isMissionChangeFullyApplied(current, suggested)) {
               setH1Value(suggested);
             }
           }
