@@ -14,7 +14,7 @@ import MissionEditorGuide from "../../components/MissionEditorGuide";
 import { getStoredPlatform, detectPageType, getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getCurrentValueFromPreview } from "../../lib/cmsGuide";
 import { textsMatchLoosely } from "../../lib/textUtils";
 import { useSubscription } from "../../hooks/useSubscription";
-import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, buildAeoKey, isAeoCompleted } from "../../lib/missionMemory";
+import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, buildAeoKey, isAeoCompleted, normQuickWinPage, isQuickWinCompleted, completedPagePathsFromSet } from "../../lib/missionMemory";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
@@ -76,10 +76,6 @@ function readSkippedQuickWins(siteUrl) {
   } catch {
     return [];
   }
-}
-
-function normQuickWinPage(url) {
-  return String(url || "").replace(/\/$/, "").toLowerCase();
 }
 
 function readAeoCache(siteUrl) {
@@ -746,8 +742,18 @@ export default function Optimizacion() {
     setQuickWinsError(null);
 
     const focus = businessFocus.trim() || undefined;
+    const workedPages = completedPagePathsFromSet(completedIds);
+    const excludePages = [
+      ...excludeList,
+      ...Array.from(completedQuickWins),
+      ...Array.from(workedPages),
+    ]
+      .map(normQuickWinPage)
+      .filter(Boolean);
+    const uniqueExclude = [...new Set(excludePages)];
+
     callWithTimeout(
-      getQuickWins(siteUrl, goldKeyword || undefined, excludeList, focus),
+      getQuickWins(siteUrl, goldKeyword || undefined, uniqueExclude, focus),
       "El análisis de oportunidades"
     )
       .then(res => {
@@ -974,7 +980,7 @@ export default function Optimizacion() {
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 3000);
 
-        if (!completedQuickWins.has(pageUrl)) {
+        if (!isQuickWinCompleted(completedQuickWins, pageUrl)) {
           setXp(prev => {
             const newXp = prev + 100;
             localStorage.setItem("seojump_xp", newXp.toString());
@@ -982,7 +988,7 @@ export default function Optimizacion() {
           });
           setCompletedQuickWins(prev => {
             const next = new Set(prev);
-            next.add(pageUrl);
+            next.add(normQuickWinPage(pageUrl));
             return next;
           });
           setXpPopup({ amount: 100, message: "¡Crecimiento detectado!" });
@@ -1338,7 +1344,7 @@ export default function Optimizacion() {
                       )}
                       
                       {/* ── Pending Quick Wins ── */}
-                      {quickWins.filter(qw => !completedQuickWins.has(qw.page) && !isPageAlreadyWorked(completedIds, qw.page)).map((qw, index) => {
+                      {quickWins.filter(qw => !isQuickWinCompleted(completedQuickWins, qw.page) && !isPageAlreadyWorked(completedIds, qw.page)).map((qw, index) => {
                         const isUnlocked = hasPremiumAccess || index < 2;
                         
                         if (!isUnlocked) {
@@ -1365,7 +1371,7 @@ export default function Optimizacion() {
                           );
                         }
 
-                        const isCompleted = completedQuickWins.has(qw.page);
+                        const isCompleted = isQuickWinCompleted(completedQuickWins, qw.page);
                         const verifyResult = verifyQuickWinResult[index] || {};
                         
                         return (
@@ -1453,13 +1459,13 @@ export default function Optimizacion() {
                       })}
 
                       {/* ── Completed Quick Wins — panel colapsable ── */}
-                      {quickWins.filter(qw => completedQuickWins.has(qw.page)).length > 0 && (
+                      {quickWins.filter(qw => isQuickWinCompleted(completedQuickWins, qw.page)).length > 0 && (
                         <details className="card-3d border border-green-500/30 bg-green-950/20 rounded-2xl overflow-hidden">
                           <summary className="p-4 cursor-pointer font-black text-green-400 text-sm flex items-center gap-2 select-none list-none">
-                            ✅ {quickWins.filter(qw => completedQuickWins.has(qw.page)).length} misión{quickWins.filter(qw => completedQuickWins.has(qw.page)).length > 1 ? 'es' : ''} completada{quickWins.filter(qw => completedQuickWins.has(qw.page)).length > 1 ? 's' : ''} — <span className="text-green-300 font-bold">Ver historial</span>
+                            ✅ {quickWins.filter(qw => isQuickWinCompleted(completedQuickWins, qw.page)).length} misión{quickWins.filter(qw => isQuickWinCompleted(completedQuickWins, qw.page)).length > 1 ? 'es' : ''} completada{quickWins.filter(qw => isQuickWinCompleted(completedQuickWins, qw.page)).length > 1 ? 's' : ''} — <span className="text-green-300 font-bold">Ver historial</span>
                           </summary>
                           <div className="px-4 pb-4 space-y-2">
-                            {quickWins.filter(qw => completedQuickWins.has(qw.page)).map((qw, i) => (
+                            {quickWins.filter(qw => isQuickWinCompleted(completedQuickWins, qw.page)).map((qw, i) => (
                               <div key={i} className="flex items-start gap-3 py-2 border-t border-green-500/20">
                                 <span className="text-green-400 text-lg flex-shrink-0">🎉</span>
                                 <div className="min-w-0">

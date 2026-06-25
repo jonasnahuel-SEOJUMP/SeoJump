@@ -919,7 +919,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
       try {
         const doneMissions = await getMissionsByEmail(session.user.email, 'completed');
         for (const m of doneMissions) {
-          if (['H1', 'META', 'ALT', 'AEO'].includes(m.mission_type)) {
+          if (m.target_url) {
             completedPagePaths.add(normalizePagePath(m.target_url));
           }
         }
@@ -2155,13 +2155,27 @@ async function _getQuickWinsCore(
     }
 
     const excludeNorm = new Set(
-      excludePages.map(p => p.replace(/\/$/, '').toLowerCase())
+      excludePages.map(p => normalizePagePath(p).toLowerCase())
     );
+
+    // No volver a sugerir páginas ya trabajadas (Quick Win, H1, etc.) en Supabase
+    if (session?.user?.email) {
+      try {
+        const doneMissions = await getMissionsByEmail(session.user.email, 'completed');
+        for (const m of doneMissions) {
+          if (m.target_url) {
+            excludeNorm.add(normalizePagePath(m.target_url).toLowerCase());
+          }
+        }
+      } catch (err) {
+        console.warn('[QuickWins] No se pudieron cargar misiones completadas:', err);
+      }
+    }
 
     // Hasta 3 candidatos, excluyendo páginas que el usuario descartó
     const validCandidates: any[] = Array.from(urlToBestCand.values())
       .sort((a, b) => (b.impressions || 0) - (a.impressions || 0))
-      .filter(c => !excludeNorm.has((c.keys[0] || '').replace(/\/$/, '').toLowerCase()))
+      .filter(c => !excludeNorm.has(normalizePagePath(c.keys[0] || '').toLowerCase()))
       .slice(0, 3);
     console.log(`[QuickWins L1] Unique-URL candidates selected: ${validCandidates.length} (excluded: ${excludeNorm.size})`);
 

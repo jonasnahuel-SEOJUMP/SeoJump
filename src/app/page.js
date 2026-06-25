@@ -15,7 +15,7 @@ import NotificationBell from "../components/NotificationBell";
 import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, checkIsAdmin, getPageLivePreview } from "../lib/actions";
 import PlatformSelector from "../components/PlatformSelector";
 import MissionEditorGuide from "../components/MissionEditorGuide";
-import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked } from "../lib/missionMemory";
+import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, normQuickWinPage, isQuickWinCompleted } from "../lib/missionMemory";
 import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
@@ -189,9 +189,18 @@ export default function Home() {
     setMissionsLoading(true);
     setMissionError(null);
     try {
+      let completedSet = loadLocalCompletedIds();
+      try {
+        const cw = await fetchCompletedMissions();
+        if (cw.success && cw.missions?.length) {
+          const { completedIds: fromDb } = idsFromSupabaseMissions(cw.missions);
+          completedSet = new Set([...completedSet, ...fromDb]);
+        }
+      } catch (_) {}
+
       const res = await getRealMissions(siteUrl, keyword || undefined, goal || undefined);
       if (!res.success) throw new Error(res.error || "Error al cargar misiones");
-      const pending = filterPendingMissions(filterHomeMissions(res.data || []), loadLocalCompletedIds());
+      const pending = filterPendingMissions(filterHomeMissions(res.data || []), completedSet);
       setMissions(pending);
       if (pending.length > 0) {
         localStorage.setItem("seojump_missions", JSON.stringify(pending));
@@ -501,11 +510,19 @@ export default function Home() {
             refreshCredits();
           }).catch(err => console.error("Fallo al precargar quick wins:", err));
 
-          getRealMissions(url, goldKeyword, goal || undefined).then(res => {
+          Promise.all([
+            fetchCompletedMissions().catch(() => ({ success: false, missions: [] })),
+            getRealMissions(url, goldKeyword, goal || undefined),
+          ]).then(([cwResult, res]) => {
             if (!res.success) {
               throw new Error(res.error);
             }
-            const realMissions = filterPendingMissions(res.data, loadLocalCompletedIds());
+            let completedSet = loadLocalCompletedIds();
+            if (cwResult.success && cwResult.missions?.length) {
+              const { completedIds: fromDb } = idsFromSupabaseMissions(cwResult.missions);
+              completedSet = new Set([...completedSet, ...fromDb]);
+            }
+            const realMissions = filterPendingMissions(res.data, completedSet);
             if (!realMissions || realMissions.length === 0) {
               throw new Error("EMPTY_MISSIONS");
             }
@@ -607,7 +624,7 @@ export default function Home() {
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 3000);
 
-        if (!completedQuickWins.has(pageUrl)) {
+        if (!isQuickWinCompleted(completedQuickWins, pageUrl)) {
           setXp(prev => {
             const newXp = prev + 100;
             localStorage.setItem("seojump_xp", newXp.toString());
@@ -615,7 +632,7 @@ export default function Home() {
           });
           setCompletedQuickWins(prev => {
             const next = new Set(prev);
-            next.add(pageUrl);
+            next.add(normQuickWinPage(pageUrl));
             return next;
           });
           setXpPopup({ amount: 100, message: "¡Crecimiento detectado!" });

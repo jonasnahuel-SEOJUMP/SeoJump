@@ -33,6 +33,20 @@ export function buildMissionId(type, pagePathOrUrl) {
   return `${String(type || "").toLowerCase()}-${normalizePagePath(pagePathOrUrl)}`;
 }
 
+/** Clave canónica para Quick Wins (misma URL con o sin barra final / http). */
+export function normQuickWinPage(url) {
+  return normalizePagePath(url).toLowerCase();
+}
+
+export function isQuickWinCompleted(completedSet, pageUrl) {
+  if (!completedSet || !pageUrl) return false;
+  const key = normQuickWinPage(pageUrl);
+  for (const completed of completedSet) {
+    if (normQuickWinPage(completed) === key) return true;
+  }
+  return false;
+}
+
 export function loadLocalCompletedIds() {
   try {
     const parsed = JSON.parse(localStorage.getItem("seojump_completed_missions") || "[]");
@@ -51,7 +65,7 @@ export function idsFromSupabaseMissions(missions) {
   (missions || []).forEach((m) => {
     totalXp += m.xp_awarded || 0;
     if (m.mission_type === "QUICK_WIN") {
-      completedQuickWins.add(m.target_url);
+      completedQuickWins.add(normQuickWinPage(m.target_url));
     } else if (m.mission_type === "AEO_OPP") {
       completedAeo.add(buildAeoKey(m.target_url, m.suggested_value || ""));
     } else {
