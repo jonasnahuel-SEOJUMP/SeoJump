@@ -1,12 +1,10 @@
 import { getAllPosts } from "../lib/blog";
+import { getSiteUrl } from "../lib/siteUrl";
 
 export default async function sitemap() {
-  const baseUrl = "https://seo-jump.ai";
-
-  // Obtener todos los posts del blog
+  const baseUrl = getSiteUrl();
   const posts = getAllPosts();
 
-  // Mapear artículos a URLs del sitemap
   const postUrls = posts.map((post) => ({
     url: `${baseUrl}/blog/${post.slug}`,
     lastModified: post.date ? new Date(post.date) : new Date(),
@@ -14,18 +12,17 @@ export default async function sitemap() {
     priority: 0.8,
   }));
 
-  // URLs estáticas principales de la aplicación
   const staticUrls = [
     {
-      url: `${baseUrl}`,
+      url: baseUrl,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1.0,
     },
     {
       url: `${baseUrl}/blog`,
-      lastModified: new Date(),
-      changeFrequency: "daily",
+      lastModified: posts[0]?.date ? new Date(posts[0].date) : new Date(),
+      changeFrequency: "weekly",
       priority: 0.9,
     },
     {
@@ -39,6 +36,18 @@ export default async function sitemap() {
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.85,
+    },
+    {
+      url: `${baseUrl}/terminos`,
+      lastModified: new Date("2026-06-01"),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/privacidad`,
+      lastModified: new Date("2026-06-01"),
+      changeFrequency: "yearly",
+      priority: 0.3,
     },
   ];
 
