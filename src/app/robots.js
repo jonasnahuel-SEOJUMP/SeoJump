@@ -1,4 +1,4 @@
-import { getSiteUrl } from "../lib/siteUrl";
+import { getSitemapBaseUrl } from "../lib/siteUrl";
 
 /** Rutas de la app autenticada — no indexar (crawl budget + privacidad). */
 const DISALLOW = [
@@ -13,7 +13,7 @@ const DISALLOW = [
 ];
 
 export default function robots() {
-  const baseUrl = getSiteUrl();
+  const baseUrl = getSitemapBaseUrl();
 
   return {
     rules: [
