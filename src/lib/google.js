@@ -284,6 +284,58 @@ export async function getSearchConsoleData(
   }
 }
 
+/**
+ * Métricas GSC actuales para una página (+ keyword opcional), ventana ~28 días.
+ */
+export async function getPageQueryMetrics(accessToken, siteUrl, pageUrl, query) {
+  const verifiedProperty = await getVerifiedSiteProperty(accessToken, siteUrl);
+  if (!verifiedProperty || !pageUrl) return null;
+
+  const endDate = new Date().toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  const pageVariants = [...new Set([
+    pageUrl,
+    pageUrl.replace(/\/$/, ''),
+    pageUrl.endsWith('/') ? pageUrl : `${pageUrl}/`,
+  ].filter(Boolean))];
+
+  for (const pageExpr of pageVariants) {
+    const filters = [{ dimension: 'page', operator: 'equals', expression: pageExpr }];
+    const dimensions = ['page'];
+
+    if (query?.trim()) {
+      filters.push({ dimension: 'query', operator: 'equals', expression: query.trim() });
+      dimensions.push('query');
+    }
+
+    const body = {
+      startDate,
+      endDate,
+      dimensions,
+      rowLimit: 1,
+      dimensionFilterGroups: [{ filters }],
+    };
+
+    try {
+      const response = await querySearchConsole(accessToken, verifiedProperty, body);
+      if (!response.ok) continue;
+      const data = await response.json();
+      const row = data.rows?.[0];
+      if (!row) continue;
+      return {
+        clicks: row.clicks ?? 0,
+        impressions: row.impressions ?? 0,
+        position: row.position ?? null,
+      };
+    } catch {
+      continue;
+    }
+  }
+
+  return null;
+}
+
 export async function submitGoogleIndexing(accessToken, siteUrl, urlToIndex) {
   const cleanSiteUrl = siteUrl.replace(/\/$/, '');
   const sitemapUrl = `${cleanSiteUrl}/sitemap.xml`;

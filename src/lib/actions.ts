@@ -3,10 +3,11 @@
 import fs from "fs"
 import path from "path"
 import { signIn, signOut, auth } from "../auth"
-import { getSearchConsoleData, submitGoogleIndexing, getSearchConsoleConnectionStatus } from "./google"
+import { getSearchConsoleData, submitGoogleIndexing, getSearchConsoleConnectionStatus, getPageQueryMetrics } from "./google"
 import { GoogleGenerativeAI } from "@google/generative-ai"
-import { completeMission, getMissionsByEmail, deleteProfileByEmail, updateSubscriptionPlan, getCompetitorSnapshot, saveCompetitorSnapshot, listCompetitorUrls, type MissionType, type CompetitorSnapshot } from './supabase'
+import { completeMission, getMissionsByEmail, getMissionsPendingSeoWinCheck, markMissionWinNotified, deleteProfileByEmail, updateSubscriptionPlan, getCompetitorSnapshot, saveCompetitorSnapshot, listCompetitorUrls, type MissionType, type MissionBaselineInput, type CompetitorSnapshot } from './supabase'
 import { normalizePagePath, pathSlug, buildAeoKey } from './missionMemory'
+import { detectSeoWin, buildSeoWinMessage } from './seoWins'
 import {
   checkAndConsumeAiCredit,
   getAiCreditsStatus,
@@ -2894,20 +2895,95 @@ export async function markMissionComplete(
   missionType: MissionType,
   targetUrl: string,
   xpAwarded: number = 0,
-  suggestedValue?: string
+  suggestedValue?: string,
+  baseline?: {
+    keyword?: string;
+    position?: number;
+    clicks?: number;
+    impressions?: number;
+  }
 ): Promise<{ success: boolean }> {
   const session = await auth();
   if (!session?.user?.email) {
     return { success: false };
   }
+  const baselineInput: MissionBaselineInput | undefined = baseline
+    ? {
+        gold_keyword: baseline.keyword ?? null,
+        baseline_position: typeof baseline.position === 'number' ? baseline.position : null,
+        baseline_clicks: typeof baseline.clicks === 'number' ? Math.round(baseline.clicks) : null,
+        baseline_impressions: typeof baseline.impressions === 'number' ? Math.round(baseline.impressions) : null,
+      }
+    : undefined;
   const result = await completeMission(
     session.user.email,
     missionType,
     targetUrl,
     xpAwarded,
-    suggestedValue
+    suggestedValue,
+    baselineInput
   );
   return { success: !!result };
+}
+
+/**
+ * Compara misiones completadas (≥7 días) con GSC actual y devuelve victorias SEO.
+ */
+export async function checkSeoWins(siteUrl: string): Promise<{
+  success: boolean;
+  wins: { missionId: string; message: string }[];
+}> {
+  const session = await auth();
+  if (!session?.user?.email || !session.accessToken || !siteUrl?.trim()) {
+    return { success: false, wins: [] };
+  }
+
+  let pending;
+  try {
+    pending = await getMissionsPendingSeoWinCheck(session.user.email, 7, 5);
+  } catch (err) {
+    console.warn('[checkSeoWins] Error cargando misiones:', err);
+    return { success: false, wins: [] };
+  }
+
+  if (!pending.length) {
+    return { success: true, wins: [] };
+  }
+
+  const wins: { missionId: string; message: string }[] = [];
+  const cleanSite = siteUrl.trim();
+
+  for (const mission of pending) {
+    try {
+      const current = await getPageQueryMetrics(
+        session.accessToken as string,
+        cleanSite,
+        mission.target_url,
+        mission.gold_keyword || undefined
+      );
+      if (!current) continue;
+
+      const win = detectSeoWin(
+        {
+          position: mission.baseline_position ?? undefined,
+          clicks: mission.baseline_clicks ?? undefined,
+          impressions: mission.baseline_impressions ?? undefined,
+        },
+        current
+      );
+      if (!win) continue;
+
+      wins.push({
+        missionId: mission.id,
+        message: buildSeoWinMessage(mission, win),
+      });
+      await markMissionWinNotified(mission.id);
+    } catch (err) {
+      console.warn('[checkSeoWins] Error en misión', mission.id, err);
+    }
+  }
+
+  return { success: true, wins };
 }
 
 /**

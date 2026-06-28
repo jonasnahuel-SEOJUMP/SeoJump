@@ -107,7 +107,7 @@ export default function NotificationBell() {
                   }`}
                 >
                   <span className="text-xl flex-shrink-0 mt-0.5">
-                    {notif.type === "indexation" ? "🚀" : "🔔"}
+                    {notif.type === "indexation" ? "🚀" : notif.type === "seo_win" ? "📈" : "🔔"}
                   </span>
                   <div className="flex-1 min-w-0">
                     <p className="text-xs font-bold text-slate-650 dark:text-slate-300 leading-relaxed break-words">

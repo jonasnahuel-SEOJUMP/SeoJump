@@ -47,6 +47,17 @@ export type UserMission = {
   completed_at: string | null;
   xp_awarded: number;
   created_at: string;
+  baseline_position?: number | null;
+  baseline_clicks?: number | null;
+  baseline_impressions?: number | null;
+  win_notified_at?: string | null;
+};
+
+export type MissionBaselineInput = {
+  gold_keyword?: string | null;
+  baseline_position?: number | null;
+  baseline_clicks?: number | null;
+  baseline_impressions?: number | null;
 };
 
 // ─── Configuración ───────────────────────────────────────────────────────────
@@ -172,7 +183,8 @@ export async function completeMission(
   missionType: MissionType,
   targetUrl: string,
   xpAwarded: number = 0,
-  suggestedValue?: string
+  suggestedValue?: string,
+  baseline?: MissionBaselineInput
 ): Promise<UserMission | null> {
   if (!supabaseAdmin) {
     console.warn('[Supabase] completeMission: Supabase no configurado, operación ignorada.');
@@ -211,6 +223,10 @@ export async function completeMission(
         completed_at: new Date().toISOString(),
         xp_awarded: xpAwarded,
         suggested_value: suggestedValue ?? null,
+        gold_keyword: baseline?.gold_keyword ?? null,
+        baseline_position: baseline?.baseline_position ?? null,
+        baseline_clicks: baseline?.baseline_clicks ?? null,
+        baseline_impressions: baseline?.baseline_impressions ?? null,
       },
       {
         onConflict: 'user_id,mission_type,target_url',
@@ -227,6 +243,58 @@ export async function completeMission(
 
   console.log(`[Supabase] completeMission: ✅ Misión ${missionType} guardada para ${email}`);
   return data as UserMission;
+}
+
+/** Misiones completadas hace ≥ minDays sin notificación de victoria SEO. */
+export async function getMissionsPendingSeoWinCheck(
+  email: string,
+  minDays: number = 7,
+  limit: number = 6
+): Promise<UserMission[]> {
+  if (!supabaseAdmin) return [];
+
+  const { data: profile } = await supabaseAdmin
+    .from('profiles')
+    .select('id')
+    .eq('email', email)
+    .single();
+
+  if (!profile) return [];
+
+  const cutoff = new Date(Date.now() - minDays * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data, error } = await supabaseAdmin
+    .from('user_missions')
+    .select('*')
+    .eq('user_id', profile.id)
+    .eq('status', 'completed')
+    .is('win_notified_at', null)
+    .not('baseline_position', 'is', null)
+    .lte('completed_at', cutoff)
+    .order('completed_at', { ascending: true })
+    .limit(limit);
+
+  if (error) {
+    console.warn('[Supabase] getMissionsPendingSeoWinCheck:', error.message);
+    return [];
+  }
+
+  return (data ?? []) as UserMission[];
+}
+
+export async function markMissionWinNotified(missionId: string): Promise<boolean> {
+  if (!supabaseAdmin) return false;
+
+  const { error } = await supabaseAdmin
+    .from('user_missions')
+    .update({ win_notified_at: new Date().toISOString() })
+    .eq('id', missionId);
+
+  if (error) {
+    console.warn('[Supabase] markMissionWinNotified:', error.message);
+    return false;
+  }
+  return true;
 }
 
 /**

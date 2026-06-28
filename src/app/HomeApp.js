@@ -10,7 +10,7 @@ import PaywallModal from "../components/PaywallModal";
 import AICatch from "../components/AICatch";
 import LoginButton from "../components/LoginButton";
 import NotificationBell from "../components/NotificationBell";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, checkIsAdmin, getPageLivePreview } from "../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, checkIsAdmin, getPageLivePreview, checkSeoWins } from "../lib/actions";
 import PlatformSelector from "../components/PlatformSelector";
 import MissionEditorGuide from "../components/MissionEditorGuide";
 import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, normQuickWinPage, isQuickWinCompleted } from "../lib/missionMemory";
@@ -19,6 +19,7 @@ import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
 import { getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getStoredPlatform, getCurrentValueFromPreview } from "../lib/cmsGuide";
 import { isMissionChangeFullyApplied } from "../lib/textUtils";
+import { pushSeoWinNotifications, shouldCheckSeoWins, markSeoWinsChecked } from "../lib/notifications";
 import AiCreditsBadge from "../components/AiCreditsBadge";
 import SearchConsoleStatusBanner from "../components/SearchConsoleStatusBanner";
 import { useSubscription } from "../hooks/useSubscription";
@@ -391,6 +392,17 @@ export default function HomeApp() {
     init();
   }, [session, status]);
 
+  useEffect(() => {
+    if (!session || !url || serverLoading) return;
+    if (!shouldCheckSeoWins()) return;
+    markSeoWinsChecked();
+    checkSeoWins(url)
+      .then((res) => {
+        if (res.success && res.wins?.length) pushSeoWinNotifications(res.wins);
+      })
+      .catch(() => {});
+  }, [session, url, serverLoading]);
+
   // Recalculate progress when state updates
   useEffect(() => {
     let suggestionsList = [];
@@ -585,7 +597,13 @@ export default function HomeApp() {
             selectedMission.type,
             selectedMission.page,
             selectedMission.xp || 50,
-            h1Value.trim() || undefined
+            h1Value.trim() || undefined,
+            {
+              keyword: selectedMission.keyword,
+              position: selectedMission.position,
+              clicks: selectedMission.clicks,
+              impressions: selectedMission.impressions,
+            }
           ).then(r => {
             if (!r.success) console.warn('[markMissionComplete] Supabase save failed for', selectedMission.id);
           }).catch(err => console.warn('[markMissionComplete] Error:', err));
@@ -637,7 +655,12 @@ export default function HomeApp() {
           setTimeout(() => setXpPopup(null), 4000);
           setTimeout(() => syncStateWithServer(), 100);
           // Guardar en Supabase para memoria cross-device
-          markMissionComplete('QUICK_WIN', pageUrl, 100, suggestedTitle).catch(() => {});
+          markMissionComplete('QUICK_WIN', pageUrl, 100, suggestedTitle, {
+            keyword: quickWins[index]?.keyword,
+            position: quickWins[index]?.position,
+            clicks: quickWins[index]?.clicks,
+            impressions: quickWins[index]?.impressions,
+          }).catch(() => {});
         }
       }
     } catch (e) {

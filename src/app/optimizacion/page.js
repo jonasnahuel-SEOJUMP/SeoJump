@@ -6,7 +6,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, getAeoOpportunities, verifyAeoMission, checkIsAdmin, getPageLivePreview } from "../../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, checkSeoWins, getAeoOpportunities, verifyAeoMission, checkIsAdmin, getPageLivePreview } from "../../lib/actions";
 import UpgradeModal from "../../components/UpgradeModal";
 import AiCreditsBadge from "../../components/AiCreditsBadge";
 import PlatformSelector from "../../components/PlatformSelector";
@@ -15,6 +15,7 @@ import { getStoredPlatform, detectPageType, getMissionDisplayPlain, getPlainMiss
 import { isMissionChangeFullyApplied } from "../../lib/textUtils";
 import { useSubscription } from "../../hooks/useSubscription";
 import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, buildAeoKey, isAeoCompleted, normQuickWinPage, isQuickWinCompleted, completedPagePathsFromSet } from "../../lib/missionMemory";
+import { pushSeoWinNotifications, shouldCheckSeoWins, markSeoWinsChecked } from "../../lib/notifications";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
@@ -669,6 +670,16 @@ export default function Optimizacion() {
     init();
   }, [session, status]);
 
+  useEffect(() => {
+    if (!session || !siteUrl || serverLoading) return;
+    if (!shouldCheckSeoWins()) return;
+    markSeoWinsChecked();
+    checkSeoWins(siteUrl)
+      .then((res) => {
+        if (res.success && res.wins?.length) pushSeoWinNotifications(res.wins);
+      })
+      .catch(() => {});
+  }, [session, siteUrl, serverLoading]);
 
   // Re-calculate progression whenever state changes
   useEffect(() => {
@@ -939,10 +950,16 @@ export default function Optimizacion() {
           });
           // Persistir en Supabase — log si falla para diagnóstico
           markMissionComplete(
-            selectedMission.type,        // 'H1' | 'META' | 'ALT'
-            selectedMission.page,        // URL de la página objetivo
+            selectedMission.type,
+            selectedMission.page,
             selectedMission.xp || 50,
-            h1Value.trim() || undefined  // El valor que ingresó el usuario
+            h1Value.trim() || undefined,
+            {
+              keyword: selectedMission.keyword,
+              position: selectedMission.position,
+              clicks: selectedMission.clicks,
+              impressions: selectedMission.impressions,
+            }
           ).then(r => {
             if (!r.success) console.warn('[markMissionComplete] Supabase save failed for', selectedMission.id);
           }).catch(err => console.warn('[markMissionComplete] Error:', err));
@@ -997,7 +1014,12 @@ export default function Optimizacion() {
             syncStateWithServer();
           }, 100);
           // Guardar en Supabase para memoria cross-device
-          markMissionComplete('QUICK_WIN', pageUrl, 100, suggestedTitle).catch(() => {});
+          markMissionComplete('QUICK_WIN', pageUrl, 100, suggestedTitle, {
+            keyword: quickWins[index]?.keyword,
+            position: quickWins[index]?.position,
+            clicks: quickWins[index]?.clicks,
+            impressions: quickWins[index]?.impressions,
+          }).catch(() => {});
         }
       }
     } catch (e) {
