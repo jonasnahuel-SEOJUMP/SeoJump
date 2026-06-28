@@ -2,6 +2,7 @@
 
 import { SessionProvider } from "next-auth/react";
 import AiCreditToast from "./AiCreditToast";
+import SeoWinToast from "./SeoWinToast";
 
 /**
  * AuthProvider — wraps the app in NextAuth's SessionProvider.
@@ -18,6 +19,7 @@ export default function AuthProvider({ children }) {
     <SessionProvider refetchOnWindowFocus={false} refetchInterval={0}>
       {children}
       <AiCreditToast />
+      <SeoWinToast />
     </SessionProvider>
   );
 }

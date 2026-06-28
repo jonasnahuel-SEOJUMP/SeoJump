@@ -37,6 +37,9 @@ export function pushSeoWinNotifications(wins) {
   if (added > 0) {
     localStorage.setItem('seojump_notifications', JSON.stringify(existing.slice(0, 30)));
     window.dispatchEvent(new Event('seojump_notifications_updated'));
+    window.dispatchEvent(
+      new CustomEvent('seojump:seo-win', { detail: { count: added } })
+    );
   }
 
   return added;
