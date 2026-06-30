@@ -342,17 +342,36 @@ export async function updateSubscriptionPlan(
 ): Promise<boolean> {
   if (!supabaseAdmin) return false;
 
-  const { error } = await supabaseAdmin
+  const normalizedEmail = email.trim().toLowerCase();
+
+  // Asegurar que el perfil exista (usuarios nuevos que pagan antes de completar una misión).
+  const { error: upsertErr } = await supabaseAdmin.rpc('upsert_profile', {
+    p_email: normalizedEmail,
+    p_website_url: null,
+    p_business_name: null,
+  });
+  if (upsertErr) {
+    console.error('[Supabase] updateSubscriptionPlan upsert_profile:', upsertErr.message);
+    return false;
+  }
+
+  const { data, error } = await supabaseAdmin
     .from('profiles')
     .update({
       subscription_status: plan,
       subscription_expires_at: expiresAt ?? null,
       updated_at: new Date().toISOString(),
     })
-    .eq('email', email.trim().toLowerCase());
+    .eq('email', normalizedEmail)
+    .select('id')
+    .maybeSingle();
 
   if (error) {
     console.error('[Supabase] updateSubscriptionPlan:', error.message);
+    return false;
+  }
+  if (!data?.id) {
+    console.error('[Supabase] updateSubscriptionPlan: sin filas para', normalizedEmail);
     return false;
   }
   return true;

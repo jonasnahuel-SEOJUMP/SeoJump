@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   getPreapproval,
+  activateProFromPreapproval,
   parseExternalReference,
-  subscriptionExpiresInDays,
   verifyMpWebhookSignature,
 } from '../../../../lib/mercadopago';
 import { updateSubscriptionPlan } from '../../../../lib/supabase';
@@ -31,31 +31,17 @@ async function activatePlanFromPreapproval(preapprovalId: string): Promise<boole
 
   const status = (preapproval.status || '').toLowerCase();
 
-  if (status === 'authorized' || status === 'active') {
-    const expiresAt = subscriptionExpiresInDays(35);
-    const ok = await updateSubscriptionPlan(parsed.email, parsed.plan, expiresAt);
-    console.log(`[MP webhook] activated ${parsed.plan} for ${parsed.email} → ${ok}`);
-    return ok;
-  }
-
   if (status === 'cancelled' || status === 'paused') {
     const ok = await updateSubscriptionPlan(parsed.email, 'free', null);
     console.log(`[MP webhook] downgraded ${parsed.email} (status=${status}) → ${ok}`);
     return ok;
   }
 
-  console.log(`[MP webhook] preapproval ${preapprovalId} status=${status} — no action`);
-  return true;
-}
-
-async function extendPlanFromExternalReference(
-  externalReference: string | undefined
-): Promise<boolean> {
-  const parsed = parseExternalReference(externalReference);
-  if (!parsed) return false;
-
-  const expiresAt = subscriptionExpiresInDays(35);
-  return updateSubscriptionPlan(parsed.email, parsed.plan, expiresAt);
+  const outcome = await activateProFromPreapproval(preapproval);
+  console.log(
+    `[MP webhook] preapproval ${preapprovalId} status=${status} → ${outcome} for ${parsed.email}`
+  );
+  return outcome === 'activated';
 }
 
 /**
@@ -83,8 +69,11 @@ export async function POST(request: NextRequest) {
   const topic = body.type || body.topic || url.searchParams.get('topic') || '';
 
   if (eventId && !verifyMpWebhookSignature({ xSignature, xRequestId, dataId: eventId })) {
-    console.warn('[MP webhook] invalid signature for', eventId);
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    console.warn('[MP webhook] invalid signature for', eventId, '— procesando igual si no hay MP_WEBHOOK_SECRET');
+    const secret = process.env.MP_WEBHOOK_SECRET?.trim();
+    if (secret) {
+      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
+    }
   }
 
   try {

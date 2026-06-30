@@ -48,6 +48,13 @@ export default function SubscribeProButton({
       }
 
       if (data.initPoint) {
+        if (data.preapprovalId) {
+          try {
+            sessionStorage.setItem('seojump_mp_preapproval_id', data.preapprovalId);
+          } catch {
+            /* ignore */
+          }
+        }
         if (onBeforeRedirect) onBeforeRedirect();
         window.location.href = data.initPoint;
         return;

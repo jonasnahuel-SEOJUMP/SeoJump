@@ -92,6 +92,36 @@ async function mpFetch<T>(
   return { ok: true, status: res.status, data };
 }
 
+function isActivePreapprovalStatus(status: string | undefined): boolean {
+  const s = (status || '').toLowerCase();
+  return s === 'authorized' || s === 'active' || s === 'approved';
+}
+
+/** Activa PRO en Supabase si la suscripción MP está vigente. */
+export async function activateProFromPreapproval(
+  preapproval: MpPreapproval,
+  expectedAccountEmail?: string
+): Promise<'activated' | 'pending' | 'none' | 'error'> {
+  const parsed = parseExternalReference(preapproval.external_reference);
+  if (!parsed) return 'none';
+
+  if (
+    expectedAccountEmail &&
+    parsed.email !== expectedAccountEmail.trim().toLowerCase()
+  ) {
+    return 'none';
+  }
+
+  const status = (preapproval.status || '').toLowerCase();
+  if (isActivePreapprovalStatus(status)) {
+    const expiresAt = subscriptionExpiresInDays(35);
+    const ok = await updateSubscriptionPlan(parsed.email, parsed.plan, expiresAt);
+    return ok ? 'activated' : 'error';
+  }
+  if (status === 'pending') return 'pending';
+  return 'none';
+}
+
 /** Crea suscripción mensual PRO y devuelve URL de checkout (init_point). */
 export async function createProSubscriptionCheckout(params: {
   /** Cuenta SEO Jump (Google) — activamos PRO acá vía external_reference */
@@ -195,11 +225,17 @@ export async function syncProSubscriptionForEmail(
   const normalizedEmail = email.trim().toLowerCase();
   const expectedRef = buildExternalReference('pro', normalizedEmail);
 
-  // Buscar por external_reference (el pagador MP puede usar otro email).
-  const q = encodeURIComponent(expectedRef);
-  const result = await mpFetch<MpSearchResult>(
-    `/preapproval/search?q=${q}&sort=date_created&criteria=desc`
+  const refQuery = encodeURIComponent(expectedRef);
+  let result = await mpFetch<MpSearchResult>(
+    `/preapproval/search?external_reference=${refQuery}&sort=date_created&criteria=desc`
   );
+
+  // Fallback: búsqueda libre por si la API ignora external_reference en algunas cuentas
+  if (!result.ok || !result.data?.results?.length) {
+    result = await mpFetch<MpSearchResult>(
+      `/preapproval/search?q=${refQuery}&sort=date_created&criteria=desc`
+    );
+  }
 
   const results = result.data?.results ?? [];
   const matches = results.filter(
@@ -209,19 +245,21 @@ export async function syncProSubscriptionForEmail(
   if (!result.ok || matches.length === 0) return 'none';
 
   for (const sub of matches) {
-    const parsed = parseExternalReference(sub.external_reference);
-    if (!parsed || parsed.email !== normalizedEmail) continue;
-
-    const status = (sub.status || '').toLowerCase();
-    if (status === 'authorized' || status === 'active') {
-      const expiresAt = subscriptionExpiresInDays(35);
-      const ok = await updateSubscriptionPlan(parsed.email, parsed.plan, expiresAt);
-      return ok ? 'activated' : 'error';
-    }
-    if (status === 'pending') return 'pending';
+    const outcome = await activateProFromPreapproval(sub, normalizedEmail);
+    if (outcome !== 'none') return outcome;
   }
 
   return 'none';
+}
+
+/** Activa PRO por ID de suscripción (más fiable post-checkout). */
+export async function syncProSubscriptionByPreapprovalId(
+  preapprovalId: string,
+  expectedAccountEmail: string
+): Promise<'activated' | 'pending' | 'none' | 'error'> {
+  const preapproval = await getPreapproval(preapprovalId);
+  if (!preapproval) return 'none';
+  return activateProFromPreapproval(preapproval, expectedAccountEmail);
 }
 
 type MpUserMe = {
@@ -280,13 +318,17 @@ export async function getMpAccountHealth(): Promise<{
     hints.push(
       `billing.allow=false${billingCodes.length ? ` (${billingCodes.join(', ')})` : ''} — la cuenta no puede crear suscripciones hasta que MP habilite el cobro.`
     );
+  } else if (!canSell) {
+    hints.push(
+      'sell.allow=false pero billing.allow=true — normal en cuentas de suscripciones; el checkout debería funcionar.'
+    );
   }
   if (!process.env.MP_WEBHOOK_SECRET?.trim()) {
     hints.push('Opcional: configurá MP_WEBHOOK_SECRET para validar webhooks en producción.');
   }
 
   return {
-    ok: canSell && canBill,
+    ok: canBill,
     credentials: true,
     canSell,
     canBill,

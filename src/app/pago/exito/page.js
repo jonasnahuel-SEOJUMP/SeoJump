@@ -1,49 +1,70 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
+function getPreapprovalIdFromPage() {
+  if (typeof window === "undefined") return null;
+  const params = new URLSearchParams(window.location.search);
+  return (
+    params.get("preapproval_id") ||
+    params.get("preapprovalId") ||
+    sessionStorage.getItem("seojump_mp_preapproval_id") ||
+    null
+  );
+}
 
 export default function PagoExitoPage() {
   const router = useRouter();
   const [message, setMessage] = useState("Confirmando tu suscripción PRO…");
+  const [syncing, setSyncing] = useState(true);
 
-  useEffect(() => {
-    let cancelled = false;
+  const runSync = useCallback(async () => {
+    setSyncing(true);
+    setMessage("Confirmando tu suscripción PRO…");
+    const preapprovalId = getPreapprovalIdFromPage();
 
-    async function sync() {
-      for (let attempt = 0; attempt < 5; attempt++) {
-        try {
-          const res = await fetch("/api/mercadopago/sync", { method: "POST" });
-          const data = await res.json();
-          if (cancelled) return;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      try {
+        const res = await fetch("/api/mercadopago/sync", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(preapprovalId ? { preapprovalId } : {}),
+        });
+        const data = await res.json();
 
-          if (data.status === "activated") {
-            setMessage("¡Plan PRO activado! Redirigiendo al panel…");
-            setTimeout(() => router.push("/"), 2000);
-            return;
+        if (data.status === "activated") {
+          try {
+            sessionStorage.removeItem("seojump_mp_preapproval_id");
+          } catch {
+            /* ignore */
           }
-          if (data.status === "pending") {
-            setMessage("Pago en proceso. Te avisamos cuando se confirme.");
-            return;
-          }
-        } catch {
-          /* retry */
+          setMessage("¡Plan PRO activado! Redirigiendo al panel…");
+          setSyncing(false);
+          setTimeout(() => router.push("/?plan=pro"), 1500);
+          return;
         }
-        await new Promise((r) => setTimeout(r, 2000));
+        if (data.status === "pending") {
+          setMessage("Pago en proceso. Te avisamos cuando se confirme.");
+          setSyncing(false);
+          return;
+        }
+      } catch {
+        /* retry */
       }
-      if (!cancelled) {
-        setMessage(
-          "Recibimos tu pago. Si PRO no aparece en unos minutos, recargá la página o escribinos a nahuel@seo-jump.ai"
-        );
-      }
+      await new Promise((r) => setTimeout(r, 2000));
     }
 
-    sync();
-    return () => {
-      cancelled = true;
-    };
+    setMessage(
+      "Recibimos tu pago. Tocá «Reintentar activación» o escribinos a nahuel@seo-jump.ai"
+    );
+    setSyncing(false);
   }, [router]);
+
+  useEffect(() => {
+    runSync();
+  }, [runSync]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-fredoka flex items-center justify-center px-4">
@@ -51,12 +72,23 @@ export default function PagoExitoPage() {
         <div className="text-6xl">✅</div>
         <h1 className="text-3xl font-black text-white">¡Gracias por suscribirte!</h1>
         <p className="text-slate-400 font-semibold">{message}</p>
-        <Link
-          href="/"
-          className="inline-block btn-3d btn-green font-black py-3 px-8 rounded-xl"
-        >
-          Ir al panel
-        </Link>
+        <div className="flex flex-col gap-3">
+          {!syncing && (
+            <button
+              type="button"
+              onClick={runSync}
+              className="btn-3d btn-green font-black py-3 px-8 rounded-xl"
+            >
+              Reintentar activación
+            </button>
+          )}
+          <Link
+            href="/"
+            className="inline-block text-sm font-bold text-slate-400 hover:text-white"
+          >
+            Ir al panel
+          </Link>
+        </div>
       </div>
     </div>
   );
