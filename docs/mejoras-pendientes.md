@@ -31,7 +31,7 @@ Lista de ideas y mejoras para implementar. Consultar este archivo cuando pregunt
 ### Pendiente 📋
 | Tarea | Estado |
 |-------|--------|
-| **Mobbex AR** — credenciales en consola + webhook | Usuario dando de alta comercio Mobbex |
+| **Mercado Pago AR** — `MP_ACCESS_TOKEN` renovado en Vercel + webhook | Usuario confirmó billing.allow en cuenta cobros@ |
 | **Plan B MP** | Token cuenta vieja 55 Detail Shop |
 | **Lemon Squeezy + Payoneer** (Fase 1 internacional, MoR) | Pausado unos días |
 | **Stripe + LLC** | Cuando escale facturación internacional |

@@ -7,7 +7,7 @@ import { notifyAiCreditUsed } from "../lib/aiCreditToast";
 
 /**
  * Lee el plan desde Supabase (subscription_status).
- * Plan y créditos IA desde Supabase (Mobbex / Stripe actualizan subscription_status).
+ * Plan y créditos IA desde Supabase (Mercado Pago / Stripe actualizan subscription_status).
  */
 export function useSubscription() {
   const { data: session, status } = useSession();

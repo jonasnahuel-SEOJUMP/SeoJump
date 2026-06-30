@@ -28,7 +28,7 @@ function useIsArgentina() {
     fetch("/api/geo")
       .then((r) => r.json())
       .then(({ country }) => setIsAR(country === "AR"))
-      .catch(() => setIsAR(true)); // ante error, muestra Mobbex
+      .catch(() => setIsAR(true)); // ante error, muestra Mercado Pago
   }, []);
 
   return isAR;
@@ -114,7 +114,7 @@ export default function PreciosPage() {
               }`}
               onClick={() => setIsAR(true)}
             >
-              🇦🇷 ARS — Mobbex
+              🇦🇷 ARS — Mercado Pago
             </span>
             <span
               className={`cursor-pointer px-3 py-1 rounded-full border-2 transition-colors ${
@@ -186,7 +186,7 @@ export default function PreciosPage() {
                   <SubscribeProButton
                     className="w-full text-center py-3 rounded-xl font-black text-sm transition-all bg-duo-green text-white hover:brightness-110 disabled:opacity-60"
                   >
-                    Quiero PRO — Mobbex
+                    Quiero PRO — Mercado Pago
                   </SubscribeProButton>
                 ) : (
                   <StripeCheckoutButton
@@ -240,14 +240,14 @@ export default function PreciosPage() {
         {isAR !== null && (
           <p className="text-center text-xs text-slate-500 font-bold max-w-xl mx-auto">
             {isAR
-              ? "Al pagar con Mobbex, el plan PRO se activa en tu cuenta de SEO Jump (mismo email de Google)."
+              ? "Al pagar con Mercado Pago, el plan PRO se activa en tu cuenta de SEO Jump (mismo email de Google)."
               : "Payment processed by Stripe. Your PRO plan activates on your SEO Jump account automatically after checkout."}
           </p>
         )}
 
         <p className="text-center text-xs text-slate-500 font-bold">
           {isAR
-            ? `Cobro mensual con Mobbex · ${formatArs(PLANS.pro.priceArs)} IVA incluido · Plan Agencia: `
+            ? `Cobro mensual con Mercado Pago · ${formatArs(PLANS.pro.priceArs)} IVA incluido · Plan Agencia: `
             : `Monthly billing via Stripe · ${formatUsd(PLANS.pro.priceUsd)}/mo · Agency plan: `}
           <a href="mailto:nahuel@seo-jump.ai" className="text-duo-green hover:underline">
             nahuel@seo-jump.ai

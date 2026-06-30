@@ -14,7 +14,7 @@ export default function PagoExitoPage() {
     async function sync() {
       for (let attempt = 0; attempt < 5; attempt++) {
         try {
-          const res = await fetch("/api/mobbex/sync", { method: "POST" });
+          const res = await fetch("/api/mercadopago/sync", { method: "POST" });
           const data = await res.json();
           if (cancelled) return;
 

@@ -7,7 +7,7 @@ export default function PagoPendientePage() {
         <div className="text-6xl">⏳</div>
         <h1 className="text-3xl font-black text-white">Pago pendiente</h1>
         <p className="text-slate-400 font-semibold">
-          Tu pago está en proceso. Cuando Mobbex lo confirme, activaremos tu plan PRO
+          Tu pago está en proceso. Cuando Mercado Pago lo confirme, activaremos tu plan PRO
           automáticamente.
         </p>
         <Link

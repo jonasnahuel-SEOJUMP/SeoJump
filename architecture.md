@@ -16,7 +16,7 @@ Si una regla de acá cambia, actualizá este archivo en el mismo commit.
 | Auth | NextAuth v5 (Google OAuth, scope `webmasters` para Search Console) |
 | Base de datos | Supabase (perfiles, suscripciones, créditos IA, snapshots de competencia, misiones) |
 | IA | Google Gemini (análisis de contenido, Quick Wins, AEO, Espía) |
-| Pagos ARS | **Mobbex** (en migración — ver sección 6) |
+| Pagos ARS | **Mercado Pago** (suscripciones `/preapproval`) |
 | Pagos internacionales | Stripe |
 | Hosting | Vercel (deploy automático al pushear a `main`) |
 
@@ -38,7 +38,8 @@ helpers puros NO viven ahí: están en módulos sin `"use server"` y se importan
 | `aiCredits.ts` | Lógica de créditos IA (consumo, límites, caché de Gemini) | No |
 | `planLimits.ts` | Límites por plan (free/pro/agencia) | No |
 | `paymentsStub.ts` | Modo prueba de pagos ARS en local (activa PRO sin Mobbex) | No |
-| `mobbex.ts` | Integración Mobbex (o delega a stub si faltan credenciales en local) | No |
+| `mobbex.ts` | Integración Mobbex (alternativa ARS, no activa en UI) | No |
+| `mercadopago.ts` | Integración Mercado Pago suscripciones PRO | No |
 
 **Regla:** si vas a agregar un helper puro (sin sesión/créditos), ponelo en el módulo de dominio
 que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando dominios, partilo.
@@ -83,11 +84,10 @@ que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando d
 
 ## 6. Pagos
 
-- **Mobbex** es la pasarela para Argentina (reemplaza a Mercado Pago, abandonado por problemas de seguridad).
-- Estado actual: integración en `src/lib/mobbex.ts` + rutas `/api/mobbex/*`.
-- **Modo prueba local** (`src/lib/paymentsStub.ts`): si estás en `localhost` y **no** hay
-  `MOBBEX_API_KEY` / `MOBBEX_ACCESS_TOKEN`, el checkout ARS simula éxito y activa PRO en Supabase
-  (sin llamar a Mobbex). En Vercel producción esto **no** ocurre salvo `PAYMENTS_STUB=true` explícito.
+- **Mercado Pago** es la pasarela para Argentina (suscripciones mensuales PRO).
+- Estado actual: integración en `src/lib/mercadopago.ts` + rutas `/api/mercadopago/*`.
+- **Mobbex** queda en el repo como alternativa (`src/lib/mobbex.ts`) pero no está activo en la UI.
+- **Modo prueba local** (`src/lib/paymentsStub.ts`): solo aplica si se reactiva Mobbex sin credenciales en localhost.
 - **Stripe** para pagos internacionales (USD).
 - Las suscripciones actualizan `subscription_status` en Supabase vía webhook.
 - El panel admin permite activar PRO/Agencia manualmente como backup si falla el webhook.
