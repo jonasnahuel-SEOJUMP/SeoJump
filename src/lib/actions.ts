@@ -123,32 +123,43 @@ export async function activateUserPlan(
   plan: 'free' | 'pro' | 'agency',
   months: number = 1
 ): Promise<{ success: boolean; error?: string }> {
-  const isAdmin = await checkIsAdmin();
-  if (!isAdmin) {
-    return { success: false, error: 'Solo administradores pueden activar planes.' };
-  }
+  try {
+    const isAdmin = await checkIsAdmin();
+    if (!isAdmin) {
+      return { success: false, error: 'Solo administradores pueden activar planes.' };
+    }
 
-  const email = targetEmail.trim().toLowerCase();
-  if (!email) return { success: false, error: 'Email inválido.' };
+    const email = targetEmail.trim().toLowerCase();
+    if (!email) return { success: false, error: 'Email inválido.' };
 
-  let expiresAt: string | null = null;
-  if (plan !== 'free' && months > 0) {
-    const d = new Date();
-    d.setMonth(d.getMonth() + months);
-    expiresAt = d.toISOString();
-  }
+    let expiresAt: string | null = null;
+    if (plan !== 'free' && months > 0) {
+      const d = new Date();
+      d.setMonth(d.getMonth() + months);
+      expiresAt = d.toISOString();
+    }
 
-  const result = await updateSubscriptionPlan(email, plan, expiresAt);
-  if (!result.ok) {
+    const result = await updateSubscriptionPlan(email, plan, expiresAt);
+    if (!result.ok) {
+      return {
+        success: false,
+        error:
+          result.error ||
+          'No se pudo actualizar el plan. Revisá Supabase (migración 003) o variables en Vercel.',
+      };
+    }
+
+    return { success: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
     return {
       success: false,
       error:
-        result.error ||
-        'No se pudo actualizar el plan. Revisá Supabase (migración 003) o variables en Vercel.',
+        /fetch failed/i.test(message)
+          ? 'No se pudo conectar con Supabase desde el servidor. Revisá NEXT_PUBLIC_SUPABASE_URL en Vercel y probá /api/debug-supabase'
+          : message,
     };
   }
-
-  return { success: true };
 }
 
 type GeminiCreditResult =

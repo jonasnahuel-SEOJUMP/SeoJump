@@ -271,13 +271,24 @@ export default function Perfil() {
                   playClick();
                   setAdminLoading(true);
                   setAdminMsg(null);
-                  const res = await activateUserPlan(adminEmail.trim(), adminPlan, adminMonths);
-                  setAdminLoading(false);
-                  if (res.success) {
-                    setAdminMsg({ ok: true, text: `Plan ${adminPlan} activado para ${adminEmail}` });
-                    refreshPlan();
-                  } else {
-                    setAdminMsg({ ok: false, text: res.error || "Error" });
+                  try {
+                    const res = await activateUserPlan(adminEmail.trim(), adminPlan, adminMonths);
+                    if (res.success) {
+                      setAdminMsg({ ok: true, text: `Plan ${adminPlan} activado para ${adminEmail}` });
+                      refreshPlan();
+                    } else {
+                      setAdminMsg({ ok: false, text: res.error || "Error" });
+                    }
+                  } catch (err) {
+                    const text = err instanceof Error ? err.message : String(err);
+                    setAdminMsg({
+                      ok: false,
+                      text: /fetch failed/i.test(text)
+                        ? "No se pudo conectar con Supabase. Revisá variables en Vercel y probá /api/debug-supabase"
+                        : text,
+                    });
+                  } finally {
+                    setAdminLoading(false);
                   }
                 }}
                 className="btn-3d btn-green text-sm font-black py-2.5 px-5 disabled:opacity-50"

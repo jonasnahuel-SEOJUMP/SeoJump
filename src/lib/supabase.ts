@@ -62,9 +62,9 @@ export type MissionBaselineInput = {
 
 // ─── Configuración ───────────────────────────────────────────────────────────
 
-const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl  = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
+const supabaseAnon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
+const supabaseServiceRole = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
 
 const isConfigured = Boolean(supabaseUrl && supabaseAnon);
 
@@ -335,6 +335,20 @@ export async function isMissionCompleted(
 /**
  * Actualiza el plan de suscripción de un usuario (activación manual PRO/Agencia).
  */
+function formatSupabaseConnectionError(err: unknown, host?: string | null): string {
+  const message = err instanceof Error ? err.message : String(err);
+  if (/fetch failed|ENOTFOUND|ECONNREFUSED|ETIMEDOUT|getaddrinfo/i.test(message)) {
+    const target = host ? ` (${host})` : '';
+    return (
+      `No se pudo conectar con Supabase${target}. ` +
+      'Revisá en Vercel → Settings → Environment Variables que NEXT_PUBLIC_SUPABASE_URL ' +
+      'sea exactamente la Project URL del dashboard de Supabase (Settings → API), sin espacios al final. ' +
+      'Luego redeploy. Probá también /api/debug-supabase'
+    );
+  }
+  return message;
+}
+
 export async function updateSubscriptionPlan(
   email: string,
   plan: 'free' | 'pro' | 'agency',
@@ -345,55 +359,70 @@ export async function updateSubscriptionPlan(
   }
 
   const normalizedEmail = email.trim().toLowerCase();
+  const projectHost = supabaseUrl ? safeSupabaseHost(supabaseUrl) : null;
 
-  const { error: upsertErr } = await supabaseAdmin.rpc('upsert_profile', {
-    p_email: normalizedEmail,
-    p_website_url: null,
-    p_business_name: null,
-  });
-  if (upsertErr) {
-    console.error('[Supabase] updateSubscriptionPlan upsert_profile:', upsertErr.message);
-    return { ok: false, error: upsertErr.message };
-  }
+  try {
+    const { error: upsertErr } = await supabaseAdmin.rpc('upsert_profile', {
+      p_email: normalizedEmail,
+      p_website_url: null,
+      p_business_name: null,
+    });
+    if (upsertErr) {
+      console.error('[Supabase] updateSubscriptionPlan upsert_profile:', upsertErr.message);
+      return { ok: false, error: upsertErr.message };
+    }
 
-  const baseUpdate = {
-    subscription_status: plan,
-    updated_at: new Date().toISOString(),
-  };
+    const baseUpdate = {
+      subscription_status: plan,
+      updated_at: new Date().toISOString(),
+    };
 
-  let { data, error } = await supabaseAdmin
-    .from('profiles')
-    .update({
-      ...baseUpdate,
-      subscription_expires_at: expiresAt ?? null,
-    })
-    .eq('email', normalizedEmail)
-    .select('id')
-    .maybeSingle();
-
-  // Fallback si no corrieron migración 003 (columna subscription_expires_at)
-  if (
-    error &&
-    /subscription_expires_at/i.test(error.message)
-  ) {
-    ({ data, error } = await supabaseAdmin
+    let { data, error } = await supabaseAdmin
       .from('profiles')
-      .update(baseUpdate)
+      .update({
+        ...baseUpdate,
+        subscription_expires_at: expiresAt ?? null,
+      })
       .eq('email', normalizedEmail)
       .select('id')
-      .maybeSingle());
-  }
+      .maybeSingle();
 
-  if (error) {
-    console.error('[Supabase] updateSubscriptionPlan:', error.message);
-    return { ok: false, error: error.message };
+    // Fallback si no corrieron migración 003 (columna subscription_expires_at)
+    if (
+      error &&
+      /subscription_expires_at/i.test(error.message)
+    ) {
+      ({ data, error } = await supabaseAdmin
+        .from('profiles')
+        .update(baseUpdate)
+        .eq('email', normalizedEmail)
+        .select('id')
+        .maybeSingle());
+    }
+
+    if (error) {
+      console.error('[Supabase] updateSubscriptionPlan:', error.message);
+      return { ok: false, error: error.message };
+    }
+    if (!data?.id) {
+      const msg = `No se encontró perfil para ${normalizedEmail}`;
+      console.error('[Supabase] updateSubscriptionPlan:', msg);
+      return { ok: false, error: msg };
+    }
+    return { ok: true };
+  } catch (err) {
+    const error = formatSupabaseConnectionError(err, projectHost);
+    console.error('[Supabase] updateSubscriptionPlan:', error);
+    return { ok: false, error };
   }
-  if (!data?.id) {
-    const msg = `No se encontró perfil para ${normalizedEmail}`;
-    console.error('[Supabase] updateSubscriptionPlan:', msg);
-    return { ok: false, error: msg };
+}
+
+function safeSupabaseHost(url: string): string | null {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return null;
   }
-  return { ok: true };
 }
 
 // ─── Espía de la Competencia (Fase 1) ───────────────────────────────────────
