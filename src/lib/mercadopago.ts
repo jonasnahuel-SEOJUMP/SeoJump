@@ -230,17 +230,29 @@ export async function syncProSubscriptionForEmail(
     `/preapproval/search?external_reference=${refQuery}&sort=date_created&criteria=desc`
   );
 
-  // Fallback: búsqueda libre por si la API ignora external_reference en algunas cuentas
-  if (!result.ok || !result.data?.results?.length) {
+  let matches = (result.data?.results ?? []).filter(
+    (sub) => sub.external_reference === expectedRef
+  );
+
+  // Fallback: listar recientes y filtrar (útil si el pago fue antes de guardar preapproval_id)
+  if (!result.ok || matches.length === 0) {
     result = await mpFetch<MpSearchResult>(
-      `/preapproval/search?q=${refQuery}&sort=date_created&criteria=desc`
+      `/preapproval/search?sort=date_created&criteria=desc&limit=50`
+    );
+    matches = (result.data?.results ?? []).filter(
+      (sub) => sub.external_reference === expectedRef
     );
   }
 
-  const results = result.data?.results ?? [];
-  const matches = results.filter(
-    (sub) => sub.external_reference === expectedRef
-  );
+  // Fallback legacy: búsqueda libre
+  if (!result.ok || matches.length === 0) {
+    result = await mpFetch<MpSearchResult>(
+      `/preapproval/search?q=${refQuery}&sort=date_created&criteria=desc`
+    );
+    matches = (result.data?.results ?? []).filter(
+      (sub) => sub.external_reference === expectedRef
+    );
+  }
 
   if (!result.ok || matches.length === 0) return 'none';
 

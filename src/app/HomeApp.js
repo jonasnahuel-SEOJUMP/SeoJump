@@ -153,6 +153,15 @@ export default function HomeApp() {
   const { hasPremiumAccess, credits, loading: creditsLoading, refresh: refreshCredits } = useSubscription();
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("plan") === "pro") {
+      refreshCredits();
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [refreshCredits]);
+
+  useEffect(() => {
     localStorage.removeItem("isPremium");
     setCmsPlatform(getStoredPlatform());
     const savedGoal = localStorage.getItem("seojump_goal");

@@ -40,9 +40,9 @@ export default function PagoExitoPage() {
           } catch {
             /* ignore */
           }
-          setMessage("¡Plan PRO activado! Redirigiendo al panel…");
+          setMessage("¡Plan PRO activado! Recargá el panel (F5) si las misiones siguen bloqueadas.");
           setSyncing(false);
-          setTimeout(() => router.push("/?plan=pro"), 1500);
+          setTimeout(() => router.push("/optimizacion?plan=pro"), 2000);
           return;
         }
         if (data.status === "pending") {

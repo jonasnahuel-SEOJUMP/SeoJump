@@ -417,6 +417,16 @@ export default function Optimizacion() {
   const [phExample, setPhExample] = useState(QUICK_WIN_PLACEHOLDER_EXAMPLES[0]);
   const { hasPremiumAccess, credits: aiCredits, loading: creditsLoading, refresh: refreshCredits } = useSubscription();
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("plan") === "pro") {
+      refreshCredits();
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [refreshCredits]);
+
   const [upgradeMessage, setUpgradeMessage] = useState("");
   const [cmsPlatform, setCmsPlatform] = useState("wp_woo");
   const [pagePreview, setPagePreview] = useState(null);
