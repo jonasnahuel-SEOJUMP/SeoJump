@@ -32,9 +32,9 @@ async function activatePlanFromPreapproval(preapprovalId: string): Promise<boole
   const status = (preapproval.status || '').toLowerCase();
 
   if (status === 'cancelled' || status === 'paused') {
-    const ok = await updateSubscriptionPlan(parsed.email, 'free', null);
-    console.log(`[MP webhook] downgraded ${parsed.email} (status=${status}) → ${ok}`);
-    return ok;
+    const result = await updateSubscriptionPlan(parsed.email, 'free', null);
+    console.log(`[MP webhook] downgraded ${parsed.email} (status=${status}) → ${result.ok}`);
+    return result.ok;
   }
 
   const outcome = await activateProFromPreapproval(preapproval);

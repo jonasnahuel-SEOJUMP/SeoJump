@@ -339,12 +339,13 @@ export async function updateSubscriptionPlan(
   email: string,
   plan: 'free' | 'pro' | 'agency',
   expiresAt?: string | null
-): Promise<boolean> {
-  if (!supabaseAdmin) return false;
+): Promise<{ ok: boolean; error?: string }> {
+  if (!supabaseAdmin) {
+    return { ok: false, error: 'Supabase no configurado en el servidor (faltan variables en Vercel).' };
+  }
 
   const normalizedEmail = email.trim().toLowerCase();
 
-  // Asegurar que el perfil exista (usuarios nuevos que pagan antes de completar una misión).
   const { error: upsertErr } = await supabaseAdmin.rpc('upsert_profile', {
     p_email: normalizedEmail,
     p_website_url: null,
@@ -352,29 +353,47 @@ export async function updateSubscriptionPlan(
   });
   if (upsertErr) {
     console.error('[Supabase] updateSubscriptionPlan upsert_profile:', upsertErr.message);
-    return false;
+    return { ok: false, error: upsertErr.message };
   }
 
-  const { data, error } = await supabaseAdmin
+  const baseUpdate = {
+    subscription_status: plan,
+    updated_at: new Date().toISOString(),
+  };
+
+  let { data, error } = await supabaseAdmin
     .from('profiles')
     .update({
-      subscription_status: plan,
+      ...baseUpdate,
       subscription_expires_at: expiresAt ?? null,
-      updated_at: new Date().toISOString(),
     })
     .eq('email', normalizedEmail)
     .select('id')
     .maybeSingle();
 
+  // Fallback si no corrieron migración 003 (columna subscription_expires_at)
+  if (
+    error &&
+    /subscription_expires_at/i.test(error.message)
+  ) {
+    ({ data, error } = await supabaseAdmin
+      .from('profiles')
+      .update(baseUpdate)
+      .eq('email', normalizedEmail)
+      .select('id')
+      .maybeSingle());
+  }
+
   if (error) {
     console.error('[Supabase] updateSubscriptionPlan:', error.message);
-    return false;
+    return { ok: false, error: error.message };
   }
   if (!data?.id) {
-    console.error('[Supabase] updateSubscriptionPlan: sin filas para', normalizedEmail);
-    return false;
+    const msg = `No se encontró perfil para ${normalizedEmail}`;
+    console.error('[Supabase] updateSubscriptionPlan:', msg);
+    return { ok: false, error: msg };
   }
-  return true;
+  return { ok: true };
 }
 
 // ─── Espía de la Competencia (Fase 1) ───────────────────────────────────────

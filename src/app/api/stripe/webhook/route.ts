@@ -42,8 +42,8 @@ export async function POST(request: NextRequest) {
         }
 
         const expiresAt = stripeExpiresInDays(35);
-        const ok = await updateSubscriptionPlan(email, 'pro', expiresAt);
-        console.log(`[Stripe webhook] PRO activado para ${email} → ${ok}`);
+        const result = await updateSubscriptionPlan(email, 'pro', expiresAt);
+        console.log(`[Stripe webhook] PRO activado para ${email} → ${result.ok}`);
         break;
       }
 
@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
           break;
         }
 
-        const ok = await updateSubscriptionPlan(email, 'free', null);
-        console.log(`[Stripe webhook] plan → free para ${email} (cancelación) → ${ok}`);
+        const result = await updateSubscriptionPlan(email, 'free', null);
+        console.log(`[Stripe webhook] plan → free para ${email} (cancelación) → ${result.ok}`);
         break;
       }
 

@@ -58,7 +58,7 @@ export function isPaymentsStubMode(): boolean {
 export async function stubActivateProPlan(email: string): Promise<boolean> {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return false;
-  return updateSubscriptionPlan(normalized, 'pro', expiresInDays(35));
+  return (await updateSubscriptionPlan(normalized, 'pro', expiresInDays(35))).ok;
 }
 
 export function stubCheckoutUrl(): string {

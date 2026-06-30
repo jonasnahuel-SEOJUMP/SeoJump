@@ -138,9 +138,14 @@ export async function activateUserPlan(
     expiresAt = d.toISOString();
   }
 
-  const ok = await updateSubscriptionPlan(email, plan, expiresAt);
-  if (!ok) {
-    return { success: false, error: 'No se pudo actualizar el plan. ¿Ejecutaste la migración 003 en Supabase?' };
+  const result = await updateSubscriptionPlan(email, plan, expiresAt);
+  if (!result.ok) {
+    return {
+      success: false,
+      error:
+        result.error ||
+        'No se pudo actualizar el plan. Revisá Supabase (migración 003) o variables en Vercel.',
+    };
   }
 
   return { success: true };

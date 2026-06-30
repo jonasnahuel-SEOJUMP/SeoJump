@@ -115,8 +115,8 @@ export async function activateProFromPreapproval(
   const status = (preapproval.status || '').toLowerCase();
   if (isActivePreapprovalStatus(status)) {
     const expiresAt = subscriptionExpiresInDays(35);
-    const ok = await updateSubscriptionPlan(parsed.email, parsed.plan, expiresAt);
-    return ok ? 'activated' : 'error';
+    const result = await updateSubscriptionPlan(parsed.email, parsed.plan, expiresAt);
+    return result.ok ? 'activated' : 'error';
   }
   if (status === 'pending') return 'pending';
   return 'none';

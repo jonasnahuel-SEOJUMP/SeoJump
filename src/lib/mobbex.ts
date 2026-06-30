@@ -385,8 +385,8 @@ export async function syncProSubscriptionForEmail(
 
       if (isSubscriberActive(status)) {
         const expiresAt = subscriptionExpiresInDays(35);
-        const ok = await updateSubscriptionPlan(normalizedEmail, 'pro', expiresAt);
-        return ok ? 'activated' : 'error';
+        const result = await updateSubscriptionPlan(normalizedEmail, 'pro', expiresAt);
+        return result.ok ? 'activated' : 'error';
       }
       return 'pending';
     }
@@ -422,16 +422,16 @@ export async function handleMobbexWebhook(body: Record<string, unknown>): Promis
 
   if (isSuccess) {
     const expiresAt = subscriptionExpiresInDays(35);
-    const ok = await updateSubscriptionPlan(parsed.email, parsed.plan, expiresAt);
-    console.log(`[Mobbex webhook] PRO activado ${parsed.email} → ${ok}`);
-    return ok;
+    const result = await updateSubscriptionPlan(parsed.email, parsed.plan, expiresAt);
+    console.log(`[Mobbex webhook] PRO activado ${parsed.email} → ${result.ok}`);
+    return result.ok;
   }
 
   const failCodes = new Set(['401', '402', '403', '404', 'cancelled', 'canceled', 'suspended']);
   if (failCodes.has(code) || failCodes.has(code.toLowerCase())) {
-    const ok = await updateSubscriptionPlan(parsed.email, 'free', null);
-    console.log(`[Mobbex webhook] plan free ${parsed.email} (code=${code}) → ${ok}`);
-    return ok;
+    const result = await updateSubscriptionPlan(parsed.email, 'free', null);
+    console.log(`[Mobbex webhook] plan free ${parsed.email} (code=${code}) → ${result.ok}`);
+    return result.ok;
   }
 
   console.log('[Mobbex webhook] evento sin acción, code=', code, 'ref=', ref);
