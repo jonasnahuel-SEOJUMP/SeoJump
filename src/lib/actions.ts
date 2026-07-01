@@ -844,7 +844,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
       return { success: true, data: starter, source: 'web' };
     }
 
-    const rowLimit = cleanGoldKeyword ? 25 : 50;
+    const rowLimit = cleanGoldKeyword ? 75 : 100;
     let rows: any[] = [];
     try {
       rows = await getSearchConsoleData(session.accessToken, cleanSiteUrl, cleanGoldKeyword || undefined, rowLimit)
@@ -930,14 +930,17 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
     };
     // ─────────────────────────────────────────────────────────────────────
 
-    // Páginas ya optimizadas — no volver a pedir tareas en la misma URL
+    // Páginas ya optimizadas — no volver a pedir tareas en la misma URL (ni por slug)
     const completedPagePaths = new Set<string>();
+    const completedPageSlugs = new Set<string>();
     if (session?.user?.email) {
       try {
         const doneMissions = await getMissionsByEmail(session.user.email, 'completed');
         for (const m of doneMissions) {
           if (m.target_url) {
             completedPagePaths.add(normalizePagePath(m.target_url));
+            const slug = pathSlug(m.target_url);
+            if (slug) completedPageSlugs.add(slug);
           }
         }
       } catch (err) {
@@ -945,114 +948,154 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
       }
     }
 
+    const isPageCompleted = (pageUrl: string): boolean => {
+      const norm = normalizePagePath(pageUrl);
+      if (completedPagePaths.has(norm)) return true;
+      const slug = pathSlug(pageUrl);
+      return !!(slug && completedPageSlugs.has(slug));
+    };
+
     const brandTokens = deriveBrandTokens(cleanSiteUrl);
 
-    // ── Agrupar TODAS las búsquedas de cada página ──
-    // En vez de quedarnos con la query de más clics (la que ya ganás), juntamos
-    // todas las búsquedas por las que aparece cada página para luego elegir la
-    // de mayor OPORTUNIDAD real.
-    const rowsByPage = new Map<string, typeof missionRows>();
-    for (const row of missionRows) {
-      const pagePath = normalizePagePath(row.keys[0]);
-      if (completedPagePaths.has(pagePath)) continue;
-      const list = rowsByPage.get(pagePath) || [];
-      list.push(row);
-      rowsByPage.set(pagePath, list);
-    }
-
-    const missions: any[] = [];
-
-    for (const [pagePath, pageRows] of rowsByPage) {
-      // 1. Puntuar cada búsqueda por oportunidad (demanda × posición alcanzable).
-      //    Despriorizar las que son solo tu marca (ya las ganás).
-      const candidates = pageRows
-        .map(r => {
-          const kw = cleanGscKeyword(r.keys[1] || '');
-          let score = opportunityScore(r);
-          if (isMostlySiteBrand(kw, brandTokens)) score *= 0.25;
-          return { row: r, kw, score, isQuestion: isQuestionQuery(kw) };
-        })
-        .filter(c => c.kw.length > 0);
-
-      // 2. Separar intención COMERCIAL (SEO) vs PREGUNTAS (AEO/GEO — que la IA cite).
-      const commercial = candidates.filter(c => !c.isQuestion).sort((a, b) => b.score - a.score);
-      const questions  = candidates.filter(c => c.isQuestion).sort((a, b) => b.score - a.score);
-      const bestCommercial = commercial[0];
-      const bestQuestion   = questions[0];
-
-      // 3. Elegir la misión más inteligente para esta página:
-      //    - Si la mayor oportunidad es una pregunta con demanda → AEO/GEO.
-      //    - Si no → H1 atacando la keyword de INTENCIÓN comercial.
-      //    El objetivo del dueño inclina suavemente la balanza (sin romper el motor):
-      //    "visitas" favorece preguntas (AEO/alcance); "vender" favorece la intención comercial (H1).
-      const questionBias = cleanGoal === 'visitas' ? 1.3 : cleanGoal === 'vender' ? 0.77 : 1;
-      const questionScoreAdj = bestQuestion ? bestQuestion.score * questionBias : 0;
-      let chosen: { row: typeof pageRows[0]; kw: string; score: number };
-      let missionType: 'H1' | 'AEO';
-      if (bestQuestion && (!bestCommercial || questionScoreAdj >= bestCommercial.score)) {
-        chosen = bestQuestion;
-        missionType = 'AEO';
-      } else if (bestCommercial) {
-        chosen = bestCommercial;
-        missionType = 'H1';
-      } else {
-        chosen = { row: pageRows[0], kw: '', score: 0 };
-        missionType = 'H1';
+    const buildMissionsFromGscRows = (inputRows: typeof missionRows): any[] => {
+      const rowsByPage = new Map<string, typeof missionRows>();
+      for (const row of inputRows) {
+        const pagePath = normalizePagePath(row.keys[0]);
+        if (isPageCompleted(row.keys[0])) continue;
+        const list = rowsByPage.get(pagePath) || [];
+        list.push(row);
+        rowsByPage.set(pagePath, list);
       }
 
-      const fullPageUrl = chosen.row.keys[0];
-      // Para AEO conservamos la pregunta tal cual; para SEO ajustamos a la URL.
-      const effectiveKeyword = missionType === 'AEO'
-        ? chosen.kw
-        : resolveKeyword(chosen.kw, fullPageUrl, cleanGoldKeyword);
+      const built: any[] = [];
 
-      let displayPath = pagePath;
-      if (displayPath === '/') {
-        displayPath = 'Página de Inicio (Portada)';
-      } else {
-        displayPath = displayPath.replace(/^\/+|\/+$/g, '').replace(/[-/]/g, ' ');
-        if (displayPath.length > 0) {
-          displayPath = displayPath.charAt(0).toUpperCase() + displayPath.slice(1);
+      for (const [pagePath, pageRows] of rowsByPage) {
+        const candidates = pageRows
+          .map(r => {
+            const kw = cleanGscKeyword(r.keys[1] || '');
+            let score = opportunityScore(r);
+            if (isMostlySiteBrand(kw, brandTokens)) score *= 0.25;
+            return { row: r, kw, score, isQuestion: isQuestionQuery(kw) };
+          })
+          .filter(c => c.kw.length > 0);
+
+        const commercial = candidates.filter(c => !c.isQuestion).sort((a, b) => b.score - a.score);
+        const questions  = candidates.filter(c => c.isQuestion).sort((a, b) => b.score - a.score);
+        const bestCommercial = commercial[0];
+        const bestQuestion   = questions[0];
+
+        const questionBias = cleanGoal === 'visitas' ? 1.3 : cleanGoal === 'vender' ? 0.77 : 1;
+        const questionScoreAdj = bestQuestion ? bestQuestion.score * questionBias : 0;
+        let chosen: { row: typeof pageRows[0]; kw: string; score: number };
+        let missionType: 'H1' | 'AEO';
+        if (bestQuestion && (!bestCommercial || questionScoreAdj >= bestCommercial.score)) {
+          chosen = bestQuestion;
+          missionType = 'AEO';
+        } else if (bestCommercial) {
+          chosen = bestCommercial;
+          missionType = 'H1';
+        } else {
+          chosen = { row: pageRows[0], kw: '', score: 0 };
+          missionType = 'H1';
         }
-        if (displayPath.length > 40) {
-          displayPath = displayPath.slice(0, 37) + '...';
+
+        const fullPageUrl = chosen.row.keys[0];
+        const effectiveKeyword = missionType === 'AEO'
+          ? chosen.kw
+          : resolveKeyword(chosen.kw, fullPageUrl, cleanGoldKeyword);
+
+        let displayPath = pagePath;
+        if (displayPath === '/') {
+          displayPath = 'Página de Inicio (Portada)';
+        } else {
+          displayPath = displayPath.replace(/^\/+|\/+$/g, '').replace(/[-/]/g, ' ');
+          if (displayPath.length > 0) {
+            displayPath = displayPath.charAt(0).toUpperCase() + displayPath.slice(1);
+          }
+          if (displayPath.length > 40) {
+            displayPath = displayPath.slice(0, 37) + '...';
+          }
         }
+
+        const MISSION_TYPES = buildMissionTypes(effectiveKeyword);
+        const missionDef = MISSION_TYPES.find(m => m.type === missionType)!;
+
+        built.push({
+          id: `${missionDef.type.toLowerCase()}-${pagePath}`,
+          title: missionDef.title,
+          description: missionDef.descriptionTemplate(displayPath),
+          xp: missionDef.xp,
+          page: fullPageUrl,
+          pagePath: pagePath,
+          type: missionDef.type,
+          icon: missionDef.icon,
+          color: missionDef.color,
+          pistas: missionDef.pistas,
+          keyword: effectiveKeyword,
+          clicks: chosen.row.clicks,
+          impressions: chosen.row.impressions,
+          ctr: chosen.row.ctr,
+          position: chosen.row.position,
+          opportunity: Math.round(chosen.score * 10) / 10,
+          source: 'gsc',
+        });
       }
 
-      const MISSION_TYPES = buildMissionTypes(effectiveKeyword);
-      const missionDef = MISSION_TYPES.find(m => m.type === missionType)!;
+      built.sort((a, b) => (b.opportunity || 0) - (a.opportunity || 0));
+      return built;
+    };
 
-      missions.push({
-        id: `${missionDef.type.toLowerCase()}-${pagePath}`,
-        title: missionDef.title,
-        description: missionDef.descriptionTemplate(displayPath),
-        xp: missionDef.xp,
-        page: fullPageUrl,
-        pagePath: pagePath,
-        type: missionDef.type,
-        icon: missionDef.icon,
-        color: missionDef.color,
-        pistas: missionDef.pistas,
-        keyword: effectiveKeyword,
-        clicks: chosen.row.clicks,
-        impressions: chosen.row.impressions,
-        ctr: chosen.row.ctr,
-        position: chosen.row.position,
-        opportunity: Math.round(chosen.score * 10) / 10,
-        source: 'gsc',
-      });
+    let missions = buildMissionsFromGscRows(missionRows);
+
+    // Si ya optimizaste el top de GSC, ampliar el pool (más filas, sin filtro de keyword)
+    if (missions.length < 5 && session?.accessToken) {
+      try {
+        const broaderRows = await getSearchConsoleData(
+          session.accessToken,
+          cleanSiteUrl,
+          undefined,
+          250
+        );
+        if (broaderRows?.length) {
+          const broaderMissionRows = sortGscRows(broaderRows).filter(
+            (row) => !isHomeUrl(row.keys[0])
+          );
+          const seen = new Set(
+            missionRows.map((r) => `${normalizePagePath(r.keys[0])}|${r.keys[1] || ''}`)
+          );
+          const merged = [...missionRows];
+          for (const row of broaderMissionRows) {
+            const key = `${normalizePagePath(row.keys[0])}|${row.keys[1] || ''}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              merged.push(row);
+            }
+          }
+          missions = buildMissionsFromGscRows(merged);
+          console.log(
+            `[getRealMissions] Pool ampliado: ${merged.length} filas GSC → ${missions.length} misiones nuevas`
+          );
+        }
+      } catch (err) {
+        console.warn('[getRealMissions] No se pudo ampliar pool GSC:', err);
+      }
     }
-
-    // Ordenar por oportunidad: primero las páginas con mayor potencial de salto.
-    missions.sort((a, b) => (b.opportunity || 0) - (a.opportunity || 0));
 
     // Si GSC no produjo ninguna misión útil, caemos a misiones de arranque.
     if (missions.length === 0) {
       const starter = await buildStarterMissions(cleanSiteUrl, cleanGoldKeyword, cleanGoal);
-      return { success: true, data: starter, source: 'web' };
+      const starterPending = starter.filter((m) => {
+        const page = m.pagePath || m.page;
+        return page && !isPageCompleted(String(page));
+      });
+      return {
+        success: true,
+        data: starterPending.length > 0 ? starterPending : starter,
+        source: 'web',
+      };
     }
 
-    return { success: true, data: missions, source: 'gsc' }
+    return { success: true, data: missions.slice(0, 20), source: 'gsc' }
   } catch (error: any) {
     console.error("Error generating real missions:", error)
     logErrorToFile(

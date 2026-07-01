@@ -6,6 +6,7 @@ const SEOJUMP_USER_DATA_KEYS = [
   "seojump_completed_quick_wins",
   "seojump_completed_aeo",
   "seojump_missions",
+  "seojump_missions_fetched_at",
   "seojump_quick_wins",
   "seojump_quick_wins_url",
   "seojump_aeo_opportunities",

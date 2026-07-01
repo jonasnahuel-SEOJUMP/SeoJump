@@ -14,7 +14,8 @@ import MissionEditorGuide from "../../components/MissionEditorGuide";
 import { getStoredPlatform, detectPageType, getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getCurrentValueFromPreview } from "../../lib/cmsGuide";
 import { isMissionChangeFullyApplied } from "../../lib/textUtils";
 import { useSubscription } from "../../hooks/useSubscription";
-import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, buildAeoKey, isAeoCompleted, normQuickWinPage, isQuickWinCompleted, completedPagePathsFromSet } from "../../lib/missionMemory";
+import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, buildAeoKey, isAeoCompleted, normQuickWinPage, isQuickWinCompleted, completedPagePathsFromSet, applyMissionCompletionToSet, shouldRefreshMissionsCache } from "../../lib/missionMemory";
+import { refreshMissionsFromGsc } from "../../lib/clientMissions";
 import { pushSeoWinNotifications, shouldCheckSeoWins, markSeoWinsChecked } from "../../lib/notifications";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
@@ -385,8 +386,36 @@ export default function Optimizacion() {
   const [prog, setProg]                = useState(null);
   const [prestigeCycles, setPrestigeCycles] = useState(0);
   const [serverLoading, setServerLoading] = useState(true);
+  const [missionsLoading, setMissionsLoading] = useState(false);
 
-  // Mission detail states
+  const loadMissionsFromServer = async (targetUrl, keyword, { silent = false } = {}) => {
+    if (!targetUrl || !session) return;
+    if (!silent) {
+      setMissionsLoading(true);
+      setMissionError(null);
+    }
+    try {
+      const { pending } = await refreshMissionsFromGsc(targetUrl, keyword || undefined);
+      setMissions(pending);
+      setHasMissions(pending.length > 0);
+    } catch (err) {
+      if (!silent) {
+        setMissionError(err?.message || "Error al cargar misiones");
+      }
+    } finally {
+      if (!silent) setMissionsLoading(false);
+    }
+  };
+
+  const scheduleMissionsRefresh = (targetUrl, keyword) => {
+    if (!targetUrl) return;
+    refreshMissionsFromGsc(targetUrl, keyword || undefined)
+      .then(({ pending }) => {
+        setMissions(pending);
+        setHasMissions(pending.length > 0);
+      })
+      .catch((err) => console.warn("[Optimización] refresh misiones:", err?.message || err));
+  };
   const [selectedMission, setSelectedMission] = useState(null);
   const [h1Value, setH1Value]          = useState("");
   const [missionStatus, setMissionStatus] = useState("idle");
@@ -601,6 +630,10 @@ export default function Optimizacion() {
               isAdmin
             );
             setProg(p);
+
+            if (savedUrl && shouldRefreshMissionsCache()) {
+              scheduleMissionsRefresh(savedUrl, activeKeyword);
+            }
           } else {
             // Supabase faló o no hay sesion: usar solo localStorage
             console.warn('[Init] Supabase no devolvio datos, usando solo localStorage.');
@@ -675,6 +708,11 @@ export default function Optimizacion() {
 
       const p = getPhaseProgress(completedSet, suggestions, missionsList, keyword, savedUrl, isAdmin);
       setProg(p);
+
+      if (savedUrl && session && shouldRefreshMissionsCache()) {
+        scheduleMissionsRefresh(savedUrl, keyword);
+      }
+
       setServerLoading(false);
     };
     init();
@@ -951,11 +989,16 @@ export default function Optimizacion() {
           setXpPopup({ amount: selectedMission.xp || 50, message: "¡Crecimiento detectado!" });
           setTimeout(() => setXpPopup(null), 4000);
           setCompletedIds(prev => {
-            const updated = new Set([...prev, selectedMission.id]);
+            const updated = applyMissionCompletionToSet(prev, selectedMission);
             localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
+            setMissions((current) => filterPendingMissions(current, updated));
             setTimeout(() => {
               syncStateWithServer();
             }, 100);
+            const refreshUrl = siteUrl || localStorage.getItem("seojump_site_url");
+            if (refreshUrl) {
+              setTimeout(() => scheduleMissionsRefresh(refreshUrl, goldKeyword), 400);
+            }
             return updated;
           });
           // Persistir en Supabase — log si falla para diagnóstico
@@ -1709,6 +1752,22 @@ export default function Optimizacion() {
                   )}
 
                   <PlatformSelector value={cmsPlatform} onChange={setCmsPlatform} playClick={playClick} />
+
+                  {siteUrl && (
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        disabled={missionsLoading}
+                        onClick={() => {
+                          playClick();
+                          loadMissionsFromServer(siteUrl, goldKeyword);
+                        }}
+                        className="btn-3d btn-white text-sm font-black py-2 px-4 disabled:opacity-60"
+                      >
+                        {missionsLoading ? "Buscando en Google..." : "🔄 Buscar misiones nuevas"}
+                      </button>
+                    </div>
+                  )}
 
                   {prog?.p3 && (
                     <div className="space-y-1">

@@ -169,3 +169,61 @@ export function completedPagePathsFromSet(completedSet) {
   }
   return paths;
 }
+
+/** Índice de páginas ya trabajadas (ruta + slug) para exclusiones server/client. */
+export function buildCompletedPageIndex(doneMissions = []) {
+  const paths = new Set();
+  const slugs = new Set();
+  for (const m of doneMissions) {
+    const url = m?.target_url || m?.page;
+    if (!url) continue;
+    paths.add(normalizePagePath(url));
+    const slug = pathSlug(url);
+    if (slug) slugs.add(slug);
+  }
+  return { paths, slugs };
+}
+
+export function isPageInCompletedIndex(pageUrl, index) {
+  if (!pageUrl || !index) return false;
+  const norm = normalizePagePath(pageUrl);
+  if (index.paths?.has(norm)) return true;
+  const slug = pathSlug(pageUrl);
+  return !!(slug && index.slugs?.has(slug));
+}
+
+/** Al completar: guardar id canónico + variantes para no repetir la misma página. */
+export function applyMissionCompletionToSet(completedSet, mission) {
+  const next = new Set(completedSet || []);
+  if (!mission) return next;
+
+  if (mission.id) next.add(mission.id);
+
+  const type = String(mission.type || "").toLowerCase();
+  const pagePath = normalizePagePath(mission.pagePath || mission.page);
+  if (type && pagePath) {
+    next.add(buildMissionId(type, pagePath));
+    next.add(buildMissionId(type.toUpperCase(), pagePath));
+  }
+  if (mission.page) {
+    next.add(buildMissionId(type || "h1", mission.page));
+  }
+
+  return next;
+}
+
+export function shouldRefreshMissionsCache(maxAgeMs = 6 * 60 * 60 * 1000) {
+  try {
+    const raw = localStorage.getItem("seojump_missions_fetched_at");
+    if (!raw) return true;
+    const ts = parseInt(raw, 10);
+    if (!Number.isFinite(ts)) return true;
+    return Date.now() - ts > maxAgeMs;
+  } catch {
+    return true;
+  }
+}
+
+export function filterHomeMissions(list) {
+  return (list || []).filter((m) => m.pagePath !== "/" && m.pagePath !== "");
+}

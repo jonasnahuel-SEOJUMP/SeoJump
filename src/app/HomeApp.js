@@ -13,7 +13,8 @@ import NotificationBell from "../components/NotificationBell";
 import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, checkIsAdmin, getPageLivePreview, checkSeoWins } from "../lib/actions";
 import PlatformSelector from "../components/PlatformSelector";
 import MissionEditorGuide from "../components/MissionEditorGuide";
-import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, normQuickWinPage, isQuickWinCompleted } from "../lib/missionMemory";
+import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, normQuickWinPage, isQuickWinCompleted, applyMissionCompletionToSet, shouldRefreshMissionsCache, filterHomeMissions } from "../lib/missionMemory";
+import { refreshMissionsFromGsc } from "../lib/clientMissions";
 import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
@@ -189,43 +190,34 @@ export default function HomeApp() {
   const [missionsLoading, setMissionsLoading] = useState(false);
   const missionsAutoFetchDone = useRef(false);
 
-  const filterHomeMissions = (list) =>
-    (list || []).filter(m => m.pagePath !== '/' && m.pagePath !== '');
+  const filterHomeMissionsList = filterHomeMissions;
 
-  const loadMissionsFromServer = async (siteUrl, keyword) => {
+  const loadMissionsFromServer = async (siteUrl, keyword, { silent = false } = {}) => {
     if (!siteUrl || !session) return;
-    setMissionsLoading(true);
-    setMissionError(null);
+    if (!silent) {
+      setMissionsLoading(true);
+      setMissionError(null);
+    }
     try {
-      let completedSet = loadLocalCompletedIds();
-      try {
-        const cw = await fetchCompletedMissions();
-        if (cw.success && cw.missions?.length) {
-          const { completedIds: fromDb } = idsFromSupabaseMissions(cw.missions);
-          completedSet = new Set([...completedSet, ...fromDb]);
-        }
-      } catch (_) {}
-
-      const res = await getRealMissions(siteUrl, keyword || undefined, goal || undefined);
-      if (!res.success) throw new Error(res.error || "Error al cargar misiones");
-      const pending = filterPendingMissions(filterHomeMissions(res.data || []), completedSet);
+      const { pending } = await refreshMissionsFromGsc(
+        siteUrl,
+        keyword || undefined,
+        goal || undefined
+      );
       setMissions(pending);
-      if (pending.length > 0) {
-        localStorage.setItem("seojump_missions", JSON.stringify(pending));
-        localStorage.setItem("seojump_site_url", siteUrl);
-      } else {
-        localStorage.removeItem("seojump_missions");
-      }
+      setHasMissions(pending.length > 0);
     } catch (err) {
       const msg = err?.message || "Error al obtener misiones";
-      if (msg === "MISSING_SEARCH_CONSOLE_SCOPE") {
-        setMissionError("MISSING_SEARCH_CONSOLE_SCOPE");
-      } else {
-        setMissionError(msg);
+      if (!silent) {
+        if (msg === "MISSING_SEARCH_CONSOLE_SCOPE") {
+          setMissionError("MISSING_SEARCH_CONSOLE_SCOPE");
+        } else {
+          setMissionError(msg);
+        }
+        setMissions([]);
       }
-      setMissions([]);
     } finally {
-      setMissionsLoading(false);
+      if (!silent) setMissionsLoading(false);
     }
   };
 
@@ -318,7 +310,7 @@ export default function HomeApp() {
               try {
                 const parsed = JSON.parse(savedMissions);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                  missionsList = filterPendingMissions(filterHomeMissions(parsed), mergedCompleted);
+                  missionsList = filterPendingMissions(filterHomeMissionsList(parsed), mergedCompleted);
                   setMissions(missionsList);
                   if (savedUrl && missionsList.length > 0) setStep(6);
                 }
@@ -377,7 +369,7 @@ export default function HomeApp() {
         try {
           const parsed = JSON.parse(savedMissions);
           if (Array.isArray(parsed) && parsed.length > 0) {
-            missionsList = filterPendingMissions(filterHomeMissions(parsed), completedSet);
+            missionsList = filterPendingMissions(filterHomeMissionsList(parsed), completedSet);
             setMissions(missionsList);
             if (savedUrl && missionsList.length > 0) {
               setStep(6);
@@ -481,9 +473,11 @@ export default function HomeApp() {
     missionsAutoFetchDone.current = false;
   }, [url]);
 
-  // Si llegás al tablero sin misiones en caché, recargar una vez desde Search Console
+  // Si llegás al tablero sin misiones en caché (o caché viejo), recargar desde Search Console
   useEffect(() => {
-    if (step !== 6 || !session || !url || missions.length > 0 || missionsLoading || missionsAutoFetchDone.current) return;
+    if (step !== 6 || !session || !url || missionsLoading || missionsAutoFetchDone.current) return;
+    const needsRefresh = missions.length === 0 || shouldRefreshMissionsCache();
+    if (!needsRefresh) return;
     missionsAutoFetchDone.current = true;
     const kw = typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : null;
     loadMissionsFromServer(url, kw);
@@ -596,9 +590,15 @@ export default function HomeApp() {
           setXpPopup({ amount: selectedMission.xp || 50, message: "¡Crecimiento detectado!" });
           setTimeout(() => setXpPopup(null), 4000);
           setCompletedIds(prev => {
-            const updated = new Set([...prev, selectedMission.id]);
+            const updated = applyMissionCompletionToSet(prev, selectedMission);
             localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
+            setMissions((current) => filterPendingMissions(current, updated));
             setTimeout(() => syncStateWithServer(), 100);
+            const refreshUrl = url || localStorage.getItem("seojump_site_url");
+            const refreshKw = localStorage.getItem("gold-tu-busqueda");
+            if (refreshUrl) {
+              setTimeout(() => loadMissionsFromServer(refreshUrl, refreshKw, { silent: true }), 400);
+            }
             return updated;
           });
           // Persistir en Supabase — log si falla para diagnóstico
