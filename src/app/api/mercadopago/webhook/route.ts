@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import {
   getPreapproval,
   activateProFromPreapproval,
+  activateProFromAuthorizedPayment,
   parseExternalReference,
   verifyMpWebhookSignature,
 } from '../../../../lib/mercadopago';
@@ -16,17 +17,19 @@ type MpWebhookBody = {
   data?: { id?: string };
 };
 
-async function activatePlanFromPreapproval(preapprovalId: string): Promise<boolean> {
+type WebhookOutcome = 'activated' | 'pending' | 'none' | 'error' | 'downgraded';
+
+async function activatePlanFromPreapproval(preapprovalId: string): Promise<WebhookOutcome> {
   const preapproval = await getPreapproval(preapprovalId);
   if (!preapproval) {
     console.warn('[MP webhook] preapproval not found:', preapprovalId);
-    return false;
+    return 'none';
   }
 
   const parsed = parseExternalReference(preapproval.external_reference);
   if (!parsed) {
     console.warn('[MP webhook] invalid external_reference:', preapproval.external_reference);
-    return false;
+    return 'none';
   }
 
   const status = (preapproval.status || '').toLowerCase();
@@ -34,14 +37,18 @@ async function activatePlanFromPreapproval(preapprovalId: string): Promise<boole
   if (status === 'cancelled' || status === 'paused') {
     const result = await updateSubscriptionPlan(parsed.email, 'free', null);
     console.log(`[MP webhook] downgraded ${parsed.email} (status=${status}) → ${result.ok}`);
-    return result.ok;
+    return result.ok ? 'downgraded' : 'error';
   }
 
   const outcome = await activateProFromPreapproval(preapproval);
   console.log(
     `[MP webhook] preapproval ${preapprovalId} status=${status} → ${outcome} for ${parsed.email}`
   );
-  return outcome === 'activated';
+  return outcome;
+}
+
+function isProcessingFailure(outcome: WebhookOutcome): boolean {
+  return outcome === 'error';
 }
 
 /**
@@ -76,24 +83,31 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  let processingError = false;
+
   try {
     if (
       topic === 'subscription_preapproval' ||
       topic.includes('preapproval')
     ) {
-      if (eventId) await activatePlanFromPreapproval(String(eventId));
-    } else if (topic === 'subscription_authorized_payment') {
-      // Renovación mensual: extendemos vigencia; el email viene del preapproval vinculado
-      // MP envía id del authorized_payment — activamos vía preapproval si hace falta
       if (eventId) {
-        console.log('[MP webhook] authorized_payment', eventId);
-        // El pago recurrente confirma que la suscripción sigue activa; buscamos por API si hace falta
+        const outcome = await activatePlanFromPreapproval(String(eventId));
+        if (isProcessingFailure(outcome)) processingError = true;
+      }
+    } else if (topic === 'subscription_authorized_payment') {
+      if (eventId) {
+        const outcome = await activateProFromAuthorizedPayment(String(eventId));
+        console.log(`[MP webhook] authorized_payment ${eventId} → ${outcome}`);
+        if (isProcessingFailure(outcome)) processingError = true;
       }
     } else if (topic === 'payment') {
-      // Backup: algunos eventos de suscripción llegan como payment
       console.log('[MP webhook] payment event', eventId, body.action);
     } else {
       console.log('[MP webhook] unhandled topic:', topic, body.action);
+    }
+
+    if (processingError) {
+      return NextResponse.json({ error: 'Activation failed, retry later' }, { status: 500 });
     }
 
     return NextResponse.json({ received: true }, { status: 200 });

@@ -27,9 +27,20 @@ export async function POST(request: Request) {
   }
 
   try {
-    const status = preapprovalId
+    let status = preapprovalId
       ? await syncProSubscriptionByPreapprovalId(preapprovalId, email)
       : await syncProSubscriptionForEmail(email);
+
+    // Si el ID guardado en el navegador es viejo o incorrecto, buscar por email
+    if (preapprovalId && (status === 'none' || status === 'error')) {
+      const fallback = await syncProSubscriptionForEmail(email);
+      if (fallback === 'activated' || fallback === 'pending') {
+        status = fallback;
+      } else if (status === 'none' && fallback !== 'none') {
+        status = fallback;
+      }
+    }
+
     return NextResponse.json({ status });
   } catch (err) {
     console.error('[MP sync]', err);

@@ -97,6 +97,24 @@ function isActivePreapprovalStatus(status: string | undefined): boolean {
   return s === 'authorized' || s === 'active' || s === 'approved';
 }
 
+function preapprovalSortPriority(status: string | undefined): number {
+  const s = (status || '').toLowerCase();
+  if (isActivePreapprovalStatus(s)) return 0;
+  if (s === 'pending') return 2;
+  return 1;
+}
+
+export type MpAuthorizedPayment = {
+  id?: string | number;
+  preapproval_id?: string;
+  status?: string;
+  payment?: {
+    id?: number;
+    status?: string;
+    status_detail?: string;
+  };
+};
+
 /** Activa PRO en Supabase si la suscripción MP está vigente. */
 export async function activateProFromPreapproval(
   preapproval: MpPreapproval,
@@ -182,6 +200,42 @@ export async function getPreapproval(preapprovalId: string): Promise<MpPreapprov
   return result.data;
 }
 
+export async function getAuthorizedPayment(
+  authorizedPaymentId: string
+): Promise<MpAuthorizedPayment | null> {
+  const result = await mpFetch<MpAuthorizedPayment>(
+    `/authorized_payments/${encodeURIComponent(authorizedPaymentId)}`
+  );
+  if (!result.ok || !result.data) return null;
+  return result.data;
+}
+
+/** Renueva PRO tras un cobro recurrente aprobado (webhook subscription_authorized_payment). */
+export async function activateProFromAuthorizedPayment(
+  authorizedPaymentId: string
+): Promise<'activated' | 'pending' | 'none' | 'error'> {
+  const invoice = await getAuthorizedPayment(authorizedPaymentId);
+  if (!invoice?.preapproval_id) {
+    console.warn('[MP] authorized_payment sin preapproval_id:', authorizedPaymentId);
+    return 'none';
+  }
+
+  const paymentStatus = (invoice.payment?.status || '').toLowerCase();
+  if (paymentStatus === 'approved') {
+    const preapproval = await getPreapproval(invoice.preapproval_id);
+    if (!preapproval) return 'none';
+    return activateProFromPreapproval(preapproval);
+  }
+  if (paymentStatus === 'pending' || paymentStatus === 'in_process') {
+    return 'pending';
+  }
+
+  console.log(
+    `[MP] authorized_payment ${authorizedPaymentId} payment.status=${paymentStatus || 'n/a'}`
+  );
+  return 'none';
+}
+
 /** Valida firma x-signature de webhooks (HMAC SHA256). */
 export function verifyMpWebhookSignature(params: {
   xSignature: string | null;
@@ -256,12 +310,19 @@ export async function syncProSubscriptionForEmail(
 
   if (!result.ok || matches.length === 0) return 'none';
 
+  // Priorizar suscripciones autorizadas sobre checkouts pendientes abandonados
+  matches.sort(
+    (a, b) => preapprovalSortPriority(a.status) - preapprovalSortPriority(b.status)
+  );
+
+  let sawPending = false;
   for (const sub of matches) {
     const outcome = await activateProFromPreapproval(sub, normalizedEmail);
-    if (outcome !== 'none') return outcome;
+    if (outcome === 'activated' || outcome === 'error') return outcome;
+    if (outcome === 'pending') sawPending = true;
   }
 
-  return 'none';
+  return sawPending ? 'pending' : 'none';
 }
 
 /** Activa PRO por ID de suscripción (más fiable post-checkout). */

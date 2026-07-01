@@ -1,10 +1,28 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { auth } from '../../../auth';
 
 export const maxDuration = 15;
 
-/** GET /api/debug-supabase — health check de credenciales Supabase (admin/dev). */
+function isAdminEmail(userEmail: string): boolean {
+  const raw = process.env.ADMIN_EMAILS || process.env.ALLOWED_EMAILS || '';
+  if (!raw.trim()) return true;
+  const list = raw.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
+  return list.includes(userEmail.trim().toLowerCase());
+}
+
+/** GET /api/debug-supabase — health check Supabase (solo admin con sesión). */
 export async function GET() {
+  const session = await auth();
+  const email = session?.user?.email?.trim().toLowerCase();
+
+  if (!email) {
+    return NextResponse.json({ ok: false, error: 'no_session' }, { status: 401 });
+  }
+  if (!isAdminEmail(email)) {
+    return NextResponse.json({ ok: false, error: 'forbidden' }, { status: 403 });
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY?.trim();
