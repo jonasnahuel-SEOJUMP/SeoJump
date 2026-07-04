@@ -10,11 +10,11 @@ import PaywallModal from "../components/PaywallModal";
 import AICatch from "../components/AICatch";
 import LoginButton from "../components/LoginButton";
 import NotificationBell from "../components/NotificationBell";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, checkIsAdmin, getPageLivePreview, checkSeoWins } from "../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, fetchCompletedMissions, checkIsAdmin, getPageLivePreview, checkSeoWins } from "../lib/actions";
 import PlatformSelector from "../components/PlatformSelector";
 import MissionEditorGuide from "../components/MissionEditorGuide";
 import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, normQuickWinPage, isQuickWinCompleted, applyMissionCompletionToSet, shouldRefreshMissionsCache, filterHomeMissions } from "../lib/missionMemory";
-import { refreshMissionsFromGsc } from "../lib/clientMissions";
+import { refreshMissionsFromGsc, markMissionCompleteReliable } from "../lib/clientMissions";
 import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
@@ -600,8 +600,8 @@ export default function HomeApp() {
             }
             return updated;
           });
-          // Persistir en Supabase — log si falla para diagnóstico
-          markMissionComplete(
+          // Persistir en Supabase de forma confiable (reintenta si falla)
+          markMissionCompleteReliable(
             selectedMission.type,
             selectedMission.page,
             selectedMission.xp || 50,
@@ -612,9 +612,7 @@ export default function HomeApp() {
               clicks: selectedMission.clicks,
               impressions: selectedMission.impressions,
             }
-          ).then(r => {
-            if (!r.success) console.warn('[markMissionComplete] Supabase save failed for', selectedMission.id);
-          }).catch(err => console.warn('[markMissionComplete] Error:', err));
+          );
         }
         setShowConfetti(true);
         playSuccess();
@@ -662,13 +660,13 @@ export default function HomeApp() {
           setXpPopup({ amount: 100, message: "¡Crecimiento detectado!" });
           setTimeout(() => setXpPopup(null), 4000);
           setTimeout(() => syncStateWithServer(), 100);
-          // Guardar en Supabase para memoria cross-device
-          markMissionComplete('QUICK_WIN', pageUrl, 100, suggestedTitle, {
+          // Guardar en Supabase para memoria cross-device (reintenta si falla)
+          markMissionCompleteReliable('QUICK_WIN', pageUrl, 100, suggestedTitle, {
             keyword: quickWins[index]?.keyword,
             position: quickWins[index]?.position,
             clicks: quickWins[index]?.clicks,
             impressions: quickWins[index]?.impressions,
-          }).catch(() => {});
+          });
         }
       }
     } catch (e) {

@@ -6,7 +6,7 @@ import { useSession, signIn, signOut } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, markMissionComplete, fetchCompletedMissions, checkSeoWins, getAeoOpportunities, verifyAeoMission, checkIsAdmin, getPageLivePreview } from "../../lib/actions";
+import { getRealMissions, verifyMission, getQuickWins, verifyQuickWin, fetchCompletedMissions, checkSeoWins, getAeoOpportunities, verifyAeoMission, checkIsAdmin, getPageLivePreview } from "../../lib/actions";
 import UpgradeModal from "../../components/UpgradeModal";
 import AiCreditsBadge from "../../components/AiCreditsBadge";
 import PlatformSelector from "../../components/PlatformSelector";
@@ -15,7 +15,7 @@ import { getStoredPlatform, detectPageType, getMissionDisplayPlain, getPlainMiss
 import { isMissionChangeFullyApplied } from "../../lib/textUtils";
 import { useSubscription } from "../../hooks/useSubscription";
 import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, buildAeoKey, isAeoCompleted, normQuickWinPage, isQuickWinCompleted, completedPagePathsFromSet, applyMissionCompletionToSet, shouldRefreshMissionsCache } from "../../lib/missionMemory";
-import { refreshMissionsFromGsc } from "../../lib/clientMissions";
+import { refreshMissionsFromGsc, markMissionCompleteReliable } from "../../lib/clientMissions";
 import { pushSeoWinNotifications, shouldCheckSeoWins, markSeoWinsChecked } from "../../lib/notifications";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
@@ -1001,8 +1001,8 @@ export default function Optimizacion() {
             }
             return updated;
           });
-          // Persistir en Supabase — log si falla para diagnóstico
-          markMissionComplete(
+          // Persistir en Supabase de forma confiable (reintenta si falla)
+          markMissionCompleteReliable(
             selectedMission.type,
             selectedMission.page,
             selectedMission.xp || 50,
@@ -1013,9 +1013,7 @@ export default function Optimizacion() {
               clicks: selectedMission.clicks,
               impressions: selectedMission.impressions,
             }
-          ).then(r => {
-            if (!r.success) console.warn('[markMissionComplete] Supabase save failed for', selectedMission.id);
-          }).catch(err => console.warn('[markMissionComplete] Error:', err));
+          );
         }
         setShowConfetti(true);
         playSuccess();
@@ -1066,13 +1064,13 @@ export default function Optimizacion() {
           setTimeout(() => {
             syncStateWithServer();
           }, 100);
-          // Guardar en Supabase para memoria cross-device
-          markMissionComplete('QUICK_WIN', pageUrl, 100, suggestedTitle, {
+          // Guardar en Supabase para memoria cross-device (reintenta si falla)
+          markMissionCompleteReliable('QUICK_WIN', pageUrl, 100, suggestedTitle, {
             keyword: quickWins[index]?.keyword,
             position: quickWins[index]?.position,
             clicks: quickWins[index]?.clicks,
             impressions: quickWins[index]?.impressions,
-          }).catch(() => {});
+          });
         }
       }
     } catch (e) {
@@ -1107,9 +1105,7 @@ export default function Optimizacion() {
           setXpPopup({ amount: 30, message: '¡Snack informativo aplicado!' });
           setTimeout(() => setXpPopup(null), 4000);
           setTimeout(() => syncStateWithServer(), 100);
-          markMissionComplete('AEO_OPP', pageUrl, 30, headingText).then(r => {
-            if (!r.success) console.warn('[AEO] No se guardó en Supabase — ¿aplicaste la migración 002?');
-          }).catch(() => {});
+          markMissionCompleteReliable('AEO_OPP', pageUrl, 30, headingText);
         }
       }
     } catch (e) {

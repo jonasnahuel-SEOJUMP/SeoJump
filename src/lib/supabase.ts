@@ -34,7 +34,7 @@ export type Profile = {
 };
 
 export type MissionStatus = 'pending' | 'completed' | 'skipped';
-export type MissionType = 'H1' | 'META' | 'ALT' | 'QUICK_WIN' | 'AEO_OPP';
+export type MissionType = 'H1' | 'META' | 'ALT' | 'QUICK_WIN' | 'AEO_OPP' | 'AEO';
 
 export type UserMission = {
   id: string;
