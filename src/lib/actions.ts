@@ -36,6 +36,25 @@ import {
   filterAnchorTextRecs,
   crawlSiteLinks,
 } from './linkAudit'
+import {
+  readGeminiApiKey,
+  parseTitleSuggestionFromGemini,
+  geminiErrorToUserMessage,
+  callGeminiREST,
+} from './gemini'
+import {
+  isQuestionQuery,
+  cleanGscKeyword,
+  opportunityScore,
+  deriveBrandTokens,
+  isMostlySiteBrand,
+} from './gscScoring'
+import {
+  extractFromHtml,
+  normalize,
+  inferNichoFromUrl,
+} from './pageContent'
+import { sanitizeInput, logErrorToFile } from './inputValidation'
 
 export async function login() {
   await signIn("google")
@@ -205,250 +224,10 @@ async function invokeGeminiWithCredits(params: {
   return { ok: true, text, credits: creditCheck.status };
 }
 
-/**
- * Sanitiza y valida las entradas del usuario (keywords y URLs) antes de ser procesadas.
- */
-function sanitizeInput(text: string, type: 'keyword' | 'url'): { isValid: boolean; sanitized: string; error?: string } {
-  if (!text || !text.trim()) {
-    return { 
-      isValid: false, 
-      sanitized: "", 
-      error: `La entrada del ${type === 'keyword' ? 'término de búsqueda' : 'sitio web'} está vacía o contiene solo espacios.` 
-    };
-  }
+// sanitizeInput y logErrorToFile viven en ./inputValidation
 
-  const clean = text.trim();
-
-  if (type === 'keyword') {
-    // Permitir letras, números, espacios y acentos comunes
-    const cleanKeyword = clean.replace(/[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ\s]/g, "");
-    if (cleanKeyword.length < 2) {
-      return { 
-        isValid: false, 
-        sanitized: clean, 
-        error: "La palabra clave es demasiado corta. Debe tener al menos 2 caracteres válidos." 
-      };
-    }
-    if (cleanKeyword.length > 80) {
-      return { 
-        isValid: false, 
-        sanitized: clean, 
-        error: "La palabra clave es demasiado larga. Por favor usa un término de hasta 80 caracteres." 
-      };
-    }
-    return { isValid: true, sanitized: cleanKeyword };
-  } else {
-    const cleanUrl = clean.toLowerCase();
-    // Expresión regular para validar dominio o URL básico
-    const domainRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z]{2,10})([/\w .-]*)*\/?$/;
-    if (!domainRegex.test(cleanUrl)) {
-      return { 
-        isValid: false, 
-        sanitized: clean, 
-        error: "La URL ingresada no es válida. Asegurate de usar un formato de dominio correcto (ej: miweb.com)." 
-      };
-    }
-    return { isValid: true, sanitized: cleanUrl };
-  }
-}
-
-/**
- * Guarda un registro persistente del error en un archivo JSON local en el servidor.
- */
-function logErrorToFile(actionName: string, input: any, status: string | number, message: string) {
-  try {
-    const logFilePath = path.join(process.cwd(), "error_log.json");
-    const logEntry = {
-      action: actionName,
-      input,
-      timestamp: new Date().toISOString(),
-      status: String(status),
-      message: message || "Error desconocido"
-    };
-
-    let logs: any[] = [];
-    if (fs.existsSync(logFilePath)) {
-      try {
-        const fileContent = fs.readFileSync(logFilePath, "utf8");
-        logs = JSON.parse(fileContent);
-        if (!Array.isArray(logs)) {
-          logs = [];
-        }
-      } catch (parseErr) {
-        console.error("Error parsing existing error_log.json, resetting:", parseErr);
-        logs = [];
-      }
-    }
-
-    logs.push(logEntry);
-
-    // Conservar solo los últimos 100 registros para evitar crecimiento infinito
-    if (logs.length > 100) {
-      logs = logs.slice(logs.length - 100);
-    }
-
-    fs.writeFileSync(logFilePath, JSON.stringify(logs, null, 2), "utf8");
-    console.log(`[API Log] Error guardado exitosamente en error_log.json para acción ${actionName}`);
-  } catch (fsErr) {
-    console.error("No se pudo escribir en error_log.json:", fsErr);
-  }
-}
-
-/**
- * Realiza una llamada directa a la API REST de Google Gemini, omitiendo el SDK.
- */
-function geminiKeyHint(apiKey: string): string | null {
-  if (apiKey.startsWith('AQ.')) {
-    return 'La clave AQ. de AI Studio no autenticó. En aistudio.google.com → API Keys → creá una clave nueva en el proyecto donde cargaste créditos (gen-lang-client-0918139206). Si sigue fallando, usá una clave clásica AIza… del mismo proyecto en Vercel → GEMINI_API_KEY.';
-  }
-  return null;
-}
-
-/** Extrae título y razón del JSON que devuelve Gemini (tolera markdown y nombres alternativos). */
-function parseTitleSuggestionFromGemini(raw: string): { suggestedTitle: string; reason: string } | null {
-  const clean = raw.trim().replace(/^```(?:json)?/i, '').replace(/```$/i, '').trim();
-  let parsed: Record<string, unknown>;
-  try {
-    parsed = JSON.parse(clean);
-  } catch {
-    const match = clean.match(/\{[\s\S]*\}/);
-    if (!match) return null;
-    try {
-      parsed = JSON.parse(match[0]);
-    } catch {
-      return null;
-    }
-  }
-  const suggestedTitle = decodeHtmlEntities(
-    String(parsed.suggestedTitle || parsed.suggested_title || parsed.title || '').trim()
-  );
-  const reason = String(parsed.reason || parsed.explanation || '').trim();
-  if (!suggestedTitle) return null;
-  return { suggestedTitle, reason };
-}
-
-/** Mensaje claro según el tipo de fallo de Gemini (saldo, cuota, clave, etc.). */
-function geminiErrorToUserMessage(rawError: string): string {
-  const errMsg = String(rawError || '').toLowerCase();
-
-  if (
-    errMsg.includes('prepayment credits are depleted') ||
-    errMsg.includes('prepayment credit') ||
-    errMsg.includes('credits are depleted') ||
-    (errMsg.includes('saldo') && errMsg.includes('agot'))
-  ) {
-    return 'Saldo de Google agotado. El administrador debe cargar créditos en AI Studio (aistudio.google.com) → tu proyecto → Comprar créditos.';
-  }
-
-  if (errMsg.includes('api key expired') || errMsg.includes('api_key_invalid') || errMsg.includes('key expired') || errMsg.includes('key invalid') || errMsg.includes('invalid authentication')) {
-    return '⚠️ La clave de API de Gemini venció o es inválida. El administrador debe renovarla en Google AI Studio.';
-  }
-
-  if (errMsg.includes('429') || errMsg.includes('quota') || errMsg.includes('rate limit') || errMsg.includes('resource_exhausted')) {
-    return 'La IA está procesando muchas consultas. Esperá 30 segundos e intentá de nuevo.';
-  }
-
-  if (errMsg.includes('404') || errMsg.includes('not found')) {
-    return 'El modelo de IA no está disponible temporalmente. Intentá de nuevo en unos minutos.';
-  }
-
-  return 'Error temporal al conectar con la IA. Intentá de nuevo en unos segundos.';
-}
-
-function readGeminiApiKey(): string {
-  return (process.env.GEMINI_API_KEY || '').trim();
-}
-
-async function callGeminiREST(apiKey: string, promptText: string): Promise<string> {
-  // thinkingBudget: 0 desactiva la fase de "razonamiento" de gemini-2.5-flash,
-  // que con prompts largos tarda 20-50s y provoca timeouts. Sin ella responde en segundos.
-  const attempts: Array<{ name: string; api: string; label: string; config: Record<string, unknown> | null }> = [
-    { name: 'gemini-2.5-flash', api: 'v1beta', label: 'json+fast', config: { responseMimeType: 'application/json', thinkingConfig: { thinkingBudget: 0 } } },
-    { name: 'gemini-2.5-flash', api: 'v1beta', label: 'json', config: { responseMimeType: 'application/json' } },
-    { name: 'gemini-2.5-flash', api: 'v1beta', label: 'plain', config: null },
-  ];
-  let lastError = '';
-
-  for (const { name, api, label, config } of attempts) {
-    for (let attempt = 0; attempt < 2; attempt++) {
-      console.log(`[Gemini REST] ${name} ${api} (${label}) (attempt ${attempt + 1})...`);
-
-      try {
-        const baseUrl = `https://generativelanguage.googleapis.com/${api}/models/${name}:generateContent`;
-        const response = await fetch(baseUrl, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-goog-api-key': apiKey,
-          },
-          cache: 'no-store',
-          body: JSON.stringify({
-            contents: [{ role: 'user', parts: [{ text: promptText }] }],
-            ...(config ? { generationConfig: config } : {}),
-          }),
-          signal: AbortSignal.timeout(25000),
-        });
-
-        if ((response.status === 429 || response.status === 503) && attempt === 0) {
-          lastError = `${name}: ${response.status}`;
-          console.warn(`[Gemini REST] ${response.status}, retry in 2s...`);
-          await new Promise((r) => setTimeout(r, 2000));
-          continue;
-        }
-
-        if (!response.ok) {
-          const errText = await response.text();
-          lastError = `${name} (${api}): ${response.status} ${errText.substring(0, 200)}`;
-          break;
-        }
-
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (!text) {
-          lastError = `${name}: empty response`;
-          break;
-        }
-        console.log(`[Gemini REST] ✅ ${name} (${api}) OK`);
-        return text;
-      } catch (fetchErr: any) {
-        lastError = `${name}: ${fetchErr.message}`;
-        break;
-      }
-    }
-  }
-
-  // Respaldo: claves AIza clásicas a veces responden solo con ?key= en la URL.
-  if (apiKey.startsWith('AIza')) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        cache: 'no-store',
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: promptText }] }],
-          generationConfig: { responseMimeType: 'application/json' },
-        }),
-        signal: AbortSignal.timeout(10000),
-      });
-      if (response.ok) {
-        const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        if (text) {
-          console.log('[Gemini REST] ✅ gemini-2.5-flash (query key fallback) OK');
-          return text;
-        }
-      }
-    } catch { /* seguimos con el error principal */ }
-  }
-
-  const keyHint = geminiKeyHint(apiKey);
-  if (keyHint && (lastError.includes('401') || lastError.includes('invalid authentication'))) {
-    throw new Error(keyHint);
-  }
-  throw new Error(`Gemini failed. Last error: ${lastError}`);
-}
-
+// Los helpers de Gemini (callGeminiREST, readGeminiApiKey, geminiKeyHint,
+// parseTitleSuggestionFromGemini, geminiErrorToUserMessage) viven en ./gemini
 
 /**
  * Mission type definitions.
@@ -605,93 +384,9 @@ const buildMissionTypes = (goldKeyword?: string) => [
 ]
 
 
-// ── Detecta si una búsqueda es una pregunta (trigger para misiones AEO) ──────
-// Las preguntas indican que el usuario busca una respuesta concreta —
-// exactamente el tipo de contenido que las IAs (ChatGPT, Gemini, AI Overviews)
-// prefieren citar. Agregar FAQ convierte la página en fuente ideal para la IA.
-function isQuestionQuery(keyword: string): boolean {
-  if (!keyword) return false;
-  const kw = keyword.toLowerCase().trim();
-  const questionPatterns = [
-    // Español — inicio de pregunta
-    'qué ', 'que ', 'cómo ', 'como ', 'cuál ', 'cual ', 'cuándo ', 'cuando ',
-    'dónde ', 'donde ', 'por qué', 'para qué', 'cuánto', 'cuánta',
-    // Frases dentro de la búsqueda (no solo al inicio)
-    ' sirve', ' es bueno', ' es mejor', ' diferencia', ' funciona',
-    ' se usa', ' se puede', ' conviene', ' recomendable', ' para qué',
-    // Inglés
-    'how ', 'what ', 'why ', 'when ', 'where ', 'which ', 'is it', 'can i',
-    'does it', 'should i',
-  ];
-  return questionPatterns.some(p => kw.startsWith(p.trimStart()) || kw.includes(p));
-}
-// ─────────────────────────────────────────────────────────────────────────────
-
-// ═══════════════════════════════════════════════════════════════════════════
-// MOTOR DE SELECCIÓN INTELIGENTE DE KEYWORDS (genérico, multi-rubro)
-// Replica el criterio de un consultor SEO: no optimizar lo que ya ganás, sino
-// atacar la KEYWORD DE INTENCIÓN — alta demanda + posición alcanzable.
-// ═══════════════════════════════════════════════════════════════════════════
-
-/** Limpia la keyword cruda de GSC (saca $ y símbolos iniciales). */
-function cleanGscKeyword(raw: string): string {
-  return (raw || '')
-    .replace(/\$/g, '')
-    .replace(/^[^a-zA-Z0-9áéíóúñÁÉÍÓÚÑ]+/g, '')
-    .trim();
-}
-
-/**
- * Peso por "zona de ataque" (striking distance). Un SEO prioriza posiciones
- * 4-20: ya están en el radar de Google y un empujón las sube al Top 3.
- * Posición 1-3 ya se ganó (poco para mejorar); >40 está demasiado lejos.
- */
-function positionOpportunityWeight(position: number): number {
-  if (!position || position <= 0) return 0.5;
-  if (position <= 3) return 0.18;
-  if (position <= 10) return 1.0;
-  if (position <= 20) return 0.85;
-  if (position <= 40) return 0.4;
-  return 0.12;
-}
-
-/**
- * Puntaje de oportunidad de una búsqueda. Combina DEMANDA (impresiones, en
- * escala logarítmica para no sesgar hacia un único término gigante) con cuán
- * ALCANZABLE es la posición actual. Es lo que hace que el sistema elija la
- * keyword de intención en lugar de la de marca que ya rankeás. Sirve para
- * cualquier rubro porque se basa en datos, no en nichos hardcodeados.
- */
-function opportunityScore(row: { impressions?: number; position?: number }): number {
-  const impressions = row.impressions || 0;
-  const position = row.position || 100;
-  return Math.log10(impressions + 1) * 10 * positionOpportunityWeight(position);
-}
-
-/** Tokens de la marca del sitio (para no perseguir tu propia marca). */
-function deriveBrandTokens(siteUrl: string): string[] {
-  try {
-    const url = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
-    const host = new URL(url).hostname.replace(/^www\./, '');
-    const slug = host.split('.')[0];
-    const tokens = new Set<string>();
-    tokens.add(slug);
-    slug.split(/[-_]/).forEach(t => t && tokens.add(t));
-    return Array.from(tokens).filter(t => t.length >= 3);
-  } catch {
-    return [];
-  }
-}
-
-/** ¿La búsqueda es básicamente solo la marca del sitio (sin término de intención)? */
-function isMostlySiteBrand(query: string, brandTokens: string[]): boolean {
-  if (!brandTokens.length || !query) return false;
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
-  if (!words.length) return false;
-  const nonBrand = words.filter(w => !brandTokens.some(bt => w.includes(bt) || bt.includes(w)));
-  return nonBrand.length === 0;
-}
-// ─────────────────────────────────────────────────────────────────────────────
+// El motor de scoring de keywords (isQuestionQuery, cleanGscKeyword,
+// positionOpportunityWeight, opportunityScore, deriveBrandTokens,
+// isMostlySiteBrand) vive en ./gscScoring
 
 /**
  * Misiones de ARRANQUE (sin Search Console).
@@ -1108,109 +803,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
   }
 }
 
-function extractFromHtml(html: string, type: string): string | string[] | null {
-  try {
-    if (type === 'H1') {
-      const headings: string[] = [];
-      const pushDecoded = (raw: string) => {
-        const text = decodeHtmlEntities(raw.replace(/<[^>]+>/g, '').trim());
-        if (text) headings.push(text);
-      };
-
-      // Título SEO (<title>) — lo que Google muestra en resultados de búsqueda
-      const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-      if (titleMatch) pushDecoded(titleMatch[1]);
-      
-      // Extract H1s
-      const h1Regex = /<h1[^>]*>([\s\S]*?)<\/h1>/gi;
-      let match;
-      while ((match = h1Regex.exec(html)) !== null) {
-        pushDecoded(match[1]);
-      }
-      
-      // Extract H2s (as requested for thoroughness)
-      const h2Regex = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
-      while ((match = h2Regex.exec(html)) !== null) {
-        pushDecoded(match[1]);
-      }
-      
-      return headings.length > 0 ? headings : null;
-    }
-
-    if (type === 'META') {
-      const metaValues: string[] = [];
-      const pushDecoded = (raw: string) => {
-        const text = decodeHtmlEntities(raw.trim());
-        if (text) metaValues.push(text);
-      };
-      
-      // Meta description
-      const descMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i)
-            || html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i);
-      if (descMatch) pushDecoded(descMatch[1]);
-      
-      // Meta keywords
-      const keywMatch = html.match(/<meta\s+name=["']keywords["']\s+content=["']([^"']+)["']/i)
-            || html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']keywords["']/i);
-      if (keywMatch) pushDecoded(keywMatch[1]);
-      
-      // Page title
-      const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-      if (titleMatch) pushDecoded(titleMatch[1].replace(/<[^>]+>/g, ''));
-      
-      return metaValues.length > 0 ? metaValues : null;
-    }
-
-    if (type === 'ALT') {
-      const alts: string[] = [];
-      const regex = /<img[^>]+alt=["']([^"']+)["'][^>]*>/gi;
-      let match;
-      while ((match = regex.exec(html)) !== null) {
-        const text = decodeHtmlEntities(match[1].trim());
-        if (text) alts.push(text);
-      }
-      return alts.length > 0 ? alts : null;
-    }
-  } catch (e) {
-    console.error('Error extracting from HTML:', e);
-  }
-  return null;
-}
-
-/**
- * Parche de Puntuación Flexible: Normaliza el texto para evitar rebotes injustos.
- * Decodifica HTML, minúsculas, remueve acentos, y limpia signos ortográficos (puntos, comas, etc)
- */
-function normalize(text: string): string {
-  if (!text) return '';
-
-  // Decode HTML entities
-  let clean = decodeHtmlEntities(text);
-
-  // Fix broken UTF-8 patterns
-  clean = clean
-    .replace(/Ã±/g, "ñ")
-    .replace(/Ã‘/g, "Ñ")
-    .replace(/Ã¡/g, "á")
-    .replace(/Ã©/g, "é")
-    .replace(/Ã­/g, "í")
-    .replace(/Ã³/g, "ó")
-    .replace(/Ãº/g, "ú")
-    .replace(/Ã/g, "ñ")
-    .replace(/\uFFFD/g, "ñ");
-
-  // Specific typo fix: "paos" -> "paños"
-  clean = clean.replace(/\bpaos\b/gi, "paños");
-
-  // Lowercase + remove accents + remove punctuation + collapse whitespace
-  return clean
-    .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-    // Remover puntos finales, comas, dos puntos y signos ortográficos
-    .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()¡!¿?:;"'|\[\]\u2013\u2014\u2026]/g, '')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
+// extractFromHtml y normalize viven en ./pageContent
 
 /**
  * Verifies a mission by fetching the live page and comparing the actual tag content.
@@ -1488,42 +1081,7 @@ export async function requestGoogleIndexing(urlToIndex: string) {
 /**
  * Intenta extraer el nicho/rubro del sitio a partir de su URL y del nombre del dominio.
  */
-function inferNichoFromUrl(siteUrl: string): string {
-  if (!siteUrl) return '';
-  try {
-    const raw = siteUrl.trim().toLowerCase();
-    const url = raw.startsWith('http') ? raw : `https://${raw}`;
-    const parsed = new URL(url);
-    const hostname = parsed.hostname.replace(/^www\./, '');
-    const domainSlug = hostname.split('.')[0];
-
-    const NICHO_MAP = [
-      { match: /detail|car\s?wash|pulido|encerado|nano|wax|ceramic|coating|ppf/i, nicho: 'detailing vehicular' },
-      { match: /zapato|calzado|zapatilla|shoe|boot/i, nicho: 'calzado' },
-      { match: /ropa|indumentaria|moda|fashion|cloth/i, nicho: 'indumentaria' },
-      { match: /gastro|restaurant|comida|food|menu|bistro|pizza|burger|sushi/i, nicho: 'gastronomía' },
-      { match: /gym|fitness|muscula|entrena|sport|deporte/i, nicho: 'gimnasio' },
-      { match: /ferret|herram|tool|pintur|bazar|ferreteria/i, nicho: 'ferretería y herramientas' },
-      { match: /farm|salud|clinica|medic|dental|optica/i, nicho: 'salud' },
-      { match: /inmob|prop|alquil|venta casa|real.?estat/i, nicho: 'inmobiliaria' },
-      { match: /pet|mascotas|veterinar|perr|gat/i, nicho: 'veterinaria y mascotas' },
-      { match: /electr|tecno|celular|phone|compu|laptop/i, nicho: 'electrónica y tecnología' },
-      { match: /muebl|deco|hogar|home|sofa|silla|cama/i, nicho: 'muebles y decoración' },
-      { match: /joyeria|bijou|pulsera|collar|anillo|jewelry/i, nicho: 'joyería y accesorios' },
-      { match: /jardin|plant|flores|vivero|garden/i, nicho: 'jardinería' },
-      { match: /libreria|papeler|escolar|book|libro/i, nicho: 'librería y papelería' },
-    ];
-
-    for (const { match, nicho } of NICHO_MAP) {
-      if (match.test(domainSlug) || match.test(hostname)) {
-        return nicho;
-      }
-    }
-    return '';
-  } catch {
-    return '';
-  }
-}
+// inferNichoFromUrl vive en ./pageContent
 
 /** Vista previa en vivo de título, meta y H1 para misiones (antes/después). */
 export async function getPageLivePreview(pageUrl: string) {
