@@ -205,7 +205,6 @@ export default function HomeApp() {
         goal || undefined
       );
       setMissions(pending);
-      setHasMissions(pending.length > 0);
     } catch (err) {
       const msg = err?.message || "Error al obtener misiones";
       if (!silent) {
