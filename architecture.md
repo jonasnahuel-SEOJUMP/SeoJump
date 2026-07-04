@@ -37,9 +37,8 @@ helpers puros NO viven ahí: están en módulos sin `"use server"` y se importan
 | `supabase.ts` | Acceso a Supabase y tipos de datos | No |
 | `aiCredits.ts` | Lógica de créditos IA (consumo, límites, caché de Gemini) | No |
 | `planLimits.ts` | Límites por plan (free/pro/agencia) | No |
-| `paymentsStub.ts` | Modo prueba de pagos ARS en local (activa PRO sin Mobbex) | No |
-| `mobbex.ts` | Integración Mobbex (alternativa ARS, no activa en UI) | No |
-| `mercadopago.ts` | Integración Mercado Pago suscripciones PRO | No |
+| `mercadopago.ts` | Integración Mercado Pago suscripciones PRO (ARS) | No |
+| `stripe.ts` | Integración Stripe suscripciones PRO (USD internacional) | No |
 
 **Regla:** si vas a agregar un helper puro (sin sesión/créditos), ponelo en el módulo de dominio
 que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando dominios, partilo.
@@ -86,9 +85,7 @@ que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando d
 
 - **Mercado Pago** es la pasarela para Argentina (suscripciones mensuales PRO).
 - Estado actual: integración en `src/lib/mercadopago.ts` + rutas `/api/mercadopago/*`.
-- **Mobbex** queda en el repo como alternativa (`src/lib/mobbex.ts`) pero no está activo en la UI.
-- **Modo prueba local** (`src/lib/paymentsStub.ts`): solo aplica si se reactiva Mobbex sin credenciales en localhost.
-- **Stripe** para pagos internacionales (USD).
+- **Stripe** para pagos internacionales (USD). Se reemplazará por Lemon Squeezy cuando aprueben la cuenta.
 - Las suscripciones actualizan `subscription_status` en Supabase vía webhook.
 - El panel admin permite activar PRO/Agencia manualmente como backup si falla el webhook.
 - Variables de entorno viven en `.env.local` (local) y en Vercel (producción). Vercel NO lee `.env.local`.

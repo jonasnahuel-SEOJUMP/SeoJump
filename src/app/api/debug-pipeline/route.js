@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import { auth } from '../../../auth';
 import { getSearchConsoleData } from '../../../lib/google';
+import { requireAdmin } from '../../../lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const guard = await requireAdmin();
+  if (guard instanceof NextResponse) return guard;
+
   const trace = [];
   const siteUrl = 'https://www.55detailshop.com.ar';
 

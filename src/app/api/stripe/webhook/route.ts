@@ -29,6 +29,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
+  // Si una activación/baja en Supabase falla, respondemos 500 para que Stripe
+  // reintente el evento más tarde (evita que un cliente pague y se quede sin PRO).
+  let processingError = false;
+
   try {
     switch (event.type) {
       case 'checkout.session.completed': {
@@ -44,6 +48,7 @@ export async function POST(request: NextRequest) {
         const expiresAt = stripeExpiresInDays(35);
         const result = await updateSubscriptionPlan(email, 'pro', expiresAt);
         console.log(`[Stripe webhook] PRO activado para ${email} → ${result.ok}`);
+        if (!result.ok) processingError = true;
         break;
       }
 
@@ -57,6 +62,7 @@ export async function POST(request: NextRequest) {
 
         const result = await updateSubscriptionPlan(email, 'free', null);
         console.log(`[Stripe webhook] plan → free para ${email} (cancelación) → ${result.ok}`);
+        if (!result.ok) processingError = true;
         break;
       }
 
@@ -67,11 +73,13 @@ export async function POST(request: NextRequest) {
 
         if (sub.status === 'active') {
           const expiresAt = stripeExpiresInDays(35);
-          await updateSubscriptionPlan(email, 'pro', expiresAt);
-          console.log(`[Stripe webhook] suscripción renovada para ${email}`);
+          const result = await updateSubscriptionPlan(email, 'pro', expiresAt);
+          console.log(`[Stripe webhook] suscripción renovada para ${email} → ${result.ok}`);
+          if (!result.ok) processingError = true;
         } else if (sub.status === 'canceled' || sub.status === 'unpaid') {
-          await updateSubscriptionPlan(email, 'free', null);
-          console.log(`[Stripe webhook] plan → free para ${email} (status=${sub.status})`);
+          const result = await updateSubscriptionPlan(email, 'free', null);
+          console.log(`[Stripe webhook] plan → free para ${email} (status=${sub.status}) → ${result.ok}`);
+          if (!result.ok) processingError = true;
         }
         break;
       }
@@ -85,6 +93,13 @@ export async function POST(request: NextRequest) {
 
       default:
         console.log(`[Stripe webhook] evento no manejado: ${event.type}`);
+    }
+
+    if (processingError) {
+      return NextResponse.json(
+        { error: 'Activation failed, retry later' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ received: true });

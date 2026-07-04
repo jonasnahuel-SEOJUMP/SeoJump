@@ -1,10 +1,10 @@
+import { NextResponse } from "next/server"
 import { auth } from "../../../auth"
+import { requireAdmin } from "../../../lib/adminGuard"
 
 export async function GET() {
-  // Only allow in development
-  if (process.env.NODE_ENV === 'production') {
-    return Response.json({ error: "Not available in production" }, { status: 403 })
-  }
+  const guard = await requireAdmin()
+  if (guard instanceof NextResponse) return guard
 
   const session = await auth()
 

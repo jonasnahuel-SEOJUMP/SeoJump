@@ -12,6 +12,10 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           access_type: "offline",
           response_type: "code",
           scope: "openid profile email https://www.googleapis.com/auth/webmasters",
+          // Acumula los permisos ya concedidos en cada token en vez de resetearlos.
+          // Evita que se "pierda" el scope de Search Console entre logins
+          // (causa del clásico "tengo que entrar dos veces").
+          include_granted_scopes: "true",
         },
       },
     }),

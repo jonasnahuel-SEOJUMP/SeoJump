@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { requireAdmin } from '../../../lib/adminGuard';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,6 +29,9 @@ async function testGemini(model, api, apiKey) {
 }
 
 export async function GET() {
+  const guard = await requireAdmin();
+  if (guard instanceof NextResponse) return guard;
+
   const results = [];
   const totalStart = Date.now();
   const apiKey = (process.env.GEMINI_API_KEY || '').trim();
