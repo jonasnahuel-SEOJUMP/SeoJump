@@ -9,15 +9,12 @@ import { completeMission, getMissionsByEmail, getMissionsPendingSeoWinCheck, mar
 import { normalizePagePath, pathSlug, buildAeoKey } from './missionMemory'
 import { detectSeoWin, buildSeoWinMessage } from './seoWins'
 import {
-  checkAndConsumeAiCredit,
   getAiCreditsStatus,
   getUserPlanSnapshot,
   getCachedGeminiResponse,
-  setCachedGeminiResponse,
   buildGeminiCacheKey,
   type AiCreditsStatus,
 } from './aiCredits'
-import type { AiFeature } from './planLimits'
 import { MAX_COMPETITORS_BY_PLAN } from './planLimits'
 import { decodeHtmlEntities } from './textUtils'
 import {
@@ -40,7 +37,6 @@ import {
   readGeminiApiKey,
   parseTitleSuggestionFromGemini,
   geminiErrorToUserMessage,
-  callGeminiREST,
 } from './gemini'
 import {
   isQuestionQuery,
@@ -55,6 +51,7 @@ import {
   inferNichoFromUrl,
 } from './pageContent'
 import { sanitizeInput, logErrorToFile } from './inputValidation'
+import { invokeGeminiWithCredits } from './aiInvoke'
 
 export async function login() {
   await signIn("google")
@@ -181,49 +178,7 @@ export async function activateUserPlan(
   }
 }
 
-type GeminiCreditResult =
-  | { ok: true; text: string; credits: AiCreditsStatus }
-  | {
-      ok: false;
-      error: string;
-      code?: string;
-      credits?: AiCreditsStatus;
-      upgrade?: boolean;
-    };
-
-async function invokeGeminiWithCredits(params: {
-  email: string;
-  isAdmin: boolean;
-  feature: AiFeature;
-  cacheKey: string;
-  prompt: string;
-  apiKey: string;
-}): Promise<GeminiCreditResult> {
-  const cached = await getCachedGeminiResponse(params.cacheKey);
-  if (cached) {
-    const status = await getAiCreditsStatus(params.email, { isAdmin: params.isAdmin });
-    return { ok: true, text: cached, credits: status };
-  }
-
-  const creditCheck = await checkAndConsumeAiCredit(params.email, params.feature, {
-    isAdmin: params.isAdmin,
-  });
-
-  if (creditCheck.allowed === false) {
-    return {
-      ok: false,
-      error: creditCheck.error,
-      code: creditCheck.code,
-      credits: creditCheck.status,
-      upgrade: true,
-    };
-  }
-
-  const text = await callGeminiREST(params.apiKey, params.prompt);
-  await setCachedGeminiResponse(params.cacheKey, text);
-  return { ok: true, text, credits: creditCheck.status };
-}
-
+// invokeGeminiWithCredits y GeminiCreditResult viven en ./aiInvoke
 // sanitizeInput y logErrorToFile viven en ./inputValidation
 
 // Los helpers de Gemini (callGeminiREST, readGeminiApiKey, geminiKeyHint,
