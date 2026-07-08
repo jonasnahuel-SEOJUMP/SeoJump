@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSession } from "next-auth/react";
 import { PLANS, formatArs, formatUsd } from "../../lib/planLimits";
 import SubscribeProButton from "../../components/SubscribeProButton";
-import StripeCheckoutButton from "../../components/StripeCheckoutButton";
+import LemonCheckoutButton from "../../components/LemonCheckoutButton";
 
 const FEATURES = [
   "Quick Wins con IA",
@@ -38,14 +38,12 @@ export default function PreciosPage() {
   const { data: session } = useSession();
   const isAR = useIsArgentina();
 
-  // Leer parámetros de retorno de Stripe
-  const [stripeMsg, setStripeMsg] = useState(null);
+  // Leer parámetros de retorno de Lemon Squeezy
+  const [paymentMsg, setPaymentMsg] = useState(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("stripe") === "success")
-      setStripeMsg({ ok: true, text: "¡Pago exitoso! Tu plan PRO ya está activo. Actualizá la página si no lo ves." });
-    if (params.get("stripe") === "cancel")
-      setStripeMsg({ ok: false, text: "Cancelaste el pago. Podés intentarlo de nuevo cuando quieras." });
+    if (params.get("lemon") === "success")
+      setPaymentMsg({ ok: true, text: "¡Pago exitoso! Tu plan PRO ya está activo. Actualizá la página si no lo ves." });
   }, []);
 
   const cards = [
@@ -89,16 +87,16 @@ export default function PreciosPage() {
           </p>
         </div>
 
-        {/* Mensaje de retorno Stripe */}
-        {stripeMsg && (
+        {/* Mensaje de retorno post-pago */}
+        {paymentMsg && (
           <div
             className={`rounded-2xl px-5 py-4 text-sm font-bold text-center border-2 ${
-              stripeMsg.ok
+              paymentMsg.ok
                 ? "bg-duo-green/10 border-duo-green/30 text-duo-green"
                 : "bg-red-500/10 border-red-500/30 text-red-400"
             }`}
           >
-            {stripeMsg.text}
+            {paymentMsg.text}
           </div>
         )}
 
@@ -124,7 +122,7 @@ export default function PreciosPage() {
               }`}
               onClick={() => setIsAR(false)}
             >
-              🌍 USD — Stripe
+              🌍 USD — Lemon Squeezy
             </span>
           </div>
         )}
@@ -189,11 +187,11 @@ export default function PreciosPage() {
                     Quiero PRO — Mercado Pago
                   </SubscribeProButton>
                 ) : (
-                  <StripeCheckoutButton
+                  <LemonCheckoutButton
                     className="w-full text-center py-3 rounded-xl font-black text-sm transition-all bg-duo-green text-white hover:brightness-110 disabled:opacity-60"
                   >
-                    Get PRO — Stripe
-                  </StripeCheckoutButton>
+                    Get PRO — USD 27/mo
+                  </LemonCheckoutButton>
                 )
               ) : ctaDisabled ? (
                 <span className="w-full text-center py-3 rounded-xl bg-slate-800 text-slate-500 font-black text-sm">
@@ -241,14 +239,14 @@ export default function PreciosPage() {
           <p className="text-center text-xs text-slate-500 font-bold max-w-xl mx-auto">
             {isAR
               ? "Al pagar con Mercado Pago, el plan PRO se activa en tu cuenta de SEO Jump (mismo email de Google)."
-              : "Payment processed by Stripe. Your PRO plan activates on your SEO Jump account automatically after checkout."}
+              : "Payment processed by Lemon Squeezy. Your PRO plan activates on your SEO Jump account automatically after checkout."}
           </p>
         )}
 
         <p className="text-center text-xs text-slate-500 font-bold">
           {isAR
             ? `Cobro mensual con Mercado Pago · ${formatArs(PLANS.pro.priceArs)} IVA incluido · Plan Agencia: `
-            : `Monthly billing via Stripe · ${formatUsd(PLANS.pro.priceUsd)}/mo · Agency plan: `}
+            : `Monthly billing via Lemon Squeezy · ${formatUsd(PLANS.pro.priceUsd)}/mo · Agency plan: `}
           <a href="mailto:nahuel@seo-jump.ai" className="text-duo-green hover:underline">
             nahuel@seo-jump.ai
           </a>
