@@ -31,12 +31,12 @@ function useIsArgentina() {
       .catch(() => setIsAR(true)); // ante error, muestra Mercado Pago
   }, []);
 
-  return isAR;
+  return [isAR, setIsAR];
 }
 
 export default function PreciosPage() {
   const { data: session } = useSession();
-  const isAR = useIsArgentina();
+  const [isAR, setIsAR] = useIsArgentina();
 
   // Leer parámetros de retorno de Lemon Squeezy
   const [paymentMsg, setPaymentMsg] = useState(null);
