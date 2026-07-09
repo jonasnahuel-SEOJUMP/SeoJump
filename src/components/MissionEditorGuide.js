@@ -144,8 +144,8 @@ export default function MissionEditorGuide({
 
   if (!mission) return null;
 
-  const labels = getPlainMissionLabels(mission.type);
   const pageType = detectPageType(mission.page, pagePreview?.pageType);
+  const labels = getPlainMissionLabels(mission.type, pageType.id);
   const guide = getEditWhereGuide(mission.page, mission.type, platformId, pagePreview?.pageType);
   const kw = (mission.keyword || goldKeyword || '').trim();
   const current = getCurrentValueFromPreview(mission.type, pagePreview);
@@ -184,6 +184,16 @@ export default function MissionEditorGuide({
           <span className={`text-xs font-black px-2 py-1 rounded-md ${pageType.badgeColor}`}>
             {pageType.label}
           </span>
+          {pageType.id === 'category' && (
+            <span className="text-xs font-black px-2 py-1 rounded-md bg-purple-500/20 text-purple-200 border border-purple-400/40">
+              No es un producto — es una sección del catálogo
+            </span>
+          )}
+          {pageType.id === 'product' && (
+            <span className="text-xs font-black px-2 py-1 rounded-md bg-blue-500/20 text-sky-200 border border-blue-400/40">
+              Ficha de un producto puntual
+            </span>
+          )}
           {kw && (
             <span className="text-xs font-black px-2 py-1 rounded-md bg-duo-blue/20 text-sky-200 border border-duo-blue/40">
               Incluí: «{kw}»
@@ -281,8 +291,13 @@ export default function MissionEditorGuide({
                 Panel: {guide.adminHint}
               </p>
             )}
+            {guide.scrollHint && (
+              <p className="text-sm font-bold text-amber-200 bg-amber-500/10 border border-amber-500/30 rounded-lg px-3 py-2">
+                👇 {guide.scrollHint}
+              </p>
+            )}
             <p className="text-sm font-bold text-slate-400">
-              Campo a tocar: <span className="text-white">{guide.fieldLabel}</span>
+              Campo exacto a tocar: <span className="text-white">{guide.fieldLabel}</span>
             </p>
             <ol className="space-y-3">
               {guide.steps.map((step, idx) => (
@@ -299,6 +314,23 @@ export default function MissionEditorGuide({
                 </li>
               ))}
             </ol>
+            {guide.commonMistakes?.length > 0 && (
+              <div className="p-4 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-2">
+                <p className="text-xs font-black text-amber-300 uppercase">Errores comunes</p>
+                <ul className="space-y-1.5">
+                  {guide.commonMistakes.map((tip, idx) => (
+                    <li key={idx} className="text-sm font-bold text-amber-100/90 leading-snug flex gap-2">
+                      <span className="flex-shrink-0">⚠️</span>
+                      <span
+                        dangerouslySetInnerHTML={{
+                          __html: tip.replace(/\*\*(.*?)\*\*/g, '<strong class="text-amber-200">$1</strong>'),
+                        }}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
             <div className="flex flex-wrap gap-3 pt-2">
               {mission.page && (
                 <a
