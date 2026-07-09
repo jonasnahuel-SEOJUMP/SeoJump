@@ -165,7 +165,9 @@ export default function PreciosPage() {
 
                 {plan.id === "pro" && isAR !== null && (
                   <p className="text-xs text-slate-500 font-bold mt-1">
-                    {isAR ? "Precio final · suscripción mensual" : "Final price · monthly billing"}
+                    {isAR
+                      ? "Precio final · suscripción mensual"
+                      : "Monthly subscription · local tax may apply at checkout"}
                   </p>
                 )}
               </div>
@@ -246,7 +248,7 @@ export default function PreciosPage() {
         <p className="text-center text-xs text-slate-500 font-bold">
           {isAR
             ? `Cobro mensual con Mercado Pago · ${formatArs(PLANS.pro.priceArs)} IVA incluido · Plan Agencia: `
-            : `Monthly billing via Lemon Squeezy · ${formatUsd(PLANS.pro.priceUsd)}/mo · Agency plan: `}
+            : `Monthly billing via Lemon Squeezy · ${formatUsd(PLANS.pro.priceUsd)}/mo + tax where applicable · Agency plan: `}
           <a href="mailto:nahuel@seo-jump.ai" className="text-duo-green hover:underline">
             nahuel@seo-jump.ai
           </a>
