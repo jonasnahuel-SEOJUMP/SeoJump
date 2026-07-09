@@ -7,7 +7,7 @@
  * Variables de entorno:
  *   LEMON_SQUEEZY_API_KEY
  *   LEMON_SQUEEZY_STORE_ID          → 419196
- *   LEMON_SQUEEZY_VARIANT_ID        → UUID del variant PRO
+ *   LEMON_SQUEEZY_VARIANT_ID        → ID numérico del variant (o slug UUID del checkout)
  *   LEMON_SQUEEZY_WEBHOOK_SECRET    → signing secret del webhook
  *   NEXT_PUBLIC_APP_URL
  */
@@ -47,6 +47,98 @@ export type LemonWebhookPayload = {
   };
 };
 
+type LemonVariantsListResponse = {
+  data?: Array<{
+    id?: string;
+    attributes?: { slug?: string; status?: string };
+  }>;
+  meta?: { page?: { lastPage?: number } };
+};
+
+let cachedResolvedVariantId: string | null = null;
+
+function isNumericId(value: string): boolean {
+  return /^\d+$/.test(value);
+}
+
+/** La API usa ID numérico; el link público de checkout usa el slug (UUID). */
+async function resolveLemonVariantId(
+  configuredId: string
+): Promise<{ id: string } | { error: string }> {
+  if (isNumericId(configuredId)) {
+    return { id: configuredId };
+  }
+
+  if (!API_KEY) {
+    return { error: 'Lemon Squeezy no está configurado en el servidor.' };
+  }
+
+  const targetSlug = configuredId.trim().toLowerCase();
+  let page = 1;
+
+  try {
+    while (page <= 20) {
+      const res = await fetch(
+        `${API_BASE}/variants?page[number]=${page}&page[size]=50&filter[status]=published`,
+        {
+          headers: {
+            ...JSON_API_HEADERS,
+            Authorization: `Bearer ${API_KEY}`,
+          },
+        }
+      );
+
+      const json = (await res.json()) as LemonVariantsListResponse;
+      if (!res.ok) {
+        const detail =
+          (json as LemonCheckoutResponse).errors
+            ?.map((e) => e.detail || e.title)
+            .filter(Boolean)
+            .join('; ') || `HTTP ${res.status}`;
+        return { error: detail };
+      }
+
+      for (const variant of json.data ?? []) {
+        const slug = variant.attributes?.slug?.trim().toLowerCase();
+        if (slug === targetSlug && variant.id) {
+          return { id: String(variant.id) };
+        }
+      }
+
+      const lastPage = json.meta?.page?.lastPage ?? page;
+      if (page >= lastPage) break;
+      page += 1;
+    }
+
+    return {
+      error:
+        'No se encontró el variant de Lemon Squeezy. En Vercel, LEMON_SQUEEZY_VARIANT_ID debe ser el ID numérico (Lemon → producto → Copy ID), no el link del checkout.',
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    return { error: msg };
+  }
+}
+
+async function getLemonVariantIdForCheckout(): Promise<{ id: string } | { error: string }> {
+  if (cachedResolvedVariantId) {
+    return { id: cachedResolvedVariantId };
+  }
+
+  const resolved = await resolveLemonVariantId(VARIANT_ID);
+  if ('id' in resolved) {
+    cachedResolvedVariantId = resolved.id;
+  }
+  return resolved;
+}
+
+function humanizeLemonError(detail: string): string {
+  if (/related resource does not exist/i.test(detail)) {
+    return 'Lemon Squeezy no encontró el producto PRO configurado. Revisá en Vercel LEMON_SQUEEZY_STORE_ID y LEMON_SQUEEZY_VARIANT_ID (ID numérico del variant en Lemon → Copy ID).';
+  }
+  return detail;
+}
+
 const ACTIVE_SUBSCRIPTION_STATUSES = new Set([
   'active',
   'on_trial',
@@ -63,6 +155,11 @@ export async function createLemonProCheckout(
 ): Promise<{ url: string; checkoutId: string } | { error: string }> {
   if (!API_KEY) {
     return { error: 'Lemon Squeezy no está configurado en el servidor.' };
+  }
+
+  const variant = await getLemonVariantIdForCheckout();
+  if ('error' in variant) {
+    return { error: variant.error };
   }
 
   const testMode = process.env.LEMON_SQUEEZY_TEST_MODE === 'true';
@@ -95,7 +192,7 @@ export async function createLemonProCheckout(
               data: { type: 'stores', id: String(STORE_ID) },
             },
             variant: {
-              data: { type: 'variants', id: String(VARIANT_ID) },
+              data: { type: 'variants', id: variant.id },
             },
           },
         },
@@ -109,7 +206,7 @@ export async function createLemonProCheckout(
         json.errors?.map((e) => e.detail || e.title).filter(Boolean).join('; ') ||
         `HTTP ${res.status}`;
       console.error('[Lemon] createLemonProCheckout:', detail);
-      return { error: detail };
+      return { error: humanizeLemonError(detail) };
     }
 
     const url = json.data?.attributes?.url;
