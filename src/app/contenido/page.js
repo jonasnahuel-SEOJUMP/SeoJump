@@ -10,6 +10,39 @@ import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../.
 import Link from "next/link";
 import Header from "../../components/Header";
 
+function Phase2NextSteps({ playClick }) {
+  return (
+    <div className="p-6 rounded-2xl border-2 border-blue-500/40 bg-gradient-to-br from-blue-950/40 to-slate-900 space-y-4 animate-in fade-in duration-300">
+      <div>
+        <p className="text-xs font-black text-blue-300 uppercase tracking-wider mb-1">Fase 2 completada</p>
+        <h4 className="text-xl font-black text-white">¿Y ahora qué?</h4>
+        <p className="text-sm font-bold text-slate-300 leading-relaxed mt-2">
+          El siguiente paso es <strong className="text-white">optimizar tu página</strong> (título, meta, H1) y ver cómo te comparás con la competencia en Google.
+        </p>
+      </div>
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Link
+          href="/optimizacion"
+          onClick={playClick}
+          className="flex-1 btn-3d btn-green text-center py-3.5 px-5 text-sm md:text-base font-black"
+        >
+          🛠️ Ir a Fase 3 — Optimización
+        </Link>
+        <Link
+          href="/espia-competencia"
+          onClick={playClick}
+          className="flex-1 btn-3d btn-blue text-center py-3.5 px-5 text-sm md:text-base font-black"
+        >
+          🕵️ Comparar con competencia
+        </Link>
+      </div>
+      <p className="text-xs font-bold text-slate-500 text-center">
+        También podés volver al <Link href="/" onClick={playClick} className="text-duo-green hover:underline">tablero principal</Link> — la Fase 3 ya está desbloqueada.
+      </p>
+    </div>
+  );
+}
+
 // Helper to sanitize/purify text
 const purifyText = (text) => {
   if (!text) return "";
@@ -65,6 +98,7 @@ export default function ContenidoFase2() {
   const [targetUrl, setTargetUrl] = useState("");
   const [auditing, setAuditing] = useState(false);
   const [auditResult, setAuditResult] = useState(null);
+  const [createMarked, setCreateMarked] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
 
   // Load state from server/localStorage on mount
@@ -213,7 +247,7 @@ export default function ContenidoFase2() {
     setShowConfetti(true);
     playSuccess();
     setTimeout(() => setShowConfetti(false), 3000);
-    alert("¡Excelente! Creación agendada. Sumaste +30 XP. Ahora podés verificarla en la Fase 3.");
+    setCreateMarked(true);
   };
 
   const handleAudit = async (e) => {
@@ -479,6 +513,10 @@ export default function ContenidoFase2() {
                   ¡MARCAR COMO CREADO! (+30 XP)
                 </button>
               </div>
+
+              {createMarked && (
+                <Phase2NextSteps playClick={playClick} />
+              )}
             </div>
           )}
 
@@ -514,12 +552,18 @@ export default function ContenidoFase2() {
               </form>
 
               {auditResult && (
-                <div className={`p-4 rounded-xl border-2 font-bold text-base lg:text-lg ${
-                  auditResult.success
-                    ? 'bg-green-50 dark:bg-green-900/30 border-duo-green text-duo-green'
-                    : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-500'
-                }`}>
-                  <p>{auditResult.success ? '✅' : '⚠️'} {auditResult.message}</p>
+                <div className="space-y-4">
+                  <div className={`p-4 rounded-xl border-2 font-bold text-base lg:text-lg ${
+                    auditResult.success
+                      ? 'bg-green-50 dark:bg-green-900/30 border-duo-green text-duo-green'
+                      : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-red-500'
+                  }`}>
+                    <p>{auditResult.success ? '✅' : '⚠️'} {auditResult.message}</p>
+                  </div>
+
+                  {auditResult.success && (
+                    <Phase2NextSteps playClick={playClick} />
+                  )}
                 </div>
               )}
             </div>
