@@ -23,7 +23,14 @@ import {
   buildCompetitorSnapshot,
   fetchPage,
   extractLinksFromHtml,
+  extractHumanSignals,
 } from './scraping'
+import {
+  computeHumanScore,
+  humanDimensionPasses,
+  type HumanDimensionId,
+  type HumanMission,
+} from './humanScore'
 import {
   isHomePage,
   isCatalogHubPage,
@@ -3403,5 +3410,236 @@ ${JSON.stringify({ title: rivalSnapshot.title, h1: rivalSnapshot.h1, headings: r
       firstTime,
     },
     credits: geminiResult.credits,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HUMAN SCORE — Analiza el "valor humano" de una página y genera Misiones Human.
+// Filosofía SEO Jump: la IA optimiza (H1, meta, enlaces); el humano aporta lo
+// irreemplazable (experiencia, evidencia, opinión, casos, datos propios).
+// El puntaje es determinístico (humanScore.ts). Gemini SOLO enriquece las
+// misiones con ejemplos a medida del negocio; NUNCA escribe la experiencia.
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Descarga el HTML en vivo de una página (sin caché) para análisis de contenido. */
+async function fetchLiveHtml(pageUrl: string): Promise<{ ok: true; html: string } | { ok: false; message: string }> {
+  try {
+    const finalUrl = pageUrl.includes('?') ? `${pageUrl}&nocache=${Date.now()}` : `${pageUrl}?nocache=${Date.now()}`;
+    const response = await fetch(finalUrl, {
+      cache: 'no-store',
+      // @ts-ignore
+      next: { revalidate: 0 },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Cache-Control': 'no-cache, no-store, must-revalidate',
+        'Pragma': 'no-cache',
+        'Expires': '0',
+      },
+      signal: AbortSignal.timeout(9000),
+    });
+    if (!response.ok) {
+      return { ok: false, message: `No pude acceder a la página (Error ${response.status}). Verificá que la URL sea pública.` };
+    }
+    return { ok: true, html: await response.text() };
+  } catch (err: any) {
+    if (err?.name === 'TimeoutError') {
+      return { ok: false, message: 'La página tardó demasiado en responder (>9s). Intentá de nuevo.' };
+    }
+    return { ok: false, message: `Error al acceder a la página: ${err?.message || err}` };
+  }
+}
+
+/** Texto plano recortado para pasarle contexto real a la IA (sin tags). */
+function htmlToSnippet(html: string, maxChars = 1400): string {
+  const text = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.slice(0, maxChars);
+}
+
+/**
+ * Analiza el valor humano de una página: puntaje 0-100, 6 dimensiones y
+ * misiones para las dimensiones débiles. La IA personaliza los ejemplos de las
+ * misiones según el rubro y el contenido real (no escribe el contenido).
+ */
+export async function getHumanScore(
+  pageUrl: string,
+  goldKeyword?: string,
+  businessFocus?: string
+) {
+  const urlSanit = sanitizeInput(pageUrl, 'url');
+  if (!urlSanit.isValid) {
+    return { success: false, error: urlSanit.error };
+  }
+  let cleanUrl = urlSanit.sanitized;
+  if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+    cleanUrl = 'https://' + cleanUrl;
+  }
+
+  let cleanKeyword = '';
+  if (goldKeyword) {
+    const kwSanit = sanitizeInput(goldKeyword, 'keyword');
+    if (kwSanit.isValid) cleanKeyword = kwSanit.sanitized;
+  }
+  let cleanFocus = '';
+  if (businessFocus) {
+    const focusSanit = sanitizeInput(businessFocus, 'keyword');
+    if (focusSanit.isValid) cleanFocus = focusSanit.sanitized.slice(0, 300);
+  }
+
+  try {
+    // 1. Descargar y medir señales (determinístico, sin IA)
+    const fetched = await fetchLiveHtml(cleanUrl);
+    if (fetched.ok === false) {
+      return { success: false, error: fetched.message };
+    }
+
+    const signals = extractHumanSignals(fetched.html, cleanUrl);
+    const result = computeHumanScore(signals);
+
+    // 2. Enriquecer misiones con ejemplos a medida del negocio (IA, opcional)
+    let missions: HumanMission[] = result.missions;
+    let credits: AiCreditsStatus | undefined;
+
+    if (missions.length > 0) {
+      const apiKey = process.env.GEMINI_API_KEY;
+      const session = await auth();
+      const userEmail = session?.user?.email || '';
+      const isAdmin = await checkIsAdmin();
+
+      if (apiKey && (userEmail || isAdmin)) {
+        const nicho = inferNichoFromUrl(cleanUrl);
+        const snippet = htmlToSnippet(fetched.html);
+        const weakList = missions.map((m) => `- ${m.id}: ${m.title}`).join('\n');
+
+        const prompt = `Sos un editor de contenido experto en E-E-A-T, SEO, AEO y GEO. Ayudás a un dueño de negocio a que su contenido demuestre valor humano REAL. NO escribís el contenido por él: le das indicaciones concretas de QUÉ agregar y DÓNDE, con ejemplos adaptados a su negocio.
+
+Negocio/rubro (inferido): "${nicho || 'no identificado'}"
+Palabra clave: "${cleanKeyword || 'no especificada'}"
+Qué ofrece: "${cleanFocus || 'no especificado — deducilo del texto'}"
+
+Extracto real de la página (texto plano):
+"""
+${snippet}
+"""
+
+El contenido es flojo en estas dimensiones de "valor humano":
+${weakList}
+
+Para CADA dimensión de la lista, devolvé una recomendación ultra-concreta y accionable, adaptada a ESTE negocio (no genérica). Cada ejemplo debe sonar como algo que este dueño podría escribir de verdad, mencionando su rubro o producto.
+
+Devolvé ESTRICTAMENTE un JSON sin markdown, con esta forma:
+{
+  "experiencia": { "tip": "1 frase de qué hacer en ESTA página", "examples": ["ejemplo concreto 1", "ejemplo concreto 2"] },
+  "casosReales": { "tip": "...", "examples": ["...", "..."] }
+}
+Incluí SOLO las claves de la lista de dimensiones débiles. Los "tip" en 1 oración, máximo 2 examples por dimensión, cada uno de máximo 20 palabras. Tono directo, en español rioplatense, sin tecnicismos.`;
+
+        const cacheKey = buildGeminiCacheKey([
+          'human_score_v1',
+          userEmail || 'dev@localhost',
+          cleanUrl,
+          cleanKeyword,
+          missions.map((m) => m.id).join(','),
+          String(result.score),
+        ]);
+
+        try {
+          const geminiResult = await invokeGeminiWithCredits({
+            email: userEmail || 'dev@localhost',
+            isAdmin,
+            feature: 'human_score',
+            cacheKey,
+            prompt,
+            apiKey,
+          });
+
+          if (geminiResult.ok) {
+            credits = geminiResult.credits;
+            const txt = geminiResult.text;
+            const start = txt.indexOf('{');
+            const end = txt.lastIndexOf('}');
+            if (start !== -1 && end !== -1) {
+              const parsed = JSON.parse(txt.substring(start, end + 1));
+              missions = missions.map((m) => {
+                const ai = parsed[m.id];
+                if (ai && (ai.tip || Array.isArray(ai.examples))) {
+                  return {
+                    ...m,
+                    why: typeof ai.tip === 'string' && ai.tip.trim() ? ai.tip.trim() : m.why,
+                    examples: Array.isArray(ai.examples) && ai.examples.length
+                      ? ai.examples.slice(0, 2).map((e: any) => String(e))
+                      : m.examples,
+                  };
+                }
+                return m;
+              });
+            }
+          } else {
+            credits = geminiResult.credits;
+            // Sin créditos o error de IA: seguimos con los ejemplos determinísticos.
+          }
+        } catch (aiErr) {
+          console.warn('[getHumanScore] Enriquecimiento IA falló, uso ejemplos base:', aiErr);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      score: result.score,
+      band: result.band,
+      headline: result.headline,
+      dimensions: result.dimensions,
+      missions,
+      wordCount: result.wordCount,
+      thin: result.thin,
+      credits,
+    };
+  } catch (error: any) {
+    console.error('Error en getHumanScore:', error);
+    logErrorToFile('getHumanScore', { pageUrl: cleanUrl }, error.status || '500', error.message || String(error));
+    return { success: false, error: 'No pudimos analizar el valor humano de la página. Intentá de nuevo.' };
+  }
+}
+
+/**
+ * Verifica que el usuario haya agregado el valor humano de una dimensión puntual.
+ * Re-scrapea la página y comprueba si esa dimensión ya está "presente".
+ * No usa IA: es una comprobación determinística de las señales.
+ */
+export async function verifyHumanMission(pageUrl: string, dimension: HumanDimensionId) {
+  const validDimensions: HumanDimensionId[] = ['experiencia', 'evidencia', 'casosReales', 'opinion', 'datosPropios', 'originalidad'];
+  if (!pageUrl || !validDimensions.includes(dimension)) {
+    return { success: false, message: 'Faltan datos para verificar.' };
+  }
+
+  const urlSanit = sanitizeInput(pageUrl, 'url');
+  if (!urlSanit.isValid) {
+    return { success: false, message: urlSanit.error };
+  }
+  let cleanUrl = urlSanit.sanitized;
+  if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+    cleanUrl = 'https://' + cleanUrl;
+  }
+
+  const fetched = await fetchLiveHtml(cleanUrl);
+  if (fetched.ok === false) {
+    return { success: false, message: fetched.message };
+  }
+
+  const signals = extractHumanSignals(fetched.html, cleanUrl);
+  const passed = humanDimensionPasses(dimension, signals);
+
+  if (passed) {
+    return { success: true, message: '¡Detectamos el aporte humano en tu página! Misión completada.' };
+  }
+  return {
+    success: false,
+    message: 'Todavía no lo detectamos en la página. ¿Ya publicaste el cambio y vaciaste la caché? Revisá y volvé a verificar.',
   };
 }

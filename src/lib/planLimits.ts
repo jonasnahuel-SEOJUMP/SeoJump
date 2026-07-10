@@ -55,7 +55,8 @@ export type AiFeature =
   | 'buscador_oro'
   | 'detective_enlaces'
   | 'title_suggestion'
-  | 'competitor_spy';
+  | 'competitor_spy'
+  | 'human_score';
 
 export const AI_FEATURE_LABELS: Record<AiFeature, string> = {
   quick_wins: 'Quick Wins',
@@ -64,6 +65,7 @@ export const AI_FEATURE_LABELS: Record<AiFeature, string> = {
   detective_enlaces: 'Detective de Enlaces',
   title_suggestion: 'Sugerencia de Título',
   competitor_spy: 'Espía de la Competencia',
+  human_score: 'Human Score',
 };
 
 /** Máximo de competidores rastreables por plan (Espía de la Competencia). */

@@ -355,3 +355,177 @@ export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSn
     scrapedAt: new Date().toISOString(),
   };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// HUMAN SIGNALS — Señales de "valor humano" en el contenido (para Human Score)
+// Detección 100% determinística (sin IA): mide rastros de experiencia real,
+// evidencia propia, opinión, casos reales y datos concretos. La usa el módulo
+// humanScore.ts para calcular el puntaje. NO decide "esto es IA": mide si el
+// contenido aporta algo que una IA promedio no puede inventar.
+// ═══════════════════════════════════════════════════════════════════════════
+
+export type HumanSignals = {
+  wordCount: number;
+  experienceHits: number;   // primera persona / vivencia ("probamos", "aprendimos")
+  opinionHits: number;      // postura ("recomendamos", "preferimos")
+  limitationHits: number;   // límites/desventajas ("no sirve si", "la desventaja")
+  caseResultHits: number;   // resultados/casos ("pasó de X a Y", "logramos")
+  testimonialHits: number;  // voz del cliente ("nos dijo", "reseña")
+  fluffHits: number;        // relleno genérico ("es importante", "en resumen")
+  numberHits: number;       // números sueltos
+  percentHits: number;      // porcentajes
+  priceHits: number;        // precios ($, pesos, usd)
+  yearHits: number;         // años (2019, 2024...)
+  durationHits: number;     // duración ("hace 3 años", "5 años de")
+  imageCount: number;       // <img> total (no data-uri)
+  ownImageCount: number;    // imágenes del propio dominio (evidencia propia)
+  videoCount: number;       // <video> o embeds youtube/vimeo
+  tableCount: number;       // <table>
+  faqPresent: boolean;      // FAQ schema o varios encabezados-pregunta
+};
+
+const HS_EXPERIENCE = [
+  'nosotros', 'probamos', 'usamos', 'utilizamos', 'en nuestro caso', 'cuando empezamos',
+  'con el tiempo', 'aprendimos', 'descubrimos', 'notamos', 'nos dimos cuenta', 'trabajamos',
+  'nuestro equipo', 'en mi experiencia', 'en nuestra experiencia', 'anos de experiencia',
+  'nos paso', 'fabricamos', 'desarrollamos', 'cometimos', 'nos equivocamos', 'venimos haciendo',
+  'atendimos', 'instalamos', 'aplicamos', 'testeamos', 'comprobamos', 'nuestra experiencia',
+  'llevamos', 'nos especializamos', 'empezamos en', 'al principio', 'el error que',
+];
+
+const HS_OPINION = [
+  'recomendamos', 'recomiendo', 'preferimos', 'prefiero', 'en mi opinion', 'creemos que',
+  'lo mejor es', 'conviene', 'vale la pena', 'desde nuestro punto de vista', 'sinceramente',
+  'honestamente', 'a nuestro criterio', 'elegiria', 'te conviene', 'nuestro consejo',
+  'a mi me gusta', 'nos gusta mas',
+];
+
+const HS_LIMITATION = [
+  'no sirve para', 'no recomendamos', 'no es ideal', 'no es la mejor opcion', 'la desventaja',
+  'las desventajas', 'el problema es', 'el inconveniente', 'no funciona bien', 'limitacion',
+  'contraindic', 'no lo uses si', 'evitalo si', 'punto en contra', 'contras', 'no conviene',
+  'tene en cuenta que', 'no es para todos',
+];
+
+const HS_CASE = [
+  'paso de', 'pasamos de', 'pasaron de', 'aumento un', 'aumentaron', 'crecio un', 'logramos',
+  'conseguimos', 'el resultado fue', 'los resultados', 'duplicamos', 'triplicamos', 'redujimos',
+  'caso real', 'caso de exito', 'uno de nuestros clientes', 'un cliente', 'una clienta',
+];
+
+const HS_TESTIMONIAL = [
+  'nos dijo', 'nos escribio', 'opinion de', 'resena', 'testimonio', 'valoracion', 'valoraciones',
+  'nos comento', 'nos conto', 'segun nuestros clientes', 'nuestros clientes nos',
+];
+
+const HS_FLUFF = [
+  'es importante', 'en la actualidad', 'hoy en dia', 'en conclusion', 'en resumen',
+  'sin lugar a dudas', 'cabe destacar', 'cabe mencionar', 'en el mundo de', 'juega un papel',
+  'no es un secreto', 'en este articulo', 'en este post', 'como todos sabemos', 'a la hora de',
+  'en el mercado actual', 'dia a dia', 'se ha convertido en', 'no cabe duda', 'es fundamental',
+  'es esencial', 'marca la diferencia', 'en pocas palabras', 'vale la pena mencionar',
+  'de gran importancia', 'amplia gama', 'amplia variedad', 'soluciones a medida',
+  'calidad y servicio', 'amplia experiencia', 'lider en el mercado', 'los mejores',
+];
+
+/** Cuenta cuántos patrones de la lista aparecen (al menos una vez) en el texto normalizado. */
+function countPatternHits(normText: string, patterns: string[]): number {
+  let hits = 0;
+  for (const p of patterns) {
+    if (normText.includes(p)) hits += 1;
+  }
+  return hits;
+}
+
+/**
+ * Extrae señales de valor humano de un HTML ya descargado. No hace fetch.
+ * @param html  HTML crudo de la página
+ * @param pageUrl  URL de la página (para detectar imágenes del propio dominio)
+ */
+export function extractHumanSignals(html: string, pageUrl: string): HumanSignals {
+  const empty: HumanSignals = {
+    wordCount: 0, experienceHits: 0, opinionHits: 0, limitationHits: 0, caseResultHits: 0,
+    testimonialHits: 0, fluffHits: 0, numberHits: 0, percentHits: 0, priceHits: 0,
+    yearHits: 0, durationHits: 0, imageCount: 0, ownImageCount: 0, videoCount: 0,
+    tableCount: 0, faqPresent: false,
+  };
+  if (!html) return empty;
+
+  // ── Detección a nivel HTML (imágenes, video, tablas) antes de limpiar tags ──
+  let host = '';
+  try {
+    host = new URL(pageUrl.startsWith('http') ? pageUrl : `https://${pageUrl}`).hostname.replace(/^www\./, '');
+  } catch { /* host queda vacío */ }
+
+  let imageCount = 0;
+  let ownImageCount = 0;
+  const imgRegex = /<img[^>]+src=["']([^"']+)["'][^>]*>/gi;
+  let imgMatch;
+  while ((imgMatch = imgRegex.exec(html)) !== null) {
+    const src = imgMatch[1].trim();
+    if (src.startsWith('data:')) continue; // píxeles/íconos embebidos
+    imageCount += 1;
+    // Relativa = propia; absoluta = propia solo si el host coincide
+    const isRelative = src.startsWith('/') || (!src.startsWith('http') && !src.startsWith('//'));
+    if (isRelative) {
+      ownImageCount += 1;
+    } else if (host) {
+      try {
+        const imgHost = new URL(src.startsWith('//') ? `https:${src}` : src).hostname.replace(/^www\./, '');
+        if (imgHost === host) ownImageCount += 1;
+      } catch { /* ignore */ }
+    }
+  }
+
+  const videoCount =
+    (html.match(/<video[\s>]/gi) || []).length +
+    (html.match(/(?:youtube\.com\/embed|youtu\.be\/|player\.vimeo\.com)/gi) || []).length;
+  const tableCount = (html.match(/<table[\s>]/gi) || []).length;
+
+  const faqPresent =
+    /"@type"\s*:\s*"FAQPage"/i.test(html) ||
+    (html.match(/<h[23][^>]*>[^<]*\?/gi) || []).length >= 2;
+
+  // ── Texto plano para análisis de frases ────────────────────────────────────
+  const bodyText = html
+    .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
+    .replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  const words = bodyText ? bodyText.split(/\s+/).filter(Boolean) : [];
+  const wordCount = words.length;
+
+  const normText = bodyText
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/\s+/g, ' ');
+
+  const percentHits = (normText.match(/\d+\s?%|\d+\s?por ciento/g) || []).length;
+  const priceHits = (normText.match(/\$\s?\d+|\d+\s?(pesos|usd|dolares|euros|ars)/g) || []).length;
+  const yearHits = (normText.match(/\b(19|20)\d{2}\b/g) || []).length;
+  const durationHits = (normText.match(/hace\s+\d+\s+(anos?|meses|dias|semanas)|\d+\s+anos?\s+de|desde\s+(hace\s+)?\d+/g) || []).length;
+  const numberHits = Math.min((normText.match(/\b\d+([.,]\d+)?\b/g) || []).length, 60);
+
+  return {
+    wordCount,
+    experienceHits: countPatternHits(normText, HS_EXPERIENCE),
+    opinionHits: countPatternHits(normText, HS_OPINION),
+    limitationHits: countPatternHits(normText, HS_LIMITATION),
+    caseResultHits: countPatternHits(normText, HS_CASE),
+    testimonialHits: countPatternHits(normText, HS_TESTIMONIAL),
+    fluffHits: countPatternHits(normText, HS_FLUFF),
+    numberHits,
+    percentHits,
+    priceHits,
+    yearHits,
+    durationHits,
+    imageCount,
+    ownImageCount,
+    videoCount,
+    tableCount,
+    faqPresent,
+  };
+}

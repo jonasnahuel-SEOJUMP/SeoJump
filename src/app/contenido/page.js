@@ -9,6 +9,7 @@ import { verifyContentMission, checkIsAdmin } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Link from "next/link";
 import Header from "../../components/Header";
+import HumanScorePanel from "../../components/HumanScorePanel";
 
 function Phase2NextSteps({ playClick }) {
   return (
@@ -248,6 +249,23 @@ export default function ContenidoFase2() {
     playSuccess();
     setTimeout(() => setShowConfetti(false), 3000);
     setCreateMarked(true);
+  };
+
+  // Completado de una Misión Human (valor humano): suma XP y persiste igual que
+  // el resto de misiones de la fase (localStorage + sync con servidor).
+  const handleHumanMissionComplete = (missionId, xpGain) => {
+    if (completedMissions.has(missionId)) return;
+    const newXp = xp + (xpGain || 0);
+    setXp(newXp);
+    localStorage.setItem("seojump_xp", newXp);
+    setCompletedMissions((prev) => {
+      const updated = new Set([...prev, missionId]);
+      localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
+      setTimeout(() => { syncStateWithServer(); }, 100);
+      return updated;
+    });
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 3000);
   };
 
   const handleAudit = async (e) => {
@@ -562,7 +580,28 @@ export default function ContenidoFase2() {
                   </div>
 
                   {auditResult.success && (
-                    <Phase2NextSteps playClick={playClick} />
+                    <>
+                      <div className="border-t-2 border-slate-100 dark:border-slate-700 pt-6">
+                        <div className="mb-4">
+                          <p className="text-xs font-black text-fuchsia-500 uppercase tracking-wider mb-1">Nivel siguiente</p>
+                          <h4 className="text-2xl font-black text-slate-800 dark:text-white">
+                            Ya tenés la palabra clave. Ahora, ¿tu contenido destaca?
+                          </h4>
+                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">
+                            Miles de páginas ya usan tu misma palabra clave con textos hechos por IA. El Human Score te muestra qué le falta a la tuya para ganarles.
+                          </p>
+                        </div>
+                        <HumanScorePanel
+                          defaultUrl={targetUrl}
+                          keyword={activeKeyword}
+                          completedMissions={completedMissions}
+                          onMissionComplete={handleHumanMissionComplete}
+                          playClick={playClick}
+                          playSuccess={playSuccess}
+                        />
+                      </div>
+                      <Phase2NextSteps playClick={playClick} />
+                    </>
                   )}
                 </div>
               )}

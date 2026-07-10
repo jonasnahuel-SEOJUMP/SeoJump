@@ -256,6 +256,9 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
         </div>
       </section>
 
+      {/* HUMAN SCORE — Filosofía de diseño / métrica en evolución */}
+      <HumanScoreBlock />
+
       {/* GAMIFICACIÓN */}
       <section className="w-full py-16 px-4 flex flex-col items-center">
         <h2 className="text-3xl md:text-5xl font-black text-center text-white mb-4">
@@ -340,6 +343,7 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
           <Faq q="¿Qué diferencia hay entre SEO y AEO?" a="SEO = aparecer en los enlaces de Google. AEO = que ChatGPT y Gemini te citen como respuesta. SEO Jump trabaja ambos con misiones concretas." />
           <Faq q="¿Por qué conectar Search Console?" a="Es la fuente oficial de Google sobre tu web. Sin adivinar: usamos tus datos reales de clics, impresiones y posiciones." />
           <Faq q="¿Y el Espía de la Competencia?" a="Es una herramienta extra: pegás la URL de un rival y la IA compara su web con la tuya. Útil, pero el corazón de SEO Jump son las misiones diarias y el AEO." />
+          <Faq q="¿Qué es el Human Score?" a="Es nuestra métrica en evolución que mide el valor humano de tu contenido: experiencia, evidencia propia, casos reales, opinión y datos. No detecta si un texto fue hecho con IA; mide si aporta algo que los demás no tienen. La vamos refinando con el uso real." />
           <Faq q="¿Es seguro conectar Google?" a="Sí. OAuth oficial de Google. No vemos tu contraseña." />
         </div>
       </section>
@@ -373,6 +377,63 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
 
       <LandingFooter playClick={playClick} />
     </div>
+  );
+}
+
+/** Bloque Human Score — presentado como filosofía de diseño y métrica en evolución (no feature cerrada). */
+function HumanScoreBlock() {
+  const dims = [
+    { emoji: "👤", label: "Experiencia" },
+    { emoji: "📸", label: "Evidencia propia" },
+    { emoji: "📈", label: "Casos reales" },
+    { emoji: "⭐", label: "Opinión y criterio" },
+    { emoji: "🔢", label: "Datos propios" },
+    { emoji: "✨", label: "Originalidad" },
+  ];
+  return (
+    <section className="w-full py-20 px-4">
+      <div className="max-w-5xl mx-auto rounded-3xl border-2 border-fuchsia-500/30 bg-gradient-to-br from-fuchsia-950/30 via-slate-900 to-slate-900 p-8 md:p-14 relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-96 h-96 bg-fuchsia-600 opacity-10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20" />
+
+        <div className="relative z-10 text-center">
+          <span className="inline-flex items-center gap-2 px-4 py-1.5 bg-fuchsia-500/15 border border-fuchsia-400/40 rounded-full text-fuchsia-200 text-xs md:text-sm font-black uppercase tracking-widest mb-6">
+            🫀 Filosofía SEO Jump · Human Score
+            <span className="px-2 py-0.5 bg-fuchsia-400/20 rounded-full text-[10px] tracking-wide">en evolución</span>
+          </span>
+
+          <h2 className="text-3xl md:text-5xl font-black text-white mb-6 leading-tight">
+            La IA ya escribe por todos. Lo que te diferencia es{" "}
+            <span className="text-fuchsia-300">lo humano.</span>
+          </h2>
+
+          <p className="text-slate-300 text-lg md:text-xl max-w-3xl mx-auto leading-relaxed font-medium mb-4">
+            Hoy cualquiera genera un artículo con IA en 30 segundos. El problema ya no es escribir: es
+            destacar entre los otros cien textos casi idénticos. Por eso SEO Jump no te dice{" "}
+            <em>«no uses IA»</em>. Te ayuda a convertir un borrador en algo con valor real.
+          </p>
+          <p className="text-slate-400 text-base md:text-lg max-w-3xl mx-auto leading-relaxed mb-10">
+            <strong className="text-white">La IA optimiza. Vos aportás lo irreemplazable.</strong>{" "}
+            Estamos construyendo el <strong className="text-fuchsia-300">Human Score</strong>: una métrica
+            que mide cuánto de eso tiene tu contenido. No detecta «si es IA» — detecta si aportás algo que
+            el resto no tiene.
+          </p>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 max-w-3xl mx-auto mb-8">
+            {dims.map((d) => (
+              <div key={d.label} className="bg-slate-800/60 border border-fuchsia-500/20 rounded-xl px-4 py-3 flex items-center gap-2.5 text-left">
+                <span className="text-2xl flex-shrink-0">{d.emoji}</span>
+                <span className="text-sm md:text-base font-bold text-slate-200">{d.label}</span>
+              </div>
+            ))}
+          </div>
+
+          <p className="text-slate-500 text-sm max-w-2xl mx-auto">
+            Es una métrica en desarrollo que vamos refinando con el uso real. Alineada con la dirección de
+            Google (E-E-A-T) y de los asistentes de IA: premiar el contenido útil, original y con experiencia.
+          </p>
+        </div>
+      </div>
+    </section>
   );
 }
 
