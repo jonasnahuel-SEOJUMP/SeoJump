@@ -108,23 +108,51 @@ export async function scrapeMetadata(siteUrl: string): Promise<{ title: string; 
   return result;
 }
 
-export function extractLinksFromHtml(html: string, baseUrl: string): Array<{ href: string; anchorText: string; isInternal: boolean }> {
-  const links: Array<{ href: string; anchorText: string; isInternal: boolean }> = [];
-  const regex = /<a[^>]+href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+/** Clases habituales en enlaces/botones de grillas WooCommerce y temas como Flatsome. */
+const CATALOG_UI_LINK_CLASS_PATTERNS = [
+  /woocommerce-loop-product/i,
+  /add_to_cart/i,
+  /product_type_/i,
+  /product-small/i,
+  /show-on-hover/i,
+  /box-text-products/i,
+  /product-box/i,
+  /product-grid/i,
+  /products\s/i,
+];
+
+export function isCatalogUiLinkFromTag(aTagAttributes: string): boolean {
+  const cls = (aTagAttributes.match(/class=["']([^"']+)["']/i)?.[1] || '').toLowerCase();
+  if (!cls) return false;
+  return CATALOG_UI_LINK_CLASS_PATTERNS.some((p) => p.test(cls));
+}
+
+export function extractLinksFromHtml(
+  html: string,
+  baseUrl: string
+): Array<{ href: string; anchorText: string; isInternal: boolean; isCatalogUiLink: boolean }> {
+  const links: Array<{ href: string; anchorText: string; isInternal: boolean; isCatalogUiLink: boolean }> = [];
+  const regex = /<a([^>]*?)href=["']([^"'#]+)["']([^>]*)>([\s\S]*?)<\/a>/gi;
   let match;
   const baseHost = new URL(baseUrl).hostname.replace(/^www\./, '');
 
   while ((match = regex.exec(html)) !== null) {
     try {
-      const rawHref = match[1].trim();
+      const rawHref = match[2].trim();
       if (rawHref.startsWith("mailto:") || rawHref.startsWith("tel:") || rawHref.startsWith("javascript:")) continue;
 
       const resolved = new URL(rawHref, baseUrl).href;
-      const anchorText = match[2].replace(/<[^>]+>/g, '').trim();
+      const anchorText = match[4].replace(/<[^>]+>/g, '').trim();
       const linkHost = new URL(resolved).hostname.replace(/^www\./, '');
       const isInternal = linkHost === baseHost;
+      const tagAttrs = `${match[1] || ''} ${match[3] || ''}`;
 
-      links.push({ href: resolved, anchorText, isInternal });
+      links.push({
+        href: resolved,
+        anchorText,
+        isInternal,
+        isCatalogUiLink: isCatalogUiLinkFromTag(tagAttrs),
+      });
     } catch (e) {
       // skip malformed URLs
     }

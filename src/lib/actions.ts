@@ -2288,7 +2288,7 @@ export async function auditSiteLinks(siteUrl: string, goldKeyword?: string) {
       ? hubPages.map((p) => `- ${p.url}`).join('\n')
       : '(ninguna)';
 
-    // Anclas genéricas solo desde páginas válidas como origen (excluye home/catálogo).
+    // Ya filtrados en el crawl (sin catálogo/grillas WooCommerce); revalidar origen por URL.
     const genericAnchorsForPrompt = crawlData.genericAnchors.filter(
       (g) => isValidLinkSourcePage(g.page, cleanSiteUrl)
     );

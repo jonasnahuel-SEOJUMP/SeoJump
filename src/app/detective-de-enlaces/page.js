@@ -697,7 +697,7 @@ export default function DetectiveDeEnlaces() {
                     🔍 ESCANEAR MI SITIO
                   </button>
                   <p className="text-xs text-slate-550 font-bold mt-3">
-                    El escaneo analiza hasta 10 páginas de tu web y tarda unos segundos.
+                    El escaneo analiza hasta 5 páginas de tu web y tarda unos segundos.
                   </p>
                 </div>
               </div>

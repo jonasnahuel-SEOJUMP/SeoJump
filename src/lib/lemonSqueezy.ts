@@ -78,8 +78,11 @@ async function resolveLemonVariantId(
 
   try {
     while (page <= 20) {
+      // Ojo: NO filtramos por status. El variant por defecto de un producto de
+      // un solo variant (como PRO) queda en estado "pending" en la API aunque el
+      // producto esté publicado; filtrar por "published" lo dejaría fuera.
       const res = await fetch(
-        `${API_BASE}/variants?page[number]=${page}&page[size]=50&filter[status]=published`,
+        `${API_BASE}/variants?page[number]=${page}&page[size]=100`,
         {
           headers: {
             ...JSON_API_HEADERS,

@@ -9,6 +9,7 @@ import {
   extractLinksFromHtml,
   extractTitleFromHtml,
   checkLinkStatus,
+  detectPageTypeFromHtml,
 } from './scraping'
 
 /** Returns true if the URL is the root / home page of the domain. */
@@ -123,10 +124,53 @@ export function isGenericAnchor(text: string): boolean {
   return GENERIC_ANCHOR_PATTERNS.some(p => p.test(clean));
 }
 
+/** Botones automáticos de tienda: nunca conviene pedirle al usuario que los reescriba. */
+const ECOMMERCE_BUTTON_ANCHOR_PATTERNS = [
+  /^ver\s+producto$/i,
+  /^view\s+product$/i,
+  /^seleccionar\s+opciones$/i,
+  /^select\s+options$/i,
+  /^a[nñ]adir\s+al\s+carrito$/i,
+  /^agregar\s+al\s+carrito$/i,
+  /^add\s+to\s+cart$/i,
+  /^comprar\s+ahora$/i,
+  /^buy\s+now$/i,
+  /^vista\s+r[aá]pida$/i,
+  /^quick\s+view$/i,
+];
+
+const CATALOG_PAGE_TYPES = new Set(['home', 'category', 'product']);
+
+export function isEcommerceButtonAnchor(text: string): boolean {
+  const clean = text.trim();
+  if (!clean) return false;
+  return ECOMMERCE_BUTTON_ANCHOR_PATTERNS.some((p) => p.test(clean));
+}
+
+/** Genérico que el usuario sí puede (y conviene) mejorar — excluye catálogo WooCommerce. */
+export function isActionableGenericAnchor(
+  anchorText: string,
+  pageUrl: string,
+  siteUrl: string,
+  pageType: string,
+  isCatalogUiLink: boolean
+): boolean {
+  if (!isGenericAnchor(anchorText)) return false;
+  if (isCatalogUiLink) return false;
+  if (pageType && CATALOG_PAGE_TYPES.has(pageType)) return false;
+  if (isCatalogHubPage(pageUrl, siteUrl)) return false;
+  if (isEcommerceButtonAnchor(anchorText)) return false;
+  return true;
+}
 export async function crawlSiteLinks(siteUrl: string) {
   const cleanUrl = siteUrl.replace(/\/$/, '');
   const visited = new Set<string>();
-  const pages: Array<{ url: string; title: string; links: Array<{ href: string; anchorText: string; isInternal: boolean; statusCode: number }> }> = [];
+  const pages: Array<{
+    url: string;
+    title: string;
+    pageType: string;
+    links: Array<{ href: string; anchorText: string; isInternal: boolean; isCatalogUiLink: boolean; statusCode: number }>;
+  }> = [];
   const queue: Array<{ url: string; depth: number }> = [{ url: cleanUrl, depth: 0 }];
   const allDestinations = new Map<string, number>(); // url -> status code (lazy check)
   const MAX_PAGES = 5;
@@ -146,10 +190,12 @@ export async function crawlSiteLinks(siteUrl: string) {
 
     const links = extractLinksFromHtml(result.html, url);
     const title = extractTitleFromHtml(result.html);
+    const pageType = detectPageTypeFromHtml(result.html);
 
     pages.push({
       url: normalizedUrl,
       title,
+      pageType,
       links: links.map(l => ({ ...l, statusCode: -1 })), // status checked later
     });
 
@@ -219,11 +265,20 @@ export async function crawlSiteLinks(siteUrl: string) {
     }
   }
 
-  // Find generic anchors (internal links only)
+  // Find generic anchors (internal, actionable only — excluye grillas/catálogo WooCommerce)
   const genericAnchors: Array<{ page: string; href: string; anchorText: string }> = [];
   for (const page of pages) {
     for (const link of page.links) {
-      if (link.isInternal && isGenericAnchor(link.anchorText)) {
+      if (
+        link.isInternal &&
+        isActionableGenericAnchor(
+          link.anchorText,
+          page.url,
+          cleanUrl,
+          page.pageType,
+          link.isCatalogUiLink
+        )
+      ) {
         genericAnchors.push({
           page: page.url,
           href: link.href,
