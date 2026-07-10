@@ -427,10 +427,17 @@ function HumanScoreBlock() {
             ))}
           </div>
 
-          <p className="text-slate-500 text-sm max-w-2xl mx-auto">
+          <p className="text-slate-500 text-sm max-w-2xl mx-auto mb-6">
             Es una métrica en desarrollo que vamos refinando con el uso real. Alineada con la dirección de
             Google (E-E-A-T) y de los asistentes de IA: premiar el contenido útil, original y con experiencia.
           </p>
+
+          <Link
+            href="/blog/contenido-humano-vs-ia-human-score"
+            className="inline-block text-fuchsia-200 font-black text-sm hover:text-white underline underline-offset-4"
+          >
+            Leé nuestra visión sobre el contenido humano vs. IA →
+          </Link>
         </div>
       </div>
     </section>
