@@ -251,10 +251,11 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
     steps.push('Entrá a tu WordPress → menú **Productos** → **Todos los productos**.');
     steps.push(`En el buscador escribí ${search} y hacé clic en **Editar**.`);
     if (missionType === 'H1') {
-      fieldLabel = 'Nombre del producto + Título SEO (Yoast / Rank Math)';
-      steps.push('Arriba, el **Nombre del producto** es el título grande que ve el visitante.');
-      yoastTitleSteps();
-      commonMistakes.push('Si solo cambiás el nombre y Google sigue igual, revisá también el **Título SEO** en Yoast.');
+      fieldLabel = 'Nombre del producto (el campo de arriba de todo)';
+      steps.push('El campo a cambiar es el **Nombre del producto**: la caja de texto **arriba de todo** del editor.');
+      steps.push('Borrá el nombre actual y pegá la sugerencia de SEO Jump.');
+      commonMistakes.push('No busques ningún recuadro de Yoast para esto: en productos, el título se cambia directamente en el **Nombre del producto** de arriba.');
+      commonMistakes.push('Solo si tu producto ya tiene un **Título SEO personalizado** en Yoast/Rank Math (poco común), actualizalo ahí también para que Google muestre el nuevo.');
     } else if (missionType === 'META') {
       fieldLabel = 'Meta descripción en Yoast / Rank Math';
       yoastMetaSteps();

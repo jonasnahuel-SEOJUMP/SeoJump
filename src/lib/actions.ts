@@ -1954,9 +1954,20 @@ El "suggestedTitle" SIEMPRE debe dejar claro QUÉ es el producto o servicio (el 
 ⚠️  REGLA ABSOLUTA #6 — COMPLEMENTARIEDAD Y DIFERENCIALES ⚠️
 ██████████████████████████████████████████████████████████████
 El título, la meta descripción ("currentDescription") y la URL de cada página forman UN CONJUNTO que Google lee completo. Antes de escribir cada "suggestedTitle":
-- Mirá la URL y la "currentDescription" de esa oportunidad: si una marca o frase YA aparece ahí, NO la repitas en el título — es espacio desperdiciado. Usá ese espacio para el término de intención o un diferencial.
+- Mirá la URL y la "currentDescription" de esa oportunidad: si una MARCA o el NOMBRE DE LA TIENDA ya aparece ahí, NO lo repitas en el título — es espacio desperdiciado. Usá ese espacio para el término de intención o un diferencial.
+- ESTA REGLA APLICA SOLO A MARCAS Y NOMBRES DE TIENDA. NUNCA apliques esta regla a términos descriptivos del producto o de cómo la gente lo busca: que una palabra aparezca en el slug de la URL NO significa que esté "cubierta" — la URL no reemplaza al título. Ejemplo INVÁLIDO: quitar "acople" del título de una Foam Lance porque el slug es "/foam-lance-acople-adaptador/" (la gente busca "foam lance con acople"; sacarlo pierde esa búsqueda). Ejemplo VÁLIDO: no repetir "55detailshop" si ya está en la descripción.
 - PRESERVÁ LOS DIFERENCIALES COMPETITIVOS del título actual ("importación directa", "fabricantes", "envío a todo el país", "precios mayoristas", años de trayectoria): valen MÁS que repetir una marca ya cubierta en otro campo. Si el espacio no alcanza, el diferencial gana sobre la marca redundante.
 🔒 VIOLACIÓN = título redundante que no suma posicionamiento nuevo.
+██████████████████████████████████████████████████████████████
+
+██████████████████████████████████████████████████████████████
+⚠️  REGLA ABSOLUTA #7 — NO BORRAR TÉRMINOS DE BÚSQUEDA DEL TÍTULO ACTUAL ⚠️
+██████████████████████████████████████████████████████████████
+El título actual ("currentTitle") suele contener palabras que el dueño puso porque SABE cómo lo buscan sus clientes (complementos, compatibilidades, formatos: "con acople", "para hidrolavadora", "x 1 litro", "kit", "por mayor").
+- Antes de eliminar cualquier palabra descriptiva del título actual, preguntate: "¿alguien podría incluir esta palabra al buscar este producto?". Si la respuesta es sí o probablemente, CONSERVALA.
+- NUNCA reemplaces un término específico y buscable por una etiqueta genérica de categoría. Ejemplo INVÁLIDO: reemplazar "acople" por "Accesorio Detailing" ("accesorio detailing" es genérico; "foam lance con acople" es lo que se busca).
+- Podés eliminar sin miedo: relleno sin intención ("calidad premium", "increíble"), marca de la tienda duplicada, y datos de stock/gramaje irrelevantes para la búsqueda.
+🔒 VIOLACIÓN = la página pierde las búsquedas reales que ya tenía ganadas.
 ██████████████████████████████████████████████████████████████
 
 Reglas de lenguaje:
