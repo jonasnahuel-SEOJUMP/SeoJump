@@ -214,16 +214,26 @@ export type HeadingSection = {
  * Se comparan en minúsculas y sin tildes.
  */
 const AEO_UI_HEADING_PATTERNS = [
-  'ultimos ingresos', 'nuevos ingresos', 'recien llegados', 'novedades',
+  'ultimos ingresos', 'nuevos ingresos', 'ultimos productos', 'nuevos productos',
+  'recien llegados', 'recien ingresados', 'novedades', 'lo nuevo', 'lo ultimo',
   'destacados', 'productos destacados', 'mas vendidos', 'los mas vendidos',
-  'mas buscados', 'ofertas', 'promociones', 'liquidacion', 'outlet',
+  'mas buscados', 'lo mas buscado', 'top ventas', 'best sellers', 'mas populares',
+  'ofertas', 'ofertas destacadas', 'promociones', 'promos', 'liquidacion', 'outlet',
   'productos relacionados', 'tambien te puede interesar', 'quizas te interese',
   'productos similares', 'completa tu compra', 'vistos recientemente',
+  'productos vistos', 'seguir comprando', 'agregados recientemente',
   'categorias', 'nuestras categorias', 'marcas', 'nuestras marcas',
   'carrito', 'tu carrito', 'lista de deseos', 'favoritos',
   'mi cuenta', 'seguinos', 'redes sociales', 'newsletter', 'suscribite',
   'medios de pago', 'formas de pago', 'envios', 'menu', 'filtrar', 'filtros',
-  'ordenar por', 'resultados', 'coleccion', 'colecciones', 'catalogo',
+  'ordenar por', 'resultados', 'coleccion', 'colecciones', 'catalogo', 'tienda',
+];
+
+/** Palabras que indican que el encabezado SÍ es una pregunta / contenido informativo. */
+const AEO_INFORMATIVE_HINTS = [
+  'que es', 'que son', 'como', 'cuando', 'cuanto', 'cuanta', 'cuantos',
+  'por que', 'para que', 'donde', 'cual', 'quien', 'guia', 'beneficios',
+  'ventajas', 'diferencia', 'tipos de', 'pasos', 'consejos',
 ];
 
 /** Frases que indican que el "párrafo" es ruido de interfaz, no contenido real. */
@@ -246,9 +256,19 @@ export function normalizeForAeo(text: string): string {
 export function isUiNavigationHeading(heading: string): boolean {
   const norm = normalizeForAeo(heading);
   if (!norm) return true;
-  return AEO_UI_HEADING_PATTERNS.some(
-    (p) => norm === p || norm.startsWith(p + ' ') || norm.endsWith(' ' + p)
+
+  // Si el encabezado es claramente una pregunta o guía informativa, NO es UI.
+  const isQuestion = heading.includes('?') || heading.includes('¿');
+  const looksInformative = AEO_INFORMATIVE_HINTS.some(
+    (h) => norm === h || norm.startsWith(h + ' ') || norm.includes(' ' + h + ' ')
   );
+  if (isQuestion || looksInformative) return false;
+
+  // Coincidencia por palabra completa: atrapa «Últimos ingresos», «Nuestras
+  // Marcas», «Productos destacados de la semana», etc., sin cortar palabras.
+  // Los patrones solo contienen letras/espacios, así que no requieren escape.
+  const words = ` ${norm} `;
+  return AEO_UI_HEADING_PATTERNS.some((p) => norm === p || words.includes(` ${p} `));
 }
 
 /** True si el texto parece un listado de productos / botones de interfaz. */

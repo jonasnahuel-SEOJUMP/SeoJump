@@ -24,6 +24,8 @@ import {
   fetchPage,
   extractLinksFromHtml,
   extractHumanSignals,
+  isUiNavigationHeading,
+  isUiNoiseText,
 } from './scraping'
 import {
   computeHumanScore,
@@ -2850,6 +2852,11 @@ Texto optimizado correcto: "Un tratamiento para plásticos interiores de alta ca
 
 Para cada sección que analices, devolvé estrictamente un JSON. Si el texto actual YA es bueno para AEO (responde directo, sin fluff, con datos objetivos), marcá is_opportunity como false.
 
+IMPORTANTE — NO son oportunidades AEO (marcá is_opportunity = false SIEMPRE):
+- Encabezados de NAVEGACIÓN o secciones de tienda: "Últimos ingresos", "Novedades", "Destacados", "Más vendidos", "Ofertas", "Productos relacionados", "Categorías", "Marcas", "Carrito", "Envíos", "Colecciones". Son listados/carruseles de productos, no preguntas informativas. NO se responden con un párrafo; su función es mostrar productos.
+- Textos que son botones o interfaz: "Añadir al carrito", "Vista rápida", "Agregar a la lista de deseos", "Comprar ahora", precios sueltos, nombres de producto en serie.
+- Una oportunidad AEO REAL es un encabezado que plantea una PREGUNTA o CONCEPTO informativo ("¿Qué es...?", "¿Cómo...?", "¿Cuánto dura...?", "Beneficios de...") cuyo párrafo debería dar una respuesta directa.
+
 Devolvé un array JSON sin bloques de código markdown:
 [
   {
@@ -2878,7 +2885,7 @@ ${JSON.stringify(allSections, null, 2)}`;
     }
 
     const cacheKey = buildGeminiCacheKey([
-      'aeo_v2',
+      'aeo_v3',
       userEmail || 'dev@localhost',
       cleanSiteUrl,
       cleanGoldKeyword,
@@ -2924,6 +2931,26 @@ ${JSON.stringify(allSections, null, 2)}`;
 
     // ── Filter: only keep sections where is_opportunity is true ──────────
     let opportunities = parsed.filter((item: any) => item.is_opportunity === true);
+
+    // ── SEGUNDA RED: descartar encabezados de navegación / textos de interfaz ──
+    // scrapeHeadingSections ya filtra antes de la IA, pero esta capa atrapa lo
+    // que se cuele igual (o resultados cacheados de antes del filtro): carruseles
+    // tipo «Últimos ingresos», «Destacados», y textos de UI («Añadir al carrito»,
+    // «Vista rápida»). Estos NO son preguntas informativas y no sirven para AEO.
+    opportunities = opportunities.filter((opp: any) => {
+      const heading = opp.heading_affected || '';
+      const snippet = opp.current_text_snippet || '';
+      if (opp.source === 'starter') return true; // los starters son plantillas válidas
+      if (isUiNavigationHeading(heading)) {
+        console.log(`[AEO] Descartada oportunidad de navegación/UI: heading "${heading}"`);
+        return false;
+      }
+      if (snippet && isUiNoiseText(snippet)) {
+        console.log(`[AEO] Descartada oportunidad por texto de interfaz bajo "${heading}"`);
+        return false;
+      }
+      return true;
+    });
 
     // ── Add pageUrl to each opportunity result ──────────────────────────
     opportunities = opportunities.map((opp: any) => {
