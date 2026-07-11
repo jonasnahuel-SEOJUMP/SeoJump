@@ -5,6 +5,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { captureAppError } from './sentry';
 
 /**
  * Sanitiza y valida las entradas del usuario (keywords y URLs) antes de ser procesadas.
@@ -98,7 +99,15 @@ export function logErrorToFile(
 
     fs.writeFileSync(logFilePath, JSON.stringify(logs, null, 2), "utf8");
     console.log(`[API Log] Error guardado exitosamente en error_log.json para acción ${actionName}`);
+
+    captureAppError(new Error(message || "Error desconocido"), {
+      action: actionName,
+      input,
+      status: String(status),
+      source: "logErrorToFile",
+    });
   } catch (fsErr) {
     console.error("No se pudo escribir en error_log.json:", fsErr);
+    captureAppError(fsErr, { action: actionName, source: "logErrorToFile_write_failed" });
   }
 }
