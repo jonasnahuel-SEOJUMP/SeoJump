@@ -31,6 +31,7 @@ import {
   type HumanDimensionId,
   type HumanMission,
 } from './humanScore'
+import { fitSeoTitle, extractBrandHints, MAX_SEO_TITLE_LENGTH } from './seoTitle'
 import {
   isHomePage,
   isCatalogHubPage,
@@ -1134,7 +1135,7 @@ export async function getSmartMissionSuggestion(params: {
   const isTitle = missionType === 'H1';
 
   const cacheKey = buildGeminiCacheKey([
-    'title_suggestion_v5',
+    'title_suggestion_v6',
     email || 'anon',
     pageUrl,
     missionType,
@@ -1152,9 +1153,13 @@ export async function getSmartMissionSuggestion(params: {
     if (cachedEarly) {
       const parsed = parseTitleSuggestionFromGemini(cachedEarly);
       if (parsed) {
+        const brandHints = extractBrandHints(currentValue, pageTitle, pageH1, brand);
+        const suggestedTitle = isTitle
+          ? fitSeoTitle(parsed.suggestedTitle, { brandHints })
+          : parsed.suggestedTitle.slice(0, 155).trim();
         return {
           success: true as const,
-          suggestedTitle: parsed.suggestedTitle,
+          suggestedTitle,
           reason: parsed.reason,
           fromCache: true as const,
           fromAi: true as const,
@@ -1234,7 +1239,7 @@ CÓMO LE VA HOY EN GOOGLE (usá esto para decidir cuán agresivo ser):
 ${metricsBlock}
 
 CAMPO A OPTIMIZAR: ${isTitle ? 'el TÍTULO SEO (etiqueta <title>)' : 'la META DESCRIPCIÓN'}
-Valor actual de ese campo: "${currentValue || '(vacío)'}"
+Valor actual de ese campo: "${currentValue || '(vacío)'}"${isTitle && currentValue && currentValue.length <= MAX_SEO_TITLE_LENGTH ? `\n⚠️ El título actual ya tiene ${currentValue.length} caracteres (zona VERDE en Yoast/Rank Math). Tu sugerencia DEBE quedar también en verde (máx. 60). NO agregues el nombre de la tienda si eso lo pasa a rojo.` : ''}
 ${goalGuidance ? `\nOBJETIVO PRINCIPAL DEL DUEÑO (orientá la estrategia hacia esto):\n  ${goalGuidance}` : ''}
 PASO 1 — IDENTIFICÁ EL PERFIL DE MARCA DEL NEGOCIO (clave para decidir bien):
 - MONOMARCA / producto puntual: el negocio vende su propia marca o esta es la página de un solo producto/marca. Señales: una sola marca repetida, página de ficha de producto único.
@@ -1258,7 +1263,7 @@ REGLAS ABSOLUTAS (un experto nunca las rompe):
 8. ELIMINÁ EL RUIDO: sacá gramaje, stock, tamaños y SKUs ("x 50gs/100gs", "500ml", "pack x12") y relleno vacío ("puro", "premium", "original") solo si hace falta para entrar en el límite.
 9. DESDUPLICÁ SINÓNIMOS: si hay dos palabras casi iguales ("vidrios" y "cristales"), quedate con la más buscada/específica.
 10. NUNCA dejes un título "pelado" tipo "Marca | Tienda". Siempre debe quedar claro qué se vende.
-11. ${isTitle ? 'LONGITUD: máximo 60 caracteres (ideal 50-60). Estructura sugerida: [qué es + término de intención] + [diferencial o marca SOLO si aporta y no es redundante] + [nombre de la tienda].' : 'LONGITUD: máximo 155 caracteres. Incluí la palabra clave de intención y un llamado a la acción claro ("Comprá", "Pedí presupuesto", "Conocé más").'}
+11. ${isTitle ? 'LONGITUD CRÍTICA (Yoast/Rank Math): NUNCA superes 60 caracteres — por encima queda en ROJO y empeora el SEO. Ideal 50-60. El nombre de la tienda al final es OPCIONAL: omitilo si no entra sin pasar a rojo, o si el H1/meta ya cubren la marca. Estructura sugerida: [qué es + intención] + [diferencial] + [tienda solo si hay espacio].' : 'LONGITUD: máximo 155 caracteres. Incluí la palabra clave de intención y un llamado a la acción claro ("Comprá", "Pedí presupuesto", "Conocé más").'}
 12. Español rioplatense, natural, sin tecnicismos SEO.
 ${goalGuidance ? '13. RESPETÁ EL OBJETIVO DEL DUEÑO descrito arriba al elegir el enfoque del texto.' : ''}
 
@@ -1293,9 +1298,14 @@ Devolvé ESTRICTAMENTE este JSON, sin markdown ni texto extra:
       return { success: false, fallback: true as const, credits: result.credits };
     }
 
+    const brandHints = extractBrandHints(currentValue, pageTitle, pageH1, brand, businessContext);
+    const suggestedTitle = isTitle
+      ? fitSeoTitle(parsed.suggestedTitle, { brandHints })
+      : parsed.suggestedTitle.slice(0, 155).trim();
+
     return {
       success: true as const,
-      suggestedTitle: parsed.suggestedTitle,
+      suggestedTitle,
       reason: parsed.reason,
       fromAi: true as const,
       credits: result.credits,
@@ -1921,8 +1931,9 @@ Cada URL física del listado debe recibir exactamente un único registro en tu J
 ██████████████████████████████████████████████████████████████
 El campo "suggestedTitle" de CADA oportunidad DEBE tener entre 50 y 60 caracteres de longitud total (incluyendo espacios y caracteres especiales).
 - Mínimo: 50 caracteres. Si es más corto, agregá un beneficio o modificador atractivo.
-- Máximo ABSOLUTO: 60 caracteres. Si superas los 60 caracteres, Google lo cortará con "..." y el usuario perderá el clic.
-- Contá los caracteres mentalmente antes de escribir el título. Si tu primer borrador tiene 70 caracteres, comprimilo.
+- Máximo ABSOLUTO: 60 caracteres. Por encima, Yoast/Rank Math lo marcan en ROJO y empeora el SEO. Google también lo cortará con "...".
+- Si el "currentTitle" ya tiene ≤60 caracteres (ya está en verde), tu sugerencia TAMBIÉN debe quedar ≤60. NO agregues el nombre de la tienda al final si eso lo pasa a rojo.
+- Contá los caracteres mentalmente antes de escribir el título. Si tu primer borrador tiene 70 caracteres, comprimilo o sacá la marca de la tienda.
 - Priorizá claridad y beneficio comercial por sobre completitud. Un título de 58 caracteres bien elegido vence a uno de 80.
 🔒 VIOLACIÓN DE ESTA REGLA = Título inútil para el cliente. No se mostrará completo en Google.
 ██████████████████████████████████████████████████████████████
@@ -2117,20 +2128,16 @@ ${JSON.stringify(opportunities, null, 2)}
     // ────────────────────────────────────────────────────────────────────────
 
     // ── LAYER 3: TITLE LENGTH SAFETY NET (max 60 chars) ─────────────────────
-    // If the AI still produced an overlong title despite the instruction,
-    // we trim it cleanly at the last word boundary before the 60-char limit.
-    const MAX_TITLE_LENGTH = 60;
-    const trimTitle = (title: string): string => {
-      if (!title || title.length <= MAX_TITLE_LENGTH) return title;
-      // Try to cut at the last space before position 60 to avoid mid-word cuts
-      const cut = title.lastIndexOf(' ', MAX_TITLE_LENGTH - 1);
-      const trimmed = cut > 30 ? title.slice(0, cut) : title.slice(0, MAX_TITLE_LENGTH);
-      console.warn(`[QuickWins L3] Title trimmed from ${title.length} to ${trimmed.length} chars: "${trimmed}"`);
-      return trimmed;
-    };
+    const qwBrandHints = extractBrandHints(businessNiche, brandFallbackTitle, domainLabel);
     parsed = parsed.map((win: any) => {
       if (win.suggestedTitle) {
-        win.suggestedTitle = trimTitle(win.suggestedTitle);
+        const before = win.suggestedTitle;
+        win.suggestedTitle = fitSeoTitle(win.suggestedTitle, {
+          brandHints: extractBrandHints(win.currentTitle, ...qwBrandHints),
+        });
+        if (win.suggestedTitle.length < before.length) {
+          console.warn(`[QuickWins L3] Title fitted from ${before.length} to ${win.suggestedTitle.length} chars: "${win.suggestedTitle}"`);
+        }
       }
       return win;
     });
