@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { PH_EVENTS, trackEvent } from "../../../lib/posthog";
 
 function getPreapprovalIdFromPage() {
   if (typeof window === "undefined") return null;
@@ -40,6 +41,7 @@ export default function PagoExitoPage() {
           } catch {
             /* ignore */
           }
+          trackEvent(PH_EVENTS.PAYMENT_SUCCESS, { provider: "mercadopago" });
           setMessage("¡Plan PRO activado! Recargá el panel (F5) si las misiones siguen bloqueadas.");
           setSyncing(false);
           setTimeout(() => router.push("/optimizacion?plan=pro"), 2000);

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { signIn } from "next-auth/react";
+import { PH_EVENTS, trackEvent } from "../lib/posthog";
 
 /**
  * Botón "Quiero PRO" → Stripe Checkout (USD, tarjeta internacional).
@@ -38,6 +39,7 @@ export default function StripeCheckoutButton({
       }
 
       if (data.url) {
+        trackEvent(PH_EVENTS.CHECKOUT_STARTED, { provider: "stripe" });
         window.location.href = data.url;
         return;
       }

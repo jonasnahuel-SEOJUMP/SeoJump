@@ -21,6 +21,7 @@ import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../.
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
 import SearchConsoleStatusBanner from "../../components/SearchConsoleStatusBanner";
+import { PH_EVENTS, trackEvent } from "../../lib/posthog";
 
 const CLIENT_FETCH_TIMEOUT_MS = 58000;
 
@@ -917,6 +918,9 @@ export default function Optimizacion() {
           setAeoOpportunities(res.data);
           localStorage.setItem("seojump_aeo_opportunities", JSON.stringify(res.data));
           localStorage.setItem("seojump_aeo_opportunities_url", siteUrl);
+          trackEvent(PH_EVENTS.AEO_ANALYZED, {
+            opportunities: res.data.length,
+          });
         } else {
           handleAiLimitResponse(res);
           setAeoError(res.error || "No se pudieron obtener oportunidades AEO.");
@@ -1071,6 +1075,10 @@ export default function Optimizacion() {
             clicks: quickWins[index]?.clicks,
             impressions: quickWins[index]?.impressions,
           });
+          trackEvent(PH_EVENTS.QUICK_WIN_COMPLETED, {
+            page: pageUrl,
+            keyword: quickWins[index]?.keyword || null,
+          });
         }
       }
     } catch (e) {
@@ -1106,6 +1114,10 @@ export default function Optimizacion() {
           setTimeout(() => setXpPopup(null), 4000);
           setTimeout(() => syncStateWithServer(), 100);
           markMissionCompleteReliable('AEO_OPP', pageUrl, 30, headingText);
+          trackEvent(PH_EVENTS.AEO_COMPLETED, {
+            page: pageUrl,
+            heading: headingText,
+          });
         }
       }
     } catch (e) {
@@ -1134,6 +1146,9 @@ export default function Optimizacion() {
           setAeoOpportunities(res.data);
           localStorage.setItem("seojump_aeo_opportunities", JSON.stringify(res.data));
           localStorage.setItem("seojump_aeo_opportunities_url", siteUrl);
+          trackEvent(PH_EVENTS.AEO_ANALYZED, {
+            opportunities: res.data.length,
+          });
         } else {
           setAeoError(res.error || "No se pudieron obtener oportunidades AEO.");
         }

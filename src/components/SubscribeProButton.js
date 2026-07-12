@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { signIn } from "next-auth/react";
 import { PLANS, formatArs } from "../lib/planLimits";
+import { PH_EVENTS, trackEvent } from "../lib/posthog";
 
 /**
  * Botón "Quiero PRO" → pide email de Mercado Pago → checkout MP.
@@ -55,6 +56,7 @@ export default function SubscribeProButton({
             /* ignore */
           }
         }
+        trackEvent(PH_EVENTS.CHECKOUT_STARTED, { provider: "mercadopago" });
         if (onBeforeRedirect) onBeforeRedirect();
         window.location.href = data.initPoint;
         return;

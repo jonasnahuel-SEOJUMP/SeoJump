@@ -1,8 +1,10 @@
 "use client";
 
+import { Suspense } from "react";
 import { SessionProvider } from "next-auth/react";
 import AiCreditToast from "./AiCreditToast";
 import SeoWinToast from "./SeoWinToast";
+import PostHogProvider from "./PostHogProvider";
 
 /**
  * AuthProvider — wraps the app in NextAuth's SessionProvider.
@@ -17,7 +19,9 @@ import SeoWinToast from "./SeoWinToast";
 export default function AuthProvider({ children }) {
   return (
     <SessionProvider refetchOnWindowFocus={false} refetchInterval={0}>
-      {children}
+      <Suspense fallback={null}>
+        <PostHogProvider>{children}</PostHogProvider>
+      </Suspense>
       <AiCreditToast />
       <SeoWinToast />
     </SessionProvider>

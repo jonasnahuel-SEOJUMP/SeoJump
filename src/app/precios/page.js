@@ -6,6 +6,7 @@ import { useSession } from "next-auth/react";
 import { PLANS, formatArs, formatUsd } from "../../lib/planLimits";
 import SubscribeProButton from "../../components/SubscribeProButton";
 import LemonCheckoutButton from "../../components/LemonCheckoutButton";
+import { PH_EVENTS, trackEvent } from "../../lib/posthog";
 
 const FEATURES = [
   "Quick Wins con IA",
@@ -42,8 +43,10 @@ export default function PreciosPage() {
   const [paymentMsg, setPaymentMsg] = useState(null);
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    if (params.get("lemon") === "success")
+    if (params.get("lemon") === "success") {
+      trackEvent(PH_EVENTS.PAYMENT_SUCCESS, { provider: "lemon_squeezy" });
       setPaymentMsg({ ok: true, text: "¡Pago exitoso! Tu plan PRO ya está activo. Actualizá la página si no lo ves." });
+    }
   }, []);
 
   const cards = [

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSession, signIn } from "next-auth/react";
+import { PH_EVENTS, trackEvent } from "../lib/posthog";
 
 /**
  * Botón PRO → Lemon Squeezy Checkout (USD, internacional).
@@ -37,6 +38,7 @@ export default function LemonCheckoutButton({
       }
 
       if (data.url) {
+        trackEvent(PH_EVENTS.CHECKOUT_STARTED, { provider: "lemon_squeezy" });
         window.location.href = data.url;
         return;
       }
