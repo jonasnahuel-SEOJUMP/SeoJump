@@ -15,12 +15,16 @@ import PostHogProvider from "./PostHogProvider";
  * to re-run, causing a full state re-fetch from Supabase on every tab switch.
  *
  * refetchInterval={0}: disable periodic background polling as well.
+ *
+ * PostHog va en Suspense aparte y NO envuelve children: useSearchParams no
+ * puede bloquear la hidratación de la landing (botones sin onClick).
  */
 export default function AuthProvider({ children }) {
   return (
     <SessionProvider refetchOnWindowFocus={false} refetchInterval={0}>
+      {children}
       <Suspense fallback={null}>
-        <PostHogProvider>{children}</PostHogProvider>
+        <PostHogProvider />
       </Suspense>
       <AiCreditToast />
       <SeoWinToast />

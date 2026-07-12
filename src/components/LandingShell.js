@@ -18,7 +18,7 @@ export default function LandingShell() {
       <LandingPage
         onStart={() => {
           playClick();
-          signIn("google");
+          signIn("google", { callbackUrl: "/" });
         }}
         playClick={playClick}
         onShowPrivacy={() => setShowPrivacyModal(true)}
