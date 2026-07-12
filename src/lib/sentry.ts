@@ -1,8 +1,33 @@
 import * as Sentry from '@sentry/nextjs';
 
+/**
+ * Lee el DSN en runtime (notación con corchetes para que Next/Turbopack
+ * no lo reemplace por `undefined` en el build si faltaba la var en ese momento).
+ */
+export function getSentryDsn(): string {
+  const raw =
+    process.env['SENTRY_DSN'] ||
+    process.env['NEXT_PUBLIC_SENTRY_DSN'] ||
+    '';
+  return String(raw).trim();
+}
+
 /** True si hay DSN configurado (Vercel / .env local). */
 export function isSentryEnabled(): boolean {
-  return Boolean(process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN);
+  return getSentryDsn().length > 0;
+}
+
+function ensureSentryClient(dsn: string): void {
+  const client = Sentry.getClient();
+  if (client?.getOptions()?.dsn) return;
+
+  Sentry.init({
+    dsn,
+    enabled: true,
+    environment: process.env['VERCEL_ENV'] || process.env['NODE_ENV'] || 'development',
+    tracesSampleRate: 0,
+    sendDefaultPii: false,
+  });
 }
 
 /**
@@ -13,7 +38,10 @@ export function captureAppError(
   error: unknown,
   context?: Record<string, unknown>
 ): void {
-  if (!isSentryEnabled()) return;
+  const dsn = getSentryDsn();
+  if (!dsn) return;
+
+  ensureSentryClient(dsn);
 
   Sentry.withScope((scope) => {
     if (context) {

@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { requireAdmin } from '../../../lib/adminGuard';
-import { captureAppError, isSentryEnabled } from '../../../lib/sentry';
+import { captureAppError, getSentryDsn, isSentryEnabled } from '../../../lib/sentry';
 
 export const maxDuration = 15;
+export const dynamic = 'force-dynamic';
 
 /**
  * GET /api/debug-sentry — envía un error de prueba a Sentry (solo admin).
@@ -12,11 +13,23 @@ export async function GET() {
   const guard = await requireAdmin();
   if (guard instanceof NextResponse) return guard;
 
+  const dsn = getSentryDsn();
+  const hasSentryDsn = Boolean(String(process.env['SENTRY_DSN'] || '').trim());
+  const hasPublicSentryDsn = Boolean(String(process.env['NEXT_PUBLIC_SENTRY_DSN'] || '').trim());
+  // Typo común: DNS en vez de DSN
+  const hasTypoDns = Boolean(String(process.env['SENTRY_DNS'] || '').trim());
+
   if (!isSentryEnabled()) {
     return NextResponse.json({
       ok: false,
       sentryConfigured: false,
-      hint: 'Faltan SENTRY_DSN y/o NEXT_PUBLIC_SENTRY_DSN en Vercel. Redeploy después de agregarlas.',
+      hasSentryDsn,
+      hasPublicSentryDsn,
+      hasTypoDns,
+      vercelEnv: process.env['VERCEL_ENV'] || null,
+      hint: hasTypoDns
+        ? 'Encontramos SENTRY_DNS (mal escrito). Renombrá a SENTRY_DSN y redeployá.'
+        : 'El servidor no ve el DSN. Confirmá que las variables están en el proyecto de seo-jump.ai, con valor pegado (no vacío), y redeployá Production.',
     });
   }
 
@@ -30,6 +43,8 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     sentryConfigured: true,
+    dsnLength: dsn.length,
+    vercelEnv: process.env['VERCEL_ENV'] || null,
     message: 'Error de prueba enviado. En 1-2 minutos debería aparecer en sentry.io → Issues.',
     hint: 'Marcá el issue como resuelto o ignorado después de verificar.',
   });
