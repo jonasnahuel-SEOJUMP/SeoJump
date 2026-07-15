@@ -6,6 +6,7 @@ describe('posthog helpers', () => {
     expect(PH_EVENTS.CHECKOUT_STARTED).toBe('checkout_started');
     expect(PH_EVENTS.QUICK_WIN_COMPLETED).toBe('quick_win_completed');
     expect(PH_EVENTS.AEO_COMPLETED).toBe('aeo_completed');
+    expect(PH_EVENTS.COMPREHENSION_ANALYZED).toBe('comprehension_analyzed');
   });
 
   it('sin key no está habilitado', () => {

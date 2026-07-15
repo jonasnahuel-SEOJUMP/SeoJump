@@ -10,6 +10,7 @@ import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../.
 import Link from "next/link";
 import Header from "../../components/Header";
 import HumanScorePanel from "../../components/HumanScorePanel";
+import ComprehensionPanel from "../../components/ComprehensionPanel";
 
 function Phase2NextSteps({ playClick }) {
   return (
@@ -599,6 +600,16 @@ export default function ContenidoFase2() {
                           playClick={playClick}
                           playSuccess={playSuccess}
                         />
+                      </div>
+                      <div className="border-t-2 border-slate-100 dark:border-slate-700 pt-6">
+                        <div className="rounded-2xl bg-slate-950 border border-cyan-500/20 p-4 md:p-6">
+                          <ComprehensionPanel
+                            defaultUrl={targetUrl}
+                            playClick={playClick}
+                            playSuccess={playSuccess}
+                            onMissionComplete={handleHumanMissionComplete}
+                          />
+                        </div>
                       </div>
                       <Phase2NextSteps playClick={playClick} />
                     </>

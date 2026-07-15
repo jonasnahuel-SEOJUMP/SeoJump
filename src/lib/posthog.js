@@ -9,6 +9,8 @@ export const PH_EVENTS = {
   QUICK_WIN_COMPLETED: 'quick_win_completed',
   AEO_COMPLETED: 'aeo_completed',
   AEO_ANALYZED: 'aeo_analyzed',
+  COMPREHENSION_ANALYZED: 'comprehension_analyzed',
+  COMPREHENSION_FAQ_APPLIED: 'comprehension_faq_applied',
 };
 
 export function getPostHogKey() {

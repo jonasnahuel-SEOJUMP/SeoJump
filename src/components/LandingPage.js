@@ -344,6 +344,7 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
           <Faq q="¿Por qué conectar Search Console?" a="Es la fuente oficial de Google sobre tu web. Sin adivinar: usamos tus datos reales de clics, impresiones y posiciones." />
           <Faq q="¿Y el Espía de la Competencia?" a="Es una herramienta extra: pegás la URL de un rival y la IA compara su web con la tuya. Útil, pero el corazón de SEO Jump son las misiones diarias y el AEO." />
           <Faq q="¿Qué es el Human Score?" a="Es nuestra métrica en evolución que mide el valor humano de tu contenido: experiencia, evidencia propia, casos reales, opinión y datos. No detecta si un texto fue hecho con IA; mide si aporta algo que los demás no tienen. La vamos refinando con el uso real." />
+          <Faq q="¿Qué es el Mapa de comprensión?" a="Te muestra qué entienden Google y las IA de una página (tipo, temas, preguntas, autor, empresa) y qué falta. Si tenés preguntas frecuentes, genera la estructura lista para pegar — sin pelearte con código técnico. El objetivo no es magia: es reducir ambigüedad para que te puedan citar." />
           <Faq q="¿Es seguro conectar Google?" a="Sí. OAuth oficial de Google. No vemos tu contraseña." />
         </div>
       </section>

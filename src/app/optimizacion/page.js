@@ -21,6 +21,7 @@ import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../.
 import Header from "../../components/Header";
 import PaywallModal from "../../components/PaywallModal";
 import SearchConsoleStatusBanner from "../../components/SearchConsoleStatusBanner";
+import ComprehensionPanel from "../../components/ComprehensionPanel";
 import { PH_EVENTS, trackEvent } from "../../lib/posthog";
 
 const CLIENT_FETCH_TIMEOUT_MS = 58000;
@@ -1268,7 +1269,7 @@ export default function Optimizacion() {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-emerald-500/20 blur-3xl rounded-full pointer-events-none"></div>
                 <div className="flex justify-center mb-2"><img src="/images/logo-owl.png" alt="SEO Jump" className="w-16 h-16 md:w-20 md:h-20 object-contain drop-shadow-[0_0_15px_rgba(16,185,129,0.5)]" /></div>
                 <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-emerald-300 to-emerald-600 drop-shadow-md">
-                  {activeTab === 'quickwins' ? 'Tu Plan de Acción 🚀' : activeTab === 'aeo' ? 'Auditoría AEO 🤖' : 'Fase 3: Optimización On-Page 🛠️'}
+                  {activeTab === 'quickwins' ? 'Tu Plan de Acción 🚀' : activeTab === 'aeo' ? 'Auditoría AEO 🤖' : activeTab === 'comprehension' ? 'Mapa de comprensión 🧭' : 'Fase 3: Optimización On-Page 🛠️'}
                 </h1>
                 <div className="pt-1">
                   <button
@@ -1334,6 +1335,16 @@ export default function Optimizacion() {
                     }`}
                   >
                     🤖 Oportunidades AEO
+                  </button>
+                  <button
+                    onClick={() => { playClick(); setActiveTab('comprehension'); }}
+                    className={`px-5 py-2.5 rounded-full font-black text-xs md:text-sm border-2 transition-all duration-300 flex items-center gap-2 ${
+                      activeTab === 'comprehension'
+                        ? 'bg-gradient-to-r from-cyan-500 to-teal-500 border-cyan-400 text-slate-950 shadow-[0_0_15px_rgba(34,211,238,0.3)] scale-105'
+                        : 'bg-slate-800/40 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-white'
+                    }`}
+                  >
+                    🧭 Mapa de comprensión
                   </button>
                 </div>
               </div>
@@ -1741,6 +1752,30 @@ export default function Optimizacion() {
                       <p className="text-sm text-slate-500 mt-2">Vamos a buscar textos bajo tus H2/H3 que pueden optimizarse para que la IA te cite como fuente.</p>
                     </div>
                   )}
+                </div>
+              ) : activeTab === 'comprehension' ? (
+                <div className="space-y-6">
+                  <div className="card-3d p-6 md:p-8 border border-cyan-500/20">
+                    <ComprehensionPanel
+                      defaultUrl={siteUrl || ''}
+                      playClick={playClick}
+                      playSuccess={playSuccess}
+                      onMissionComplete={(_missionId, xp) => {
+                        setXp((prev) => {
+                          const next = prev + (xp || 40);
+                          localStorage.setItem('seojump_xp', String(next));
+                          return next;
+                        });
+                        setXpPopup({ amount: xp || 40, message: '¡Comprensión mejorada!' });
+                        setTimeout(() => setXpPopup(null), 4000);
+                        setTimeout(() => syncStateWithServer(), 100);
+                      }}
+                    />
+                  </div>
+                  <p className="text-center text-xs font-bold text-slate-500 px-4">
+                    Tip: usá una URL de artículo o producto concreto (no solo la portada) para un diagnóstico más útil.
+                    El Búho AEO mejora las <em>respuestas</em>; este mapa muestra si la página es <em>entendible</em>.
+                  </p>
                 </div>
               ) : (
                 // OPTIMIZATION MISSIONS TAB VIEW

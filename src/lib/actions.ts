@@ -35,6 +35,11 @@ import {
 } from './humanScore'
 import { fitSeoTitle, extractBrandHints, MAX_SEO_TITLE_LENGTH } from './seoTitle'
 import {
+  analyzeComprehension,
+  buildFaqJsonLd,
+  getFaqStructurePasteGuide,
+} from './comprehension'
+import {
   isHomePage,
   isCatalogHubPage,
   isContentPage,
@@ -3688,3 +3693,99 @@ export async function verifyHumanMission(pageUrl: string, dimension: HumanDimens
     message: 'Todavía no lo detectamos en la página. ¿Ya publicaste el cambio y vaciaste la caché? Revisá y volvé a verificar.',
   };
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAPA DE COMPRENSIÓN AEO — qué entiende Google/IA de la página (sin jerga Schema)
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Analiza una URL y devolvé checklist de comprensión + (si aplica) código FAQ listo para pegar.
+ * Sin créditos de IA: es 100% determinístico.
+ */
+export async function getComprehensionMap(pageUrl: string, platformId?: string) {
+  const urlSanit = sanitizeInput(pageUrl, 'url');
+  if (!urlSanit.isValid) {
+    return { success: false, error: urlSanit.error };
+  }
+  let cleanUrl = urlSanit.sanitized;
+  if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+    cleanUrl = 'https://' + cleanUrl;
+  }
+
+  try {
+    const fetched = await fetchLiveHtml(cleanUrl);
+    if (fetched.ok === false) {
+      return { success: false, error: fetched.message };
+    }
+
+    const map = analyzeComprehension(fetched.html, cleanUrl);
+    const guide = getFaqStructurePasteGuide(platformId || 'wp_woo');
+    const faqCode = map.canOfferFaqStructure ? buildFaqJsonLd(map.questions) : null;
+
+    return {
+      success: true,
+      map,
+      faqCode,
+      guide,
+    };
+  } catch (error: any) {
+    console.error('Error en getComprehensionMap:', error);
+    logErrorToFile(
+      'getComprehensionMap',
+      { pageUrl: cleanUrl },
+      error.status || '500',
+      error.message || String(error)
+    );
+    return {
+      success: false,
+      error: 'No pudimos analizar la comprensión de esta página. Intentá de nuevo.',
+    };
+  }
+}
+
+/**
+ * Verifica que la página tenga el bloque de preguntas en formato que Google/IA leen (FAQPage).
+ */
+export async function verifyComprehensionFaqStructure(pageUrl: string) {
+  if (!pageUrl?.trim()) {
+    return { success: false, message: 'Falta la URL para verificar.' };
+  }
+
+  const urlSanit = sanitizeInput(pageUrl, 'url');
+  if (!urlSanit.isValid) {
+    return { success: false, message: urlSanit.error };
+  }
+  let cleanUrl = urlSanit.sanitized;
+  if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://')) {
+    cleanUrl = 'https://' + cleanUrl;
+  }
+
+  try {
+    const fetched = await fetchLiveHtml(cleanUrl);
+    if (fetched.ok === false) {
+      return { success: false, message: fetched.message };
+    }
+
+    const map = analyzeComprehension(fetched.html, cleanUrl);
+    if (map.faqStructureAlreadyPresent) {
+      return {
+        success: true,
+        message: 'Listo: Google y las IA ya pueden leer tus preguntas frecuentes sin ambigüedad.',
+        xp: 40,
+      };
+    }
+
+    return {
+      success: false,
+      message:
+        'Todavía no detectamos el bloque de preguntas en tu web. ¿Lo pegaste, publicaste y borraste la caché?',
+    };
+  } catch (error: any) {
+    console.error('Error en verifyComprehensionFaqStructure:', error);
+    return {
+      success: false,
+      message: 'No pudimos volver a leer la página. Intentá de nuevo en unos segundos.',
+    };
+  }
+}
+
