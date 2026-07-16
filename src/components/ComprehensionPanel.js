@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { getComprehensionMap, verifyComprehensionFaqStructure } from '../lib/actions';
 import { getStoredPlatform } from '../lib/cmsGuide';
 import { PH_EVENTS, trackEvent } from '../lib/posthog';
@@ -25,7 +25,7 @@ const CONF_STYLES = {
 
 /**
  * Mapa de comprensión: qué entiende Google/IA de una página.
- * El código FAQ se muestra como "código listo para pegar" (sin jerga Schema).
+ * Tras el análisis: volver a comprobar cambios, o salir y analizar otra URL.
  */
 export default function ComprehensionPanel({
   defaultUrl = '',
@@ -40,32 +40,59 @@ export default function ComprehensionPanel({
   const [copied, setCopied] = useState(false);
   const [verifying, setVerifying] = useState(false);
   const [verifyMsg, setVerifyMsg] = useState(null);
+  const [recheckNote, setRecheckNote] = useState(null);
+  const urlInputRef = useRef(null);
 
   useEffect(() => {
-    if (defaultUrl && defaultUrl !== url) setUrl(defaultUrl);
+    if (defaultUrl && !payload) setUrl(defaultUrl);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultUrl]);
 
-  const handleAnalyze = async (e) => {
-    if (e) e.preventDefault();
-    if (!url.trim()) return;
-    if (playClick) playClick();
+  const runAnalysis = async (targetUrl, { isRecheck = false } = {}) => {
+    const clean = (targetUrl || '').trim();
+    if (!clean) return;
+
     setLoading(true);
     setError('');
-    setPayload(null);
     setVerifyMsg(null);
-    setCopied(false);
+    setRecheckNote(null);
+    if (!isRecheck) {
+      setPayload(null);
+      setCopied(false);
+    }
 
     try {
       const platformId = getStoredPlatform();
-      const res = await getComprehensionMap(url.trim(), platformId);
+      const res = await getComprehensionMap(clean, platformId);
       if (res.success) {
+        const prevScore = payload?.map?.confidenceScore;
         setPayload(res);
         trackEvent(PH_EVENTS.COMPREHENSION_ANALYZED, {
-          page: url.trim(),
+          page: clean,
           confidence: res.map?.confidence,
           canOfferFaq: !!res.map?.canOfferFaqStructure,
+          recheck: isRecheck,
         });
+        if (isRecheck && typeof prevScore === 'number' && res.map) {
+          const delta = res.map.confidenceScore - prevScore;
+          if (delta > 0) {
+            setRecheckNote({
+              ok: true,
+              text: `Mejoró la claridad: ${prevScore} → ${res.map.confidenceScore}. Buen trabajo.`,
+            });
+            if (playSuccess) playSuccess();
+          } else if (delta < 0) {
+            setRecheckNote({
+              ok: false,
+              text: `La claridad bajó un poco (${prevScore} → ${res.map.confidenceScore}). Revisá lo que cambiaste.`,
+            });
+          } else {
+            setRecheckNote({
+              ok: false,
+              text: 'Misma claridad que antes. Si ya publicaste cambios, borrá la caché del sitio y volvé a comprobar.',
+            });
+          }
+        }
       } else {
         setError(res.error || 'No pudimos analizar la página.');
       }
@@ -74,6 +101,31 @@ export default function ComprehensionPanel({
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAnalyze = async (e) => {
+    if (e) e.preventDefault();
+    if (playClick) playClick();
+    await runAnalysis(url, { isRecheck: false });
+  };
+
+  const handleRecheck = async () => {
+    const target = payload?.map?.pageUrl || url;
+    if (!target?.trim()) return;
+    if (playClick) playClick();
+    setUrl(target);
+    await runAnalysis(target, { isRecheck: true });
+  };
+
+  const handleNewUrl = () => {
+    if (playClick) playClick();
+    setPayload(null);
+    setError('');
+    setVerifyMsg(null);
+    setRecheckNote(null);
+    setCopied(false);
+    setUrl('');
+    setTimeout(() => urlInputRef.current?.focus(), 50);
   };
 
   const handleCopy = async () => {
@@ -88,7 +140,7 @@ export default function ComprehensionPanel({
     }
   };
 
-  const handleVerify = async () => {
+  const handleVerifyFaq = async () => {
     if (!payload?.map?.pageUrl) return;
     if (playClick) playClick();
     setVerifying(true);
@@ -105,7 +157,6 @@ export default function ComprehensionPanel({
           const mid = `comprehension-faq-${(payload.map.pageUrl || '').replace(/\/+$/, '').toLowerCase()}`;
           onMissionComplete(mid, res.xp || 40);
         }
-        // Refrescar mapa
         const platformId = getStoredPlatform();
         const refreshed = await getComprehensionMap(payload.map.pageUrl, platformId);
         if (refreshed.success) setPayload(refreshed);
@@ -119,6 +170,12 @@ export default function ComprehensionPanel({
 
   const map = payload?.map;
   const conf = map ? CONF_STYLES[map.confidence] || CONF_STYLES.bajo : null;
+  const hasGaps = map?.checks?.some((c) => c.applicable && !c.present);
+  const needsMoreQuestions =
+    map &&
+    !map.faqStructureAlreadyPresent &&
+    !map.canOfferFaqStructure &&
+    (map.questions?.length || 0) < 2;
 
   return (
     <div className="space-y-5">
@@ -129,29 +186,33 @@ export default function ComprehensionPanel({
         </h3>
         <p className="text-sm font-bold text-slate-400 leading-relaxed">
           No es magia ni promesas de citas. Es reducir ambigüedad: tipo de página, temas, preguntas,
-          autor y empresa. Después podés completar lo que falta con una misión clara.
+          autor y empresa. Después podés completar lo que falta y volver a comprobar.
         </p>
       </div>
 
-      <form onSubmit={handleAnalyze} className="space-y-3">
-        <label className="text-xs font-black text-slate-400 uppercase tracking-wider block">
-          URL a analizar
-        </label>
-        <input
-          type="text"
-          value={url}
-          onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://tusitio.com/producto-o-articulo"
-          className="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-sm focus:border-cyan-500 focus:outline-none"
-        />
-        <button
-          type="submit"
-          disabled={loading || !url.trim()}
-          className="btn-3d bg-cyan-600 border-cyan-700 border-b-4 hover:bg-cyan-500 text-white text-sm md:text-base font-black px-6 py-3 disabled:opacity-50"
-        >
-          {loading ? 'Analizando…' : 'Ver mapa de comprensión'}
-        </button>
-      </form>
+      {/* Formulario: solo cuando no hay resultado, o al elegir "otra URL" */}
+      {!map && (
+        <form onSubmit={handleAnalyze} className="space-y-3">
+          <label className="text-xs font-black text-slate-400 uppercase tracking-wider block">
+            URL a analizar
+          </label>
+          <input
+            ref={urlInputRef}
+            type="text"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            placeholder="https://tusitio.com/producto-o-articulo"
+            className="w-full px-4 py-3 rounded-xl bg-slate-900 border-2 border-slate-700 text-white font-bold text-sm focus:border-cyan-500 focus:outline-none"
+          />
+          <button
+            type="submit"
+            disabled={loading || !url.trim()}
+            className="btn-3d bg-cyan-600 border-cyan-700 border-b-4 hover:bg-cyan-500 text-white text-sm md:text-base font-black px-6 py-3 disabled:opacity-50"
+          >
+            {loading ? 'Analizando…' : 'Ver mapa de comprensión'}
+          </button>
+        </form>
+      )}
 
       {error && (
         <div className="p-4 rounded-xl border border-red-500/40 bg-red-950/40 text-red-300 text-sm font-bold">
@@ -161,6 +222,42 @@ export default function ComprehensionPanel({
 
       {map && conf && (
         <div className={`rounded-2xl border-2 p-5 md:p-6 space-y-5 ${conf.ring}`}>
+          {/* Acciones principales: salir / re-comprobar */}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleRecheck}
+              disabled={loading || verifying}
+              className="btn-3d bg-cyan-600 border-cyan-800 border-b-4 hover:bg-cyan-500 text-white text-sm font-black px-4 py-2.5 disabled:opacity-50"
+            >
+              {loading ? 'Comprobando…' : '🔄 Volver a comprobar esta página'}
+            </button>
+            <button
+              type="button"
+              onClick={handleNewUrl}
+              disabled={loading}
+              className="btn-3d bg-slate-700 border-slate-800 border-b-4 hover:bg-slate-600 text-white text-sm font-black px-4 py-2.5 disabled:opacity-50"
+            >
+              ← Analizar otra URL
+            </button>
+          </div>
+
+          <p className="text-xs font-bold text-slate-500 break-all">
+            Página: <span className="text-slate-300">{map.pageUrl}</span>
+          </p>
+
+          {(recheckNote || verifyMsg) && (
+            <div
+              className={`p-4 rounded-xl border text-sm font-bold ${
+                (recheckNote || verifyMsg).ok
+                  ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300'
+                  : 'bg-amber-950/40 border-amber-500/50 text-amber-200'
+              }`}
+            >
+              {(recheckNote || verifyMsg).ok ? '✅' : 'ℹ️'} {(recheckNote || verifyMsg).text}
+            </div>
+          )}
+
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <p className="text-xs font-black text-slate-400 uppercase tracking-wider mb-1">
@@ -221,7 +318,24 @@ export default function ComprehensionPanel({
             </ul>
           </div>
 
-          {/* Misión FAQ structure */}
+          {hasGaps && (
+            <div className="rounded-xl border border-slate-600/60 bg-slate-900/40 p-4 space-y-2">
+              <p className="text-sm font-black text-white">Qué hacer ahora</p>
+              <p className="text-xs font-bold text-slate-400 leading-relaxed">
+                Corregí en tu web lo marcado con ✘ (publicá y borrá la caché). Después tocá{' '}
+                <span className="text-cyan-300">Volver a comprobar esta página</span> para ver si
+                mejoró el mapa.
+              </p>
+              {needsMoreQuestions && (
+                <p className="text-xs font-bold text-amber-200/90 leading-relaxed">
+                  Tip: agregá al menos una pregunta más con su respuesta (ej. «¿Para quién es…?» o
+                  «¿Cuánto dura…?»). Con 2 preguntas claras vamos a poder darte el código listo para
+                  que Google y las IA las lean sin ambigüedad.
+                </p>
+              )}
+            </div>
+          )}
+
           {map.faqStructureAlreadyPresent && (
             <div className="rounded-xl border border-emerald-500/40 bg-emerald-950/30 p-4">
               <p className="text-sm font-black text-emerald-300">
@@ -254,9 +368,9 @@ export default function ComprehensionPanel({
                 </button>
                 <button
                   type="button"
-                  onClick={handleVerify}
-                  disabled={verifying}
-                  className="btn-3d bg-slate-700 border-slate-800 border-b-4 hover:bg-slate-600 text-white text-sm font-black px-4 py-2.5 disabled:opacity-50"
+                  onClick={handleVerifyFaq}
+                  disabled={verifying || loading}
+                  className="btn-3d bg-emerald-600 border-emerald-800 border-b-4 hover:bg-emerald-500 text-white text-sm font-black px-4 py-2.5 disabled:opacity-50"
                 >
                   {verifying ? 'Verificando…' : 'Ya lo pegué (+40 XP)'}
                 </button>
@@ -270,7 +384,6 @@ export default function ComprehensionPanel({
                 </ol>
               )}
 
-              {/* Código colapsado / técnico: disponible pero no es el foco */}
               <details className="text-xs text-slate-500">
                 <summary className="cursor-pointer font-black text-slate-400 hover:text-slate-300">
                   Ver código (solo si tu plataforma lo pide)
@@ -282,17 +395,25 @@ export default function ComprehensionPanel({
             </div>
           )}
 
-          {verifyMsg && (
-            <div
-              className={`p-4 rounded-xl border text-sm font-bold ${
-                verifyMsg.ok
-                  ? 'bg-emerald-950/40 border-emerald-500/50 text-emerald-300'
-                  : 'bg-red-950/40 border-red-500/50 text-red-300'
-              }`}
+          {/* Acciones al pie: siempre visibles */}
+          <div className="flex flex-col sm:flex-row flex-wrap gap-2 pt-2 border-t border-slate-700/60">
+            <button
+              type="button"
+              onClick={handleRecheck}
+              disabled={loading || verifying}
+              className="btn-3d bg-cyan-600 border-cyan-800 border-b-4 hover:bg-cyan-500 text-white text-sm font-black px-4 py-2.5 disabled:opacity-50"
             >
-              {verifyMsg.ok ? '✅' : '⚠️'} {verifyMsg.text}
-            </div>
-          )}
+              {loading ? 'Comprobando…' : '🔄 Volver a comprobar'}
+            </button>
+            <button
+              type="button"
+              onClick={handleNewUrl}
+              disabled={loading}
+              className="btn-3d bg-slate-700 border-slate-800 border-b-4 hover:bg-slate-600 text-white text-sm font-black px-4 py-2.5 disabled:opacity-50"
+            >
+              ← Analizar otra URL
+            </button>
+          </div>
         </div>
       )}
     </div>
