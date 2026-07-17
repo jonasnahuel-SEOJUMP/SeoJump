@@ -637,40 +637,43 @@ export default function ContenidoFase2() {
                     <p>{auditResult.success ? '✅' : '⚠️'} {auditResult.message}</p>
                   </div>
 
-                  {auditResult.success && (
-                    <>
-                      <div className="border-t-2 border-slate-100 dark:border-slate-700 pt-6">
-                        <div className="mb-4">
-                          <p className="text-xs font-black text-fuchsia-500 uppercase tracking-wider mb-1">Nivel siguiente</p>
-                          <h4 className="text-2xl font-black text-slate-800 dark:text-white">
-                            Ya tenés la palabra clave. Ahora, ¿tu contenido destaca?
-                          </h4>
-                          <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">
-                            Miles de páginas ya usan tu misma palabra clave con textos hechos por IA. El Human Score te muestra qué le falta a la tuya para ganarles.
-                          </p>
-                        </div>
-                        <HumanScorePanel
-                          defaultUrl={targetUrl}
-                          keyword={activeKeyword}
-                          completedMissions={completedMissions}
-                          onMissionComplete={handleHumanMissionComplete}
-                          playClick={playClick}
-                          playSuccess={playSuccess}
-                        />
-                      </div>
-                      <div className="border-t-2 border-slate-100 dark:border-slate-700 pt-6">
-                        <div className="rounded-2xl bg-slate-950 border border-cyan-500/20 p-4 md:p-6">
-                          <ComprehensionPanel
-                            defaultUrl={targetUrl}
-                            playClick={playClick}
-                            playSuccess={playSuccess}
-                            onMissionComplete={handleHumanMissionComplete}
-                          />
-                        </div>
-                      </div>
-                      <Phase2NextSteps playClick={playClick} />
-                    </>
-                  )}
+                  {/* Human Score + Mapa de comprensión: disponibles siempre que
+                       hayas auditado una URL, den verde o rojo. Son análisis
+                       independientes de si la palabra clave está en la página. */}
+                  <div className="border-t-2 border-slate-100 dark:border-slate-700 pt-6">
+                    <div className="mb-4">
+                      <p className="text-xs font-black text-fuchsia-500 uppercase tracking-wider mb-1">Nivel siguiente</p>
+                      <h4 className="text-2xl font-black text-slate-800 dark:text-white">
+                        {auditResult.success
+                          ? 'Ya tenés la palabra clave. Ahora, ¿tu contenido destaca?'
+                          : 'Igual podés analizar la calidad de esta página'}
+                      </h4>
+                      <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">
+                        {auditResult.success
+                          ? 'Miles de páginas ya usan tu misma palabra clave con textos hechos por IA. El Human Score te muestra qué le falta a la tuya para ganarles.'
+                          : 'Aunque la palabra clave todavía no aparezca, el Human Score y el Mapa de comprensión funcionan igual sobre esta URL.'}
+                      </p>
+                    </div>
+                    <HumanScorePanel
+                      defaultUrl={targetUrl}
+                      keyword={activeKeyword}
+                      completedMissions={completedMissions}
+                      onMissionComplete={handleHumanMissionComplete}
+                      playClick={playClick}
+                      playSuccess={playSuccess}
+                    />
+                  </div>
+                  <div className="border-t-2 border-slate-100 dark:border-slate-700 pt-6">
+                    <div className="rounded-2xl bg-slate-950 border border-cyan-500/20 p-4 md:p-6">
+                      <ComprehensionPanel
+                        defaultUrl={targetUrl}
+                        playClick={playClick}
+                        playSuccess={playSuccess}
+                        onMissionComplete={handleHumanMissionComplete}
+                      />
+                    </div>
+                  </div>
+                  {auditResult.success && <Phase2NextSteps playClick={playClick} />}
                 </div>
               )}
             </div>
