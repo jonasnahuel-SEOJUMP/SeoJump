@@ -79,6 +79,8 @@ export default function ContenidoFase2() {
   const [xp, setXp] = useState(0);
   const [siteUrl, setSiteUrl] = useState("");
   const [activeKeyword, setActiveKeyword] = useState("");
+  const [editingKeyword, setEditingKeyword] = useState(false);
+  const [keywordDraft, setKeywordDraft] = useState("");
   const [completedMissions, setCompletedMissions] = useState(new Set());
   const [hasMissions, setHasMissions] = useState(false);
   const [prog, setProg] = useState(null);
@@ -230,6 +232,27 @@ export default function ContenidoFase2() {
       router.push("/");
     }
   }, [session, status, router]);
+
+  const startEditKeyword = () => {
+    playClick();
+    setKeywordDraft(activeKeyword);
+    setEditingKeyword(true);
+  };
+
+  const saveEditedKeyword = () => {
+    const val = (keywordDraft || "").trim();
+    if (!val) return;
+    if (isUrlLikeKeyword(val)) {
+      alert('Eso parece una URL, no una palabra clave 😉. Escribí lo que buscaría tu cliente en Google, ej: "shampoo para autos".');
+      return;
+    }
+    if (playClick) playClick();
+    localStorage.setItem('gold-tu-busqueda', val);
+    setActiveKeyword(val);
+    setEditingKeyword(false);
+    setAuditResult(null);
+    setTimeout(() => { syncStateWithServer(); }, 100);
+  };
 
   const handleCreateComplete = () => {
     playClick();
@@ -405,16 +428,44 @@ export default function ContenidoFase2() {
             
             <div className="relative z-10 w-full md:w-auto">
               <p className="text-xs md:text-sm font-black text-blue-400 uppercase tracking-widest mb-2 flex items-center gap-2">
-                <span>🎯</span> Palabra clave activa de Fase 1
+                <span>🎯</span> Palabra clave de esta página
               </p>
-              <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white drop-shadow-md">"{activeKeyword}"</h2>
+              {editingKeyword ? (
+                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mt-1">
+                  <input
+                    type="text"
+                    autoFocus
+                    value={keywordDraft}
+                    onChange={(e) => setKeywordDraft(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') saveEditedKeyword(); if (e.key === 'Escape') setEditingKeyword(false); }}
+                    placeholder="Ej: shampoo para autos"
+                    className="w-full sm:w-96 p-3 md:p-4 text-lg md:text-2xl font-black rounded-xl bg-slate-800 text-white border-2 border-blue-500/60 focus:border-blue-400 outline-none"
+                  />
+                  <div className="flex gap-2">
+                    <button onClick={saveEditedKeyword} className="btn-3d btn-green text-sm md:text-base font-black py-3 px-5">Guardar</button>
+                    <button onClick={() => { playClick(); setEditingKeyword(false); }} className="btn-3d btn-white text-sm md:text-base font-black py-3 px-5 border-slate-700 text-slate-300 hover:text-white">Cancelar</button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-3xl md:text-4xl lg:text-5xl font-black text-white drop-shadow-md">"{activeKeyword}"</h2>
+                  <p className="text-xs md:text-sm font-bold text-slate-400 mt-2">
+                    No tiene que ser la misma de Fase 1: usá la que mejor describe <span className="text-slate-200">esta</span> página.
+                  </p>
+                </>
+              )}
             </div>
             
-            <div className="relative z-10 w-full md:w-auto mt-4 md:mt-0">
-              <Link href="/buscador-de-oro" onClick={playClick} className="btn-3d btn-white w-full md:w-auto text-sm md:text-base font-black py-3 px-6 flex items-center justify-center gap-2 border-slate-700 text-slate-300 hover:text-white">
-                <span>🔄</span> Cambiar Palabra
-              </Link>
-            </div>
+            {!editingKeyword && (
+              <div className="relative z-10 w-full md:w-auto mt-4 md:mt-0 flex flex-col gap-2">
+                <button onClick={startEditKeyword} className="btn-3d btn-blue w-full md:w-auto text-sm md:text-base font-black py-3 px-6 flex items-center justify-center gap-2">
+                  <span>✏️</span> Cambiar palabra acá
+                </button>
+                <Link href="/buscador-de-oro" onClick={playClick} className="text-xs md:text-sm font-bold text-slate-400 hover:text-white text-center underline">
+                  🔍 Buscar ideas en Fase 1
+                </Link>
+              </div>
+            )}
           </div>
 
           {/* Owl Introduction */}
