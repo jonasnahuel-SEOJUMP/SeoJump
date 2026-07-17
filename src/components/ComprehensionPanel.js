@@ -5,6 +5,22 @@ import { getComprehensionMap, verifyComprehensionFaqStructure } from '../lib/act
 import { getStoredPlatform } from '../lib/cmsGuide';
 import { PH_EVENTS, trackEvent } from '../lib/posthog';
 
+/** Renderiza **negrita** de markdown como <strong> (evita mostrar asteriscos literales). */
+function renderWithBold(text) {
+  if (!text) return null;
+  const parts = String(text).split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return (
+        <strong key={i} className="text-slate-200">
+          {part.slice(2, -2)}
+        </strong>
+      );
+    }
+    return part;
+  });
+}
+
 const CONF_STYLES = {
   alto: {
     ring: 'border-emerald-500/50 bg-emerald-950/30',
@@ -353,8 +369,8 @@ export default function ComprehensionPanel({
                 </p>
                 <p className="text-sm font-bold text-slate-300">
                   Esta página responde {map.questions.length} preguntas. Generamos automáticamente
-                  la estructura que Google y las IA entienden — sin que tengas que pelearte con
-                  código técnico.
+                  un bloque de código (invisible para tus visitantes) que Google y las IA leen para
+                  entender esas preguntas — sin que tengas que tocar nada técnico.
                 </p>
               </div>
 
@@ -376,13 +392,30 @@ export default function ComprehensionPanel({
                 </button>
               </div>
 
+              <div className="rounded-lg bg-slate-900/60 border border-slate-700/60 p-3 space-y-1">
+                <p className="text-xs font-black text-slate-300">¿Qué es este código?</p>
+                <p className="text-xs font-bold text-slate-400 leading-relaxed">
+                  Es un pequeño bloque técnico (lo que Google llama «datos estructurados»).
+                  <span className="text-slate-200"> No cambia cómo se ve tu página: es invisible para quien la visita.</span> Solo
+                  le explica a Google y a las IA, en su idioma, qué preguntas responde tu página.
+                </p>
+              </div>
+
               {payload.guide?.steps?.length > 0 && (
-                <ol className="list-decimal list-inside space-y-1.5 text-xs font-bold text-slate-400">
-                  {payload.guide.steps.map((step, i) => (
-                    <li key={i}>{step}</li>
-                  ))}
-                </ol>
+                <div className="space-y-2">
+                  <p className="text-xs font-black text-slate-300">Dónde pegarlo, paso a paso:</p>
+                  <ol className="list-decimal list-inside space-y-1.5 text-xs font-bold text-slate-400">
+                    {payload.guide.steps.map((step, i) => (
+                      <li key={i}>{renderWithBold(step)}</li>
+                    ))}
+                  </ol>
+                </div>
               )}
+
+              <p className="text-xs font-bold text-amber-200/80 leading-relaxed">
+                Tip: pegalo en la <span className="text-amber-100">misma página que analizaste</span> (un producto,
+                artículo o página de preguntas frecuentes). En la página de inicio no suele ser el mejor lugar.
+              </p>
 
               <details className="text-xs text-slate-500">
                 <summary className="cursor-pointer font-black text-slate-400 hover:text-slate-300">
