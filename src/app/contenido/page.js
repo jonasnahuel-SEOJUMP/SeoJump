@@ -7,6 +7,7 @@ import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { verifyContentMission, checkIsAdmin } from "../../lib/actions";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
+import { cleanStoredKeyword, isUrlLikeKeyword } from "../../lib/keywordUtils";
 import Link from "next/link";
 import Header from "../../components/Header";
 import HumanScorePanel from "../../components/HumanScorePanel";
@@ -114,7 +115,7 @@ export default function ContenidoFase2() {
             setXp(serverState.xp || 0);
             setSiteUrl(serverState.site_url || '');
             setTargetUrl(serverState.site_url || '');
-            setActiveKeyword(purifyText(serverState.gold_query || ''));
+            setActiveKeyword(cleanStoredKeyword(purifyText(serverState.gold_query || '')));
             setCompletedMissions(new Set(serverState.completed_missions || []));
             setPrestigeCycles(serverState.ciclos_prestigio || 0);
             setHasMissions((serverState.missions || []).length > 0);
@@ -143,8 +144,13 @@ export default function ContenidoFase2() {
           setTargetUrl(savedUrl);
         }
 
-        const savedKeyword = localStorage.getItem('gold-tu-busqueda');
-        if (savedKeyword) setActiveKeyword(purifyText(savedKeyword));
+        const savedKeyword = cleanStoredKeyword(localStorage.getItem('gold-tu-busqueda'));
+        if (savedKeyword) {
+          setActiveKeyword(purifyText(savedKeyword));
+        } else if (localStorage.getItem('gold-tu-busqueda')) {
+          // La keyword guardada era una URL u otro valor inválido: la limpiamos
+          localStorage.removeItem('gold-tu-busqueda');
+        }
 
         const prestige = parseInt(localStorage.getItem('seojump_prestigio_cycles') || '0', 10);
         setPrestigeCycles(prestige);
@@ -638,6 +644,10 @@ export default function ContenidoFase2() {
                 if (e.key === 'Enter') {
                   const val = e.currentTarget.value.trim();
                   if (val) {
+                    if (isUrlLikeKeyword(val)) {
+                      alert('Eso parece una URL, no una palabra clave 😉. Escribí lo que buscaría tu cliente en Google, ej: "shampoo para autos".');
+                      return;
+                    }
                     if (playClick) playClick();
                     localStorage.setItem('gold-tu-busqueda', val);
                     setActiveKeyword(val);
@@ -650,6 +660,10 @@ export default function ContenidoFase2() {
                 const input = document.getElementById('manual-keyword-input');
                 const val = input ? input.value.trim() : '';
                 if (val) {
+                  if (isUrlLikeKeyword(val)) {
+                    alert('Eso parece una URL, no una palabra clave 😉. Escribí lo que buscaría tu cliente en Google, ej: "shampoo para autos".');
+                    return;
+                  }
                   if (playClick) playClick();
                   localStorage.setItem('gold-tu-busqueda', val);
                   setActiveKeyword(val);

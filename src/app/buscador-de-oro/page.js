@@ -13,6 +13,7 @@ import Header from "../../components/Header";
 import UpgradeModal from "../../components/UpgradeModal";
 import AiCreditsBadge from "../../components/AiCreditsBadge";
 import { notifyAiCreditUsed } from "../../lib/aiCreditToast";
+import { isUrlLikeKeyword } from "../../lib/keywordUtils";
 
 // Filtro Purificador Universal (UI-safe and encoding-safe parser)
 const purifyText = (text) => {
@@ -307,6 +308,11 @@ export default function BuscadorDeOro() {
   const handleSearch = async (e) => {
     if (e && e.preventDefault) e.preventDefault();
     if (!searchInput.trim() || loading || cooldown > 0) return;
+
+    if (isUrlLikeKeyword(searchInput)) {
+      setError('Eso parece una URL, no una palabra clave. Escribí lo que buscaría tu cliente en Google (ej: "shampoo para autos") — la URL de tu web ya la configuraste aparte.');
+      return;
+    }
 
     const limit = aiCredits?.limitDay ?? DAILY_LIMIT;
     const currentCredits = readCredits();

@@ -2,6 +2,8 @@
  * progression.js - Helper to compute SEO game phase progression, prestigie cycles, and sync state.
  */
 
+import { cleanStoredKeyword } from "./keywordUtils";
+
 export function getPhaseProgress(completedMissionsSet, suggestions, rawMissions, activeKeyword, siteUrl, isAdmin = false) {
   // ── God Mode: admins bypass all phase gates ──────────────────────────────
   // Controlled via NEXT_PUBLIC_ADMIN_EMAILS env var (comma-separated list).
@@ -104,7 +106,7 @@ export async function syncStateWithServer() {
     const completedList = JSON.parse(localStorage.getItem("seojump_completed_missions") || "[]");
     const prestige = parseInt(localStorage.getItem("seojump_prestigio_cycles") || "0", 10);
     const siteUrl = localStorage.getItem("seojump_site_url") || "";
-    const query = localStorage.getItem("gold-tu-busqueda") || "";
+    const query = cleanStoredKeyword(localStorage.getItem("gold-tu-busqueda"));
     
     let suggestions = [];
     try {
@@ -176,7 +178,9 @@ export async function pullStateFromServer() {
         localStorage.setItem("seojump_prestigio_cycles", mergedPrestige.toString());
         
         if (server.site_url) localStorage.setItem("seojump_site_url", server.site_url);
-        if (server.gold_query) localStorage.setItem("gold-tu-busqueda", server.gold_query);
+        // Nunca restaurar una keyword que en realidad es una URL (dato corrupto viejo)
+        const serverKeyword = cleanStoredKeyword(server.gold_query);
+        if (serverKeyword) localStorage.setItem("gold-tu-busqueda", serverKeyword);
         if (server.gold_suggestions) localStorage.setItem("gold-suggestions", JSON.stringify(server.gold_suggestions));
         if (server.missions_list) localStorage.setItem("seojump_missions", JSON.stringify(server.missions_list));
         
@@ -185,7 +189,7 @@ export async function pullStateFromServer() {
           completed_missions: mergedCompleted,
           ciclos_prestigio: mergedPrestige,
           site_url: server.site_url || localStorage.getItem("seojump_site_url"),
-          gold_query: server.gold_query || localStorage.getItem("gold-tu-busqueda"),
+          gold_query: cleanStoredKeyword(server.gold_query || localStorage.getItem("gold-tu-busqueda")),
           gold_suggestions: server.gold_suggestions || [],
           missions_list: server.missions_list || []
         };
