@@ -1,5 +1,6 @@
 import React from "react";
 import Link from "next/link";
+import PublicComprehension from "./PublicComprehension";
 
 /** Landing principal (AEO + misiones diarias). variant="spy" solo para /espia-competencia (ads). */
 export default function LandingPage({ onStart, playClick, variant = "default" }) {
@@ -12,6 +13,12 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
     e.preventDefault();
     if (playClick) playClick();
     document.getElementById("como-funciona")?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  const scrollToMapa = (e) => {
+    e.preventDefault();
+    if (playClick) playClick();
+    document.getElementById("mapa-ia")?.scrollIntoView({ behavior: "smooth" });
   };
 
   if (variant === "spy") {
@@ -75,13 +82,20 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
             🚀 Analizar Mi Web Gratis
           </button>
           <a
-            href="#como-funciona"
-            onClick={scrollToHow}
-            className="text-slate-400 hover:text-white font-bold underline underline-offset-4 decoration-slate-600 transition-colors py-4"
+            href="#mapa-ia"
+            onClick={scrollToMapa}
+            className="btn-3d text-lg md:text-xl px-6 py-5 w-full sm:w-auto bg-cyan-500/10 border-2 border-cyan-400/40 text-cyan-200 hover:bg-cyan-500/20 hover:scale-105 transition-all font-black text-center"
           >
-            ▶ Ver cómo funciona
+            🤖 ¿Las IA entienden tu web?
           </a>
         </div>
+        <a
+          href="#como-funciona"
+          onClick={scrollToHow}
+          className="text-slate-400 hover:text-white font-bold underline underline-offset-4 decoration-slate-600 transition-colors mt-5"
+        >
+          ▶ Ver cómo funciona
+        </a>
 
         <div className="mt-8 flex flex-col items-center">
           <div className="flex text-yellow-400 text-xl mb-2">⭐⭐⭐⭐⭐</div>
@@ -89,6 +103,27 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
             <strong className="text-slate-300">4.9/5</strong> – Negocios locales, e-commerce y profesionales que prefieren
             una misión clara cada día antes que otro dashboard de SEO.
           </p>
+        </div>
+      </section>
+
+      {/* GANCHO — ¿Las IA entienden tu página? (herramienta pública gratis) */}
+      <section id="mapa-ia" className="w-full px-4 pb-8 md:pb-16">
+        <div className="relative rounded-3xl border-2 border-cyan-500/30 bg-gradient-to-b from-slate-900/80 to-slate-950 p-6 md:p-12 shadow-2xl overflow-hidden">
+          <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-cyan-500/10 blur-[120px] rounded-full pointer-events-none" />
+          <div className="relative text-center mb-8">
+            <span className="inline-block px-4 py-1.5 bg-purple-500/20 border border-purple-400/40 rounded-full text-purple-200 text-xs md:text-sm font-black uppercase tracking-widest mb-5">
+              🤖 Nuevo · Optimización para IA (AEO)
+            </span>
+            <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-[1.1] max-w-3xl mx-auto mb-4">
+              ¿Las IA entienden tu página?{" "}
+              <span className="text-cyan-400">Descubrilo gratis.</span>
+            </h2>
+            <p className="text-slate-300 font-semibold text-base md:text-xl max-w-2xl mx-auto">
+              Pegá tu URL y en segundos te mostramos qué entiende (y qué NO entiende){" "}
+              <strong className="text-white">ChatGPT, Gemini y Google</strong> sobre tu negocio.
+            </p>
+          </div>
+          <PublicComprehension onRegister={handleStart} playClick={playClick} />
         </div>
       </section>
 
