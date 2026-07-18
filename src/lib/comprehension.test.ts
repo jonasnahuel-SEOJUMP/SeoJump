@@ -92,4 +92,18 @@ describe('analyzeComprehension', () => {
     expect(map.faqStructureAlreadyPresent).toBe(true);
     expect(map.canOfferFaqStructure).toBe(false);
   });
+
+  it('ofrece estructura FAQ con una sola pregunta detectada', () => {
+    const html = `
+      <html><head><title>Shampoo Luxury Foam</title></head>
+      <body>
+        <h1>Shampoo Luxury Foam para autos</h1>
+        <h2>¿Por qué elegir Luxury Foam para tu auto?</h2>
+        <p>Su fórmula concentrada rinde entre 10 y 12 lavados completos en balde.</p>
+      </body></html>`;
+    const map = analyzeComprehension(html, 'https://example.com/producto/shampoo');
+    expect(map.questions.length).toBe(1);
+    expect(map.canOfferFaqStructure).toBe(true);
+    expect(map.faqStructureAlreadyPresent).toBe(false);
+  });
 });

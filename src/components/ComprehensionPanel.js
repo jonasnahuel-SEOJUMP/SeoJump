@@ -191,7 +191,10 @@ export default function ComprehensionPanel({
     map &&
     !map.faqStructureAlreadyPresent &&
     !map.canOfferFaqStructure &&
-    (map.questions?.length || 0) < 2;
+    (map.questions?.length || 0) < 1;
+  // 1 pregunta: ya ofrecemos el código, pero sugerimos sumar otra para el rich result de Google.
+  const singleQuestion =
+    map && map.canOfferFaqStructure && (map.questions?.length || 0) === 1;
 
   return (
     <div className="space-y-5">
@@ -368,10 +371,18 @@ export default function ComprehensionPanel({
                   Misión: hacer que las IA lean tus preguntas
                 </p>
                 <p className="text-sm font-bold text-slate-300">
-                  Esta página responde {map.questions.length} preguntas. Generamos automáticamente
+                  Esta página responde {map.questions.length}{' '}
+                  {map.questions.length === 1 ? 'pregunta' : 'preguntas'}. Generamos automáticamente
                   un bloque de código (invisible para tus visitantes) que Google y las IA leen para
                   entender esas preguntas — sin que tengas que tocar nada técnico.
                 </p>
+                {singleQuestion && (
+                  <p className="text-xs font-bold text-amber-200/80 mt-2 leading-relaxed">
+                    Detectamos 1 pregunta: alcanza para que las IA la entiendan. Si querés que
+                    Google muestre el resultado enriquecido de preguntas, sumá al menos otra
+                    pregunta con su respuesta en la página.
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-2">

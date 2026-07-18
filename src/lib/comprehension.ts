@@ -357,7 +357,9 @@ export function analyzeComprehension(html: string, pageUrl: string): Comprehensi
   const needsDate = pageType === 'post';
 
   const faqStructureAlreadyPresent = existingStructured.hasFaqPage;
-  const canOfferFaqStructure = questions.length >= 2 && !faqStructureAlreadyPresent;
+  // Con 1+ pregunta ya generamos el bloque: para las IA una sola Q&A estructurada
+  // ya ayuda. (Google prefiere 2+ para el resultado enriquecido; se avisa en la UI.)
+  const canOfferFaqStructure = questions.length >= 1 && !faqStructureAlreadyPresent;
 
   const checks: ComprehensionCheck[] = [
     {
@@ -431,10 +433,10 @@ export function analyzeComprehension(html: string, pageUrl: string): Comprehensi
       detail: faqStructureAlreadyPresent
         ? 'Las preguntas frecuentes ya están en un formato entendible para Google y las IA.'
         : canOfferFaqStructure
-          ? `Tenés ${questions.length} preguntas en el texto. Podés generar la estructura lista para que Google/IA las lean sin ambigüedad.`
-          : questions.length === 1
-            ? 'Solo hay una pregunta clara. Sumá al menos otra (con respuesta) para armar el bloque.'
-            : 'Todavía no hay un bloque de preguntas listo para Google/IA.',
+          ? questions.length === 1
+            ? 'Detectamos 1 pregunta. Podés generar la estructura para que las IA la lean sin ambigüedad (para el resultado enriquecido de Google conviene sumar otra).'
+            : `Tenés ${questions.length} preguntas en el texto. Podés generar la estructura lista para que Google/IA las lean sin ambigüedad.`
+          : 'Todavía no hay un bloque de preguntas listo para Google/IA.',
       applicable: questions.length >= 1 || faqStructureAlreadyPresent,
     },
   ];
