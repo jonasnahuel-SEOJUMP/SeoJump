@@ -1165,10 +1165,13 @@ export default function HomeApp() {
  
                {/* Navigation Menu */}
                <nav className="flex flex-wrap lg:flex-col gap-2 lg:gap-4 w-full">
-                 <Link href="/buscador-de-oro" onClick={playClick} className="flex-1 btn-3d phase-idle-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all">
-                   <span className="md:hidden">🔍 F1</span><span className="hidden md:inline">🔍 Fase 1: Búsqueda</span>
-                 </Link>
-                 {prog?.p2?.unlocked ? (
+                <Link href="/buscador-de-oro" onClick={playClick} className="flex-1 btn-3d phase-idle-yellow text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all">
+                  <span className="md:hidden">🔍 F1</span><span className="hidden md:inline">🔍 Fase 1: Búsqueda</span>
+                </Link>
+                <Link href="/mapa-comprension" onClick={playClick} className="flex-1 btn-3d phase-idle-cyan text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all">
+                  <span className="md:hidden">🧠 Mapa</span><span className="hidden md:inline">🧠 Mapa de comprensión</span>
+                </Link>
+                {prog?.p2?.unlocked ? (
                    <Link href="/contenido" onClick={playClick} className="flex-1 btn-3d phase-idle-blue text-center !py-2.5 !px-2 md:!py-5 md:!px-6 !text-xs md:!text-lg lg:!text-xl font-black transition-all">
                      <span className="md:hidden">✍️ F2</span><span className="hidden md:inline">✍️ Fase 2: Contenido</span>
                    </Link>
