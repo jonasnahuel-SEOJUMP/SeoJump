@@ -4,6 +4,12 @@ import { useState, useEffect, useRef } from 'react';
 import { getComprehensionMap, verifyComprehensionFaqStructure } from '../lib/actions';
 import { getStoredPlatform } from '../lib/cmsGuide';
 import { PH_EVENTS, trackEvent } from '../lib/posthog';
+import {
+  SCHEMA_INSTALL_METHODS,
+  getSchemaPasteGuide,
+  getStoredSchemaInstallMethod,
+  setStoredSchemaInstallMethod,
+} from '../lib/schemaPasteGuide';
 
 /** Renderiza **negrita** de markdown como <strong> (evita mostrar asteriscos literales). */
 function renderWithBold(text) {
@@ -57,12 +63,17 @@ export default function ComprehensionPanel({
   const [verifying, setVerifying] = useState(false);
   const [verifyMsg, setVerifyMsg] = useState(null);
   const [recheckNote, setRecheckNote] = useState(null);
+  const [installMethod, setInstallMethod] = useState('');
   const urlInputRef = useRef(null);
 
   useEffect(() => {
     if (defaultUrl && !payload) setUrl(defaultUrl);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultUrl]);
+
+  useEffect(() => {
+    setInstallMethod(getStoredSchemaInstallMethod(getStoredPlatform()));
+  }, []);
 
   const runAnalysis = async (targetUrl, { isRecheck = false } = {}) => {
     const clean = (targetUrl || '').trim();
@@ -79,6 +90,7 @@ export default function ComprehensionPanel({
 
     try {
       const platformId = getStoredPlatform();
+      setInstallMethod(getStoredSchemaInstallMethod(platformId));
       const res = await getComprehensionMap(clean, platformId);
       if (res.success) {
         const prevScore = payload?.map?.confidenceScore;
@@ -192,6 +204,7 @@ export default function ComprehensionPanel({
   const conf = map ? CONF_STYLES[map.confidence] || CONF_STYLES.bajo : null;
   const hasGaps = map?.checks?.some((c) => c.applicable && !c.present);
   const offer = payload?.offer || null;
+  const pasteGuide = getSchemaPasteGuide(installMethod);
   // Todo cubierto: no hay estructura nueva para ofrecer.
   const allCovered = map && !offer;
 
@@ -370,24 +383,6 @@ export default function ComprehensionPanel({
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  type="button"
-                  onClick={handleCopy}
-                  className="btn-3d bg-cyan-600 border-cyan-800 border-b-4 hover:bg-cyan-500 text-white text-sm font-black px-4 py-2.5"
-                >
-                  {copied ? '✓ Copiado' : `📋 ${offer.copyLabel || payload.guide?.copyLabel || 'Copiar código'}`}
-                </button>
-                <button
-                  type="button"
-                  onClick={handleVerifyFaq}
-                  disabled={verifying || loading}
-                  className="btn-3d bg-emerald-600 border-emerald-800 border-b-4 hover:bg-emerald-500 text-white text-sm font-black px-4 py-2.5 disabled:opacity-50"
-                >
-                  {verifying ? 'Verificando…' : 'Ya lo pegué (+40 XP)'}
-                </button>
-              </div>
-
               <div className="rounded-lg bg-slate-900/60 border border-slate-700/60 p-3 space-y-1">
                 <p className="text-xs font-black text-slate-300">¿Qué es este código?</p>
                 <p className="text-xs font-bold text-slate-400 leading-relaxed">
@@ -397,21 +392,104 @@ export default function ComprehensionPanel({
                 </p>
               </div>
 
-              {payload.guide?.steps?.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-xs font-black text-slate-300">Dónde pegarlo, paso a paso:</p>
-                  <ol className="list-decimal list-inside space-y-1.5 text-xs font-bold text-slate-400">
-                    {payload.guide.steps.map((step, i) => (
-                      <li key={i}>{renderWithBold(step)}</li>
+              <div className="rounded-xl border-2 border-cyan-500/30 bg-slate-950/50 p-4 space-y-4">
+                <div>
+                  <label
+                    htmlFor="schema-install-method"
+                    className="text-sm font-black text-white block mb-1"
+                  >
+                    1. ¿Con qué editor modificás esta página?
+                  </label>
+                  <p className="text-xs font-bold text-slate-400 leading-relaxed mb-3">
+                    Elegilo para ver los botones y lugares exactos. No todos los WordPress se editan
+                    de la misma manera.
+                  </p>
+                  <select
+                    id="schema-install-method"
+                    value={installMethod}
+                    onChange={(event) => {
+                      const method = event.target.value;
+                      setInstallMethod(method);
+                      if (method) setStoredSchemaInstallMethod(method);
+                      setVerifyMsg(null);
+                      if (playClick) playClick();
+                    }}
+                    className="w-full rounded-lg border-2 border-slate-600 bg-slate-900 px-3 py-3 text-sm font-black text-white focus:border-cyan-500 focus:outline-none"
+                  >
+                    <option value="">Elegí tu editor…</option>
+                    {SCHEMA_INSTALL_METHODS.map((method) => (
+                      <option key={method.id} value={method.id}>
+                        {method.icon} {method.label}
+                      </option>
                     ))}
-                  </ol>
+                  </select>
                 </div>
-              )}
 
-              <p className="text-xs font-bold text-amber-200/80 leading-relaxed">
-                Tip: pegalo en la <span className="text-amber-100">misma página que analizaste</span>.
-                En la página de inicio no suele ser el mejor lugar (salvo el código de empresa).
-              </p>
+                {!pasteGuide && (
+                  <div className="rounded-lg border border-amber-500/30 bg-amber-950/30 p-3">
+                    <p className="text-xs font-bold text-amber-200">
+                      Elegí una opción arriba. SEO Jump te va a indicar exactamente dónde entrar,
+                      qué botón tocar y dónde pegar el código.
+                    </p>
+                  </div>
+                )}
+
+                {pasteGuide && (
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-sm font-black text-cyan-300">{pasteGuide.title}</p>
+                      <p className="text-xs font-bold text-slate-400 mt-1 leading-relaxed">
+                        {pasteGuide.recognition}
+                      </p>
+                    </div>
+                    <ol className="space-y-2 text-xs font-bold text-slate-300">
+                      {pasteGuide.steps.map((step, i) => (
+                        <li key={i} className="flex gap-2.5 items-start">
+                          <span className="flex-none w-5 h-5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-[10px] font-black flex items-center justify-center">
+                            {i + 1}
+                          </span>
+                          <span className="leading-relaxed pt-0.5">{renderWithBold(step)}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    {pasteGuide.warning && (
+                      <div className="rounded-lg border border-amber-500/40 bg-amber-950/30 p-3">
+                        <p className="text-xs font-bold text-amber-200 leading-relaxed">
+                          ⚠️ {pasteGuide.warning}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-black text-white">
+                  2. Copiá, pegá siguiendo la guía y comprobalo
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleCopy}
+                    disabled={!pasteGuide}
+                    className="btn-3d bg-cyan-600 border-cyan-800 border-b-4 hover:bg-cyan-500 text-white text-sm font-black px-4 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    {copied
+                      ? '✓ Copiado'
+                      : pasteGuide
+                        ? `📋 ${offer.copyLabel || payload.guide?.copyLabel || 'Copiar código'}`
+                        : 'Primero elegí tu editor'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleVerifyFaq}
+                    disabled={verifying || loading || !pasteGuide}
+                    className="btn-3d bg-emerald-600 border-emerald-800 border-b-4 hover:bg-emerald-500 text-white text-sm font-black px-4 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {verifying ? 'Verificando…' : 'Ya lo pegué (+40 XP)'}
+                  </button>
+                </div>
+              </div>
 
               <details className="text-xs text-slate-500">
                 <summary className="cursor-pointer font-black text-slate-400 hover:text-slate-300">
