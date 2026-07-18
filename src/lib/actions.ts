@@ -36,7 +36,6 @@ import {
 import { fitSeoTitle, extractBrandHints, MAX_SEO_TITLE_LENGTH } from './seoTitle'
 import {
   analyzeComprehension,
-  buildFaqJsonLd,
   getFaqStructurePasteGuide,
 } from './comprehension'
 import {
@@ -3720,11 +3719,16 @@ export async function getComprehensionMap(pageUrl: string, platformId?: string) 
 
     const map = analyzeComprehension(fetched.html, cleanUrl);
     const guide = getFaqStructurePasteGuide(platformId || 'wp_woo');
-    const faqCode = map.canOfferFaqStructure ? buildFaqJsonLd(map.questions) : null;
+    // offerCode: el schema recomendado según el tipo de página (FAQ, Producto, Artículo u Organización).
+    const offerCode = map.offer?.code ?? null;
+    // faqCode: compat hacia atrás (solo si la oferta es FAQ).
+    const faqCode = map.offer?.type === 'faq' ? map.offer.code : null;
 
     return {
       success: true,
       map,
+      offer: map.offer,
+      offerCode,
       faqCode,
       guide,
     };
@@ -3743,10 +3747,37 @@ export async function getComprehensionMap(pageUrl: string, platformId?: string) 
   }
 }
 
+const STRUCTURE_PRESENT_MSG: Record<string, string> = {
+  faq: 'Listo: Google y las IA ya pueden leer tus preguntas frecuentes sin ambigüedad.',
+  product: 'Listo: Google y las IA ya reconocen esta página como un producto.',
+  article: 'Listo: Google y las IA ya reconocen esta página como un artículo.',
+  organization: 'Listo: Google y las IA ya identifican a la empresa responsable.',
+};
+
+function isStructureTypePresent(
+  map: ReturnType<typeof analyzeComprehension>,
+  offerType: string
+): boolean {
+  const s = map.existingStructured;
+  switch (offerType) {
+    case 'faq':
+      return s.hasFaqPage;
+    case 'product':
+      return s.hasProduct;
+    case 'article':
+      return s.hasArticle;
+    case 'organization':
+      return s.hasOrganization || s.hasLocalBusiness;
+    default:
+      return false;
+  }
+}
+
 /**
- * Verifica que la página tenga el bloque de preguntas en formato que Google/IA leen (FAQPage).
+ * Verifica que la página ya tenga el bloque estructurado que se ofreció
+ * (FAQPage, Product, Article u Organization). Compat: sin offerType, valida FAQ.
  */
-export async function verifyComprehensionFaqStructure(pageUrl: string) {
+export async function verifyComprehensionFaqStructure(pageUrl: string, offerType: string = 'faq') {
   if (!pageUrl?.trim()) {
     return { success: false, message: 'Falta la URL para verificar.' };
   }
@@ -3767,10 +3798,10 @@ export async function verifyComprehensionFaqStructure(pageUrl: string) {
     }
 
     const map = analyzeComprehension(fetched.html, cleanUrl);
-    if (map.faqStructureAlreadyPresent) {
+    if (isStructureTypePresent(map, offerType)) {
       return {
         success: true,
-        message: 'Listo: Google y las IA ya pueden leer tus preguntas frecuentes sin ambigüedad.',
+        message: STRUCTURE_PRESENT_MSG[offerType] || STRUCTURE_PRESENT_MSG.faq,
         xp: 40,
       };
     }
@@ -3778,7 +3809,7 @@ export async function verifyComprehensionFaqStructure(pageUrl: string) {
     return {
       success: false,
       message:
-        'Todavía no detectamos el bloque de preguntas en tu web. ¿Lo pegaste, publicaste y borraste la caché?',
+        'Todavía no detectamos el bloque en tu web. ¿Lo pegaste, publicaste y borraste la caché?',
     };
   } catch (error: any) {
     console.error('Error en verifyComprehensionFaqStructure:', error);

@@ -39,6 +39,22 @@ export type FaqPair = {
   answer: string;
 };
 
+export type StructuredOfferType = 'faq' | 'product' | 'article' | 'organization';
+
+export type StructuredOffer = {
+  type: StructuredOfferType;
+  /** JSON-LD listo para pegar. */
+  code: string;
+  /** Título de la misión (sin jerga Schema). */
+  missionTitle: string;
+  /** Qué hace, en lenguaje simple. */
+  description: string;
+  /** Texto del botón de copiar. */
+  copyLabel: string;
+  /** Aviso opcional (ej. Google prefiere 2+ preguntas). */
+  note?: string;
+};
+
 export type ExistingStructuredData = {
   hasFaqPage: boolean;
   hasProduct: boolean;
@@ -65,6 +81,8 @@ export type ComprehensionMap = {
   canOfferFaqStructure: boolean;
   /** Si ya hay FAQ estructurado, no ofrecer duplicar. */
   faqStructureAlreadyPresent: boolean;
+  /** Mejor estructura para ofrecer según el tipo de página (o null si ya está todo cubierto). */
+  offer: StructuredOffer | null;
 };
 
 const PAGE_TYPE_LABELS: Record<ComprehensionPageType, string> = {
@@ -303,7 +321,236 @@ export function buildFaqJsonLd(pairs: FaqPair[]): string {
     '@type': 'FAQPage',
     mainEntity,
   };
+  return wrapJsonLd(payload);
+}
+
+function wrapJsonLd(payload: unknown): string {
   return `<script type="application/ld+json">\n${JSON.stringify(payload, null, 2)}\n</script>`;
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Lee un <meta name|property="key" content="..."> (en cualquier orden de atributos). */
+export function extractMeta(html: string, key: string): string {
+  const k = escapeRegExp(key);
+  const re1 = new RegExp(`<meta[^>]+(?:property|name)=["']${k}["'][^>]+content=["']([^"']*)["']`, 'i');
+  const re2 = new RegExp(`<meta[^>]+content=["']([^"']*)["'][^>]+(?:property|name)=["']${k}["']`, 'i');
+  const m = html.match(re1) || html.match(re2);
+  return m ? decodeHtmlEntities(m[1].trim()) : '';
+}
+
+function siteOrigin(pageUrl: string): string {
+  try {
+    return new URL(pageUrl.startsWith('http') ? pageUrl : `https://${pageUrl}`).origin;
+  } catch {
+    return '';
+  }
+}
+
+/** Normaliza un precio en formato AR/US a número string ("12.345,67" → "12345.67"). */
+function normalizePrice(raw: string): string {
+  if (!raw) return '';
+  let s = raw.replace(/[^\d.,]/g, '');
+  if (s.includes('.') && s.includes(',')) {
+    // "12.345,67" → punto miles, coma decimal
+    s = s.replace(/\./g, '').replace(',', '.');
+  } else if (s.includes(',')) {
+    // "12345,67" → coma decimal
+    s = s.replace(',', '.');
+  }
+  // solo dejar el primer punto decimal
+  const parts = s.split('.');
+  if (parts.length > 2) s = parts.slice(0, -1).join('') + '.' + parts[parts.length - 1];
+  const n = parseFloat(s);
+  return Number.isFinite(n) && n > 0 ? String(n) : '';
+}
+
+export type ProductInfo = {
+  name: string;
+  image: string;
+  description: string;
+  price: string;
+  currency: string;
+  brand: string;
+};
+
+export function detectProductInfo(html: string, title: string, h1: string): ProductInfo {
+  const name = (extractMeta(html, 'og:title') || h1 || title.split(/\s*[|–—]\s*/)[0] || '').trim();
+  const image = extractMeta(html, 'og:image');
+  const description = extractMeta(html, 'description') || extractMeta(html, 'og:description');
+  let priceRaw = extractMeta(html, 'product:price:amount') || extractMeta(html, 'og:price:amount');
+  const currency =
+    extractMeta(html, 'product:price:currency') || extractMeta(html, 'og:price:currency') || 'ARS';
+  if (!priceRaw) {
+    const ip = html.match(/itemprop=["']price["'][^>]*content=["']([\d.,]+)["']/i);
+    if (ip) priceRaw = ip[1];
+  }
+  const price = normalizePrice(priceRaw);
+  const brand = extractMeta(html, 'product:brand') || extractMeta(html, 'og:brand');
+  return { name, image, description, price, currency, brand };
+}
+
+export function buildProductJsonLd(info: ProductInfo, pageUrl: string): string {
+  const payload: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Product',
+    name: info.name,
+  };
+  if (info.image) payload.image = info.image;
+  if (info.description) payload.description = info.description.slice(0, 400);
+  if (info.brand) payload.brand = { '@type': 'Brand', name: info.brand };
+  if (info.price) {
+    payload.offers = {
+      '@type': 'Offer',
+      price: info.price,
+      priceCurrency: info.currency || 'ARS',
+      availability: 'https://schema.org/InStock',
+      url: pageUrl,
+    };
+  }
+  return wrapJsonLd(payload);
+}
+
+export type ArticleInfo = {
+  headline: string;
+  image: string;
+  datePublished: string;
+  dateModified: string;
+  author: string;
+  publisher: string;
+};
+
+export function detectArticleInfo(html: string, title: string, h1: string): ArticleInfo {
+  const headline = (h1 || extractMeta(html, 'og:title') || title.split(/\s*[|–—]\s*/)[0] || '').trim();
+  const image = extractMeta(html, 'og:image');
+  const datePublished = extractMeta(html, 'article:published_time');
+  const dateModified = extractMeta(html, 'article:modified_time') || datePublished;
+  const author = extractMeta(html, 'author');
+  const publisher = extractMeta(html, 'og:site_name');
+  return { headline, image, datePublished, dateModified, author, publisher };
+}
+
+export function buildArticleJsonLd(info: ArticleInfo, pageUrl: string): string {
+  const payload: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: info.headline,
+    mainEntityOfPage: pageUrl,
+  };
+  if (info.image) payload.image = info.image;
+  if (info.datePublished) payload.datePublished = info.datePublished;
+  if (info.dateModified) payload.dateModified = info.dateModified;
+  if (info.author) payload.author = { '@type': 'Person', name: info.author };
+  if (info.publisher) payload.publisher = { '@type': 'Organization', name: info.publisher };
+  return wrapJsonLd(payload);
+}
+
+export type OrgInfo = { name: string; url: string; logo: string };
+
+export function detectOrgInfo(html: string, title: string, pageUrl: string): OrgInfo {
+  const parts = title.split(/\s*[|–—]\s*/).map((s) => s.trim()).filter(Boolean);
+  const name =
+    extractMeta(html, 'og:site_name') ||
+    (parts.length ? parts[parts.length - 1] : '') ||
+    '';
+  const url = siteOrigin(pageUrl);
+  const logo = extractMeta(html, 'og:image');
+  return { name, url, logo };
+}
+
+export function buildOrganizationJsonLd(info: OrgInfo): string {
+  const payload: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'Organization',
+    name: info.name,
+  };
+  if (info.url) payload.url = info.url;
+  if (info.logo) payload.logo = info.logo;
+  return wrapJsonLd(payload);
+}
+
+/**
+ * Elige la mejor estructura para ofrecer según el tipo de página.
+ * Prioridad: FAQ (mayor valor AEO) → Producto → Artículo → Organización.
+ * Devuelve null si ya está todo cubierto.
+ */
+export function resolveStructuredOffer(
+  html: string,
+  pageUrl: string,
+  pageType: ComprehensionPageType,
+  title: string,
+  h1: string,
+  questions: FaqPair[],
+  existing: ExistingStructuredData
+): StructuredOffer | null {
+  // 1. FAQ — la de mayor valor para que las IA citen
+  if (questions.length >= 1 && !existing.hasFaqPage) {
+    return {
+      type: 'faq',
+      code: buildFaqJsonLd(questions),
+      missionTitle: 'Hacer que las IA lean tus preguntas',
+      description: `Esta página responde ${questions.length} ${
+        questions.length === 1 ? 'pregunta' : 'preguntas'
+      }. Generamos el bloque (invisible para tus visitantes) que Google y las IA leen para entenderlas.`,
+      copyLabel: 'Copiar código listo para pegar',
+      note:
+        questions.length === 1
+          ? 'Con 1 pregunta las IA ya la entienden. Para el resultado enriquecido de Google, sumá otra pregunta con su respuesta.'
+          : undefined,
+    };
+  }
+
+  // 2. Producto sin Product schema
+  if (pageType === 'product' && !existing.hasProduct) {
+    const info = detectProductInfo(html, title, h1);
+    if (info.name) {
+      return {
+        type: 'product',
+        code: buildProductJsonLd(info, pageUrl),
+        missionTitle: 'Hacer que Google entienda que esto es un producto',
+        description:
+          'Generamos la ficha de producto (nombre, imagen, precio y marca si están) que Google y las IA usan para mostrarlo y recomendarlo.',
+        copyLabel: 'Copiar código del producto',
+        note: info.price
+          ? undefined
+          : 'No detectamos un precio para incluir automáticamente. El bloque igual ayuda; si querés, agregá el precio en tu tienda.',
+      };
+    }
+  }
+
+  // 3. Artículo/blog sin Article schema
+  if (pageType === 'post' && !existing.hasArticle) {
+    const info = detectArticleInfo(html, title, h1);
+    if (info.headline) {
+      return {
+        type: 'article',
+        code: buildArticleJsonLd(info, pageUrl),
+        missionTitle: 'Hacer que Google entienda que esto es un artículo',
+        description:
+          'Generamos la ficha de artículo (título, autor y fecha si están) para que Google y las IA sepan de qué trata y cuándo se publicó.',
+        copyLabel: 'Copiar código del artículo',
+      };
+    }
+  }
+
+  // 4. Organización responsable (fallback: home, categoría, página)
+  if (!existing.hasOrganization && !existing.hasLocalBusiness) {
+    const info = detectOrgInfo(html, title, pageUrl);
+    if (info.name) {
+      return {
+        type: 'organization',
+        code: buildOrganizationJsonLd(info),
+        missionTitle: 'Decirle a Google qué empresa está detrás',
+        description:
+          'Generamos la identidad de tu empresa (nombre, sitio y logo) para que Google y las IA sepan quién es responsable de esta página.',
+        copyLabel: 'Copiar código de la empresa',
+      };
+    }
+  }
+
+  return null;
 }
 
 function computeConfidence(checks: ComprehensionCheck[]): {
@@ -461,6 +708,15 @@ export function analyzeComprehension(html: string, pageUrl: string): Comprehensi
     existingStructured,
     canOfferFaqStructure,
     faqStructureAlreadyPresent,
+    offer: resolveStructuredOffer(
+      html,
+      pageUrl,
+      pageType,
+      title,
+      h1,
+      questions,
+      existingStructured
+    ),
   };
 }
 

@@ -105,5 +105,65 @@ describe('analyzeComprehension', () => {
     expect(map.questions.length).toBe(1);
     expect(map.canOfferFaqStructure).toBe(true);
     expect(map.faqStructureAlreadyPresent).toBe(false);
+    expect(map.offer?.type).toBe('faq');
+  });
+
+  it('ofrece Product schema en producto sin preguntas ni Product previo', () => {
+    const html = `
+      <html><head>
+        <title>Microfibras por Mayor | 55 Detail Shop</title>
+        <meta property="og:title" content="Microfibras por Mayor">
+        <meta property="og:image" content="https://ex.com/mf.jpg">
+        <meta property="product:price:amount" content="12345.00">
+        <meta property="product:price:currency" content="ARS">
+      </head>
+      <body><h1>Microfibras por Mayor</h1><p>Importación directa.</p></body></html>`;
+    const map = analyzeComprehension(html, 'https://example.com/producto/microfibras-x-mayor/');
+    expect(map.pageType).toBe('product');
+    expect(map.offer?.type).toBe('product');
+    expect(map.offer?.code).toContain('"@type": "Product"');
+    expect(map.offer?.code).toContain('12345');
+    expect(map.offer?.code).toContain('ARS');
+  });
+
+  it('ofrece Article schema en post sin Article previo', () => {
+    const html = `
+      <html><head>
+        <title>Cómo sellar tu auto | Blog</title>
+        <meta property="article:published_time" content="2025-01-10">
+        <meta name="author" content="Juan Pérez">
+        <meta property="og:site_name" content="55 Detail Shop">
+      </head>
+      <body><h1>Cómo sellar tu auto paso a paso</h1><p>Guía completa.</p></body></html>`;
+    const map = analyzeComprehension(html, 'https://example.com/blog/como-sellar');
+    expect(map.pageType).toBe('post');
+    expect(map.offer?.type).toBe('article');
+    expect(map.offer?.code).toContain('"@type": "Article"');
+    expect(map.offer?.code).toContain('Juan Pérez');
+  });
+
+  it('ofrece Organization schema como fallback cuando falta identidad', () => {
+    const html = `
+      <html><head>
+        <title>Inicio | Mi Tienda</title>
+        <meta property="og:site_name" content="Mi Tienda">
+      </head>
+      <body><h1>Bienvenidos</h1><p>Somos una tienda.</p></body></html>`;
+    const map = analyzeComprehension(html, 'https://mitienda.com/');
+    expect(map.offer?.type).toBe('organization');
+    expect(map.offer?.code).toContain('"@type": "Organization"');
+    expect(map.offer?.code).toContain('Mi Tienda');
+  });
+
+  it('no ofrece nada si ya tiene Product y Organization', () => {
+    const html = `
+      <html><head><title>Producto | Tienda</title></head>
+      <body>
+        <h1>Un producto</h1>
+        <script type="application/ld+json">{"@context":"https://schema.org","@type":"Product","name":"X"}</script>
+        <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"Tienda"}</script>
+      </body></html>`;
+    const map = analyzeComprehension(html, 'https://example.com/producto/x');
+    expect(map.offer).toBeNull();
   });
 });

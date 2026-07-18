@@ -144,11 +144,13 @@ export default function ComprehensionPanel({
     setTimeout(() => urlInputRef.current?.focus(), 50);
   };
 
+  const offerCode = payload?.offerCode || payload?.offer?.code || null;
+
   const handleCopy = async () => {
-    if (!payload?.faqCode) return;
+    if (!offerCode) return;
     if (playClick) playClick();
     try {
-      await navigator.clipboard.writeText(payload.faqCode);
+      await navigator.clipboard.writeText(offerCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
@@ -158,19 +160,21 @@ export default function ComprehensionPanel({
 
   const handleVerifyFaq = async () => {
     if (!payload?.map?.pageUrl) return;
+    const offerType = payload?.offer?.type || 'faq';
     if (playClick) playClick();
     setVerifying(true);
     setVerifyMsg(null);
     try {
-      const res = await verifyComprehensionFaqStructure(payload.map.pageUrl);
+      const res = await verifyComprehensionFaqStructure(payload.map.pageUrl, offerType);
       setVerifyMsg({ ok: !!res.success, text: res.message });
       if (res.success) {
         if (playSuccess) playSuccess();
         trackEvent(PH_EVENTS.COMPREHENSION_FAQ_APPLIED, {
           page: payload.map.pageUrl,
+          offerType,
         });
         if (onMissionComplete) {
-          const mid = `comprehension-faq-${(payload.map.pageUrl || '').replace(/\/+$/, '').toLowerCase()}`;
+          const mid = `comprehension-${offerType}-${(payload.map.pageUrl || '').replace(/\/+$/, '').toLowerCase()}`;
           onMissionComplete(mid, res.xp || 40);
         }
         const platformId = getStoredPlatform();
@@ -187,14 +191,9 @@ export default function ComprehensionPanel({
   const map = payload?.map;
   const conf = map ? CONF_STYLES[map.confidence] || CONF_STYLES.bajo : null;
   const hasGaps = map?.checks?.some((c) => c.applicable && !c.present);
-  const needsMoreQuestions =
-    map &&
-    !map.faqStructureAlreadyPresent &&
-    !map.canOfferFaqStructure &&
-    (map.questions?.length || 0) < 1;
-  // 1 pregunta: ya ofrecemos el código, pero sugerimos sumar otra para el rich result de Google.
-  const singleQuestion =
-    map && map.canOfferFaqStructure && (map.questions?.length || 0) === 1;
+  const offer = payload?.offer || null;
+  // Todo cubierto: no hay estructura nueva para ofrecer.
+  const allCovered = map && !offer;
 
   return (
     <div className="space-y-5">
@@ -345,42 +344,28 @@ export default function ComprehensionPanel({
                 <span className="text-cyan-300">Volver a comprobar esta página</span> para ver si
                 mejoró el mapa.
               </p>
-              {needsMoreQuestions && (
-                <p className="text-xs font-bold text-amber-200/90 leading-relaxed">
-                  Tip: agregá al menos una pregunta más con su respuesta (ej. «¿Para quién es…?» o
-                  «¿Cuánto dura…?»). Con 2 preguntas claras vamos a poder darte el código listo para
-                  que Google y las IA las lean sin ambigüedad.
-                </p>
-              )}
             </div>
           )}
 
-          {map.faqStructureAlreadyPresent && (
+          {allCovered && (
             <div className="rounded-xl border border-emerald-500/40 bg-emerald-950/30 p-4">
               <p className="text-sm font-black text-emerald-300">
-                Tus preguntas frecuentes ya están en un formato que Google y las IA pueden leer.
-                No hace falta duplicar nada.
+                Google y las IA ya tienen los datos estructurados clave de esta página. No hace
+                falta generar ni duplicar nada.
               </p>
             </div>
           )}
 
-          {payload.faqCode && map.canOfferFaqStructure && (
+          {offer && offerCode && (
             <div className="rounded-xl border border-cyan-500/40 bg-cyan-950/20 p-4 md:p-5 space-y-4">
               <div>
                 <p className="text-xs font-black text-cyan-400 uppercase tracking-wider mb-1">
-                  Misión: hacer que las IA lean tus preguntas
+                  Misión: {offer.missionTitle}
                 </p>
-                <p className="text-sm font-bold text-slate-300">
-                  Esta página responde {map.questions.length}{' '}
-                  {map.questions.length === 1 ? 'pregunta' : 'preguntas'}. Generamos automáticamente
-                  un bloque de código (invisible para tus visitantes) que Google y las IA leen para
-                  entender esas preguntas — sin que tengas que tocar nada técnico.
-                </p>
-                {singleQuestion && (
+                <p className="text-sm font-bold text-slate-300">{offer.description}</p>
+                {offer.note && (
                   <p className="text-xs font-bold text-amber-200/80 mt-2 leading-relaxed">
-                    Detectamos 1 pregunta: alcanza para que las IA la entiendan. Si querés que
-                    Google muestre el resultado enriquecido de preguntas, sumá al menos otra
-                    pregunta con su respuesta en la página.
+                    {offer.note}
                   </p>
                 )}
               </div>
@@ -391,7 +376,7 @@ export default function ComprehensionPanel({
                   onClick={handleCopy}
                   className="btn-3d bg-cyan-600 border-cyan-800 border-b-4 hover:bg-cyan-500 text-white text-sm font-black px-4 py-2.5"
                 >
-                  {copied ? '✓ Copiado' : `📋 ${payload.guide?.copyLabel || 'Copiar código'}`}
+                  {copied ? '✓ Copiado' : `📋 ${offer.copyLabel || payload.guide?.copyLabel || 'Copiar código'}`}
                 </button>
                 <button
                   type="button"
@@ -408,7 +393,7 @@ export default function ComprehensionPanel({
                 <p className="text-xs font-bold text-slate-400 leading-relaxed">
                   Es un pequeño bloque técnico (lo que Google llama «datos estructurados»).
                   <span className="text-slate-200"> No cambia cómo se ve tu página: es invisible para quien la visita.</span> Solo
-                  le explica a Google y a las IA, en su idioma, qué preguntas responde tu página.
+                  le explica a Google y a las IA, en su idioma, de qué trata esta página.
                 </p>
               </div>
 
@@ -424,8 +409,8 @@ export default function ComprehensionPanel({
               )}
 
               <p className="text-xs font-bold text-amber-200/80 leading-relaxed">
-                Tip: pegalo en la <span className="text-amber-100">misma página que analizaste</span> (un producto,
-                artículo o página de preguntas frecuentes). En la página de inicio no suele ser el mejor lugar.
+                Tip: pegalo en la <span className="text-amber-100">misma página que analizaste</span>.
+                En la página de inicio no suele ser el mejor lugar (salvo el código de empresa).
               </p>
 
               <details className="text-xs text-slate-500">
@@ -433,7 +418,7 @@ export default function ComprehensionPanel({
                   Ver código (solo si tu plataforma lo pide)
                 </summary>
                 <pre className="mt-2 p-3 rounded-lg bg-black/40 overflow-x-auto text-[10px] text-slate-400 max-h-40">
-                  {payload.faqCode}
+                  {offerCode}
                 </pre>
               </details>
             </div>
