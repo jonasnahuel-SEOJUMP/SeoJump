@@ -5,16 +5,20 @@
  */
 
 export const SCHEMA_INSTALL_METHODS = [
-  { id: 'wp_blocks', label: 'WordPress — Editor de bloques', icon: '🧱' },
-  { id: 'wp_classic', label: 'WordPress — Editor clásico', icon: '📝' },
-  { id: 'wp_builder', label: 'WordPress — Elementor / Divi', icon: '🎨' },
-  { id: 'shopify', label: 'Shopify', icon: '🛍️' },
-  { id: 'tiendanube', label: 'Tiendanube', icon: '☁️' },
-  { id: 'other', label: 'Otra plataforma / No sé', icon: '❓' },
+  { id: 'wp_blocks', label: 'WordPress — Editor de bloques', shortLabel: 'Bloques', icon: '🧱', group: 'wp' },
+  { id: 'wp_classic', label: 'WordPress — Editor clásico', shortLabel: 'Clásico', icon: '📝', group: 'wp' },
+  { id: 'wp_builder', label: 'WordPress — Elementor / Divi / maquetador', shortLabel: 'Maquetador', icon: '🎨', group: 'wp' },
+  { id: 'shopify', label: 'Shopify', shortLabel: 'Shopify', icon: '🛍️', group: 'other' },
+  { id: 'tiendanube', label: 'Tiendanube', shortLabel: 'Tiendanube', icon: '☁️', group: 'other' },
+  { id: 'other', label: 'Otra plataforma / No sé', shortLabel: 'Otra', icon: '❓', group: 'other' },
 ];
+
+export const SCHEMA_PASTE_BLOG_HREF = '/blog/donde-pegar-codigo-schema-wordpress-shopify';
 
 const STORAGE_KEY = 'seojump_schema_install_method';
 const VALID_METHODS = new Set(SCHEMA_INSTALL_METHODS.map((method) => method.id));
+
+const WP_METHODS = new Set(['wp_blocks', 'wp_classic', 'wp_builder']);
 
 function isCompatibleWithPlatform(methodId, platformId) {
   if (!platformId) return true;
@@ -46,19 +50,153 @@ export function setStoredSchemaInstallMethod(methodId) {
   localStorage.setItem(STORAGE_KEY, methodId);
 }
 
+/**
+ * Heurística suave: señales en el HTML público. Nunca fuerza Editor Clásico
+ * (casi no deja huella). Prioridad: maquetador > bloques > Shopify.
+ *
+ * @param {string} html
+ * @returns {{ suggestedMethod: string|null, confidence: 'alta'|'media'|'baja'|null, reasons: string[] }}
+ */
+export function detectSchemaInstallHints(html) {
+  const raw = String(html || '');
+  const lower = raw.toLowerCase();
+  const reasons = [];
+
+  const hasBuilder =
+    /elementor|data-elementor|elementor-widget|et_pb_|et-pb-|flatsome|theme-flatsome|\[ux_|ux_banner|ux-builder|wpb_wrapper|vc_row|fusion-builder|oxygen-body/i.test(
+      raw
+    );
+  if (hasBuilder) {
+    if (/elementor|data-elementor/i.test(raw)) reasons.push('Marcas de Elementor en el HTML');
+    if (/et_pb_|et-pb-/i.test(raw)) reasons.push('Marcas de Divi en el HTML');
+    if (/flatsome|\[ux_|ux_banner|ux-builder/i.test(raw)) {
+      reasons.push('Shortcodes o tema tipo Flatsome (ej. [ux_banner])');
+    }
+    if (/wpb_wrapper|vc_row/i.test(raw)) reasons.push('Marcas de WPBakery / Visual Composer');
+    if (/fusion-builder|oxygen-body/i.test(raw)) reasons.push('Constructor visual detectado');
+    return {
+      suggestedMethod: 'wp_builder',
+      confidence: reasons.length >= 2 ? 'alta' : 'media',
+      reasons,
+    };
+  }
+
+  const hasBlocks =
+    /wp-block-|is-root-container|wp-block-group|wp-block-columns|wp-block-cover|has-global-padding/i.test(
+      raw
+    );
+  if (hasBlocks) {
+    reasons.push('Clases típicas del Editor de bloques (Gutenberg)');
+    return {
+      suggestedMethod: 'wp_blocks',
+      confidence: 'media',
+      reasons,
+    };
+  }
+
+  const hasShopify =
+    /cdn\.shopify\.com|shopify\.com\/s\/|myshopify\.com|Shopify\.theme|shopify-section/i.test(raw) ||
+    /<meta[^>]+name=["']generator["'][^>]+content=["'][^"']*shopify/i.test(lower);
+  if (hasShopify) {
+    reasons.push('Señales de Shopify en el HTML');
+    return {
+      suggestedMethod: 'shopify',
+      confidence: 'alta',
+      reasons,
+    };
+  }
+
+  return { suggestedMethod: null, confidence: null, reasons: [] };
+}
+
+/**
+ * Resuelve qué editor mostrar al abrir el resultado de un análisis.
+ * - Si hay hint de página y el stored lo contradice (ej. Clásico vs bloques), NO auto-aplica stored.
+ * - Si stored es compatible con el hint (mismo o sin hint), usa stored.
+ * - Si no hay stored, usa el hint o la sugerencia de plataforma.
+ *
+ * @returns {{
+ *   method: string,
+ *   conflict: boolean,
+ *   conflictMessage: string|null,
+ *   suggestedMethod: string|null,
+ * }}
+ */
+export function resolveSchemaInstallMethod({
+  platformId = '',
+  storedMethod = '',
+  editorHint = null,
+} = {}) {
+  const suggested =
+    editorHint?.suggestedMethod && VALID_METHODS.has(editorHint.suggestedMethod)
+      ? editorHint.suggestedMethod
+      : null;
+
+  const stored =
+    storedMethod && VALID_METHODS.has(storedMethod) && isCompatibleWithPlatform(storedMethod, platformId)
+      ? storedMethod
+      : '';
+
+  const platformFallback = suggestedSchemaInstallMethod(platformId);
+
+  const conflicts =
+    !!(suggested && stored && suggested !== stored && WP_METHODS.has(suggested) && WP_METHODS.has(stored));
+
+  if (conflicts) {
+    const storedLabel =
+      SCHEMA_INSTALL_METHODS.find((m) => m.id === stored)?.shortLabel || stored;
+    const suggestedLabel =
+      SCHEMA_INSTALL_METHODS.find((m) => m.id === suggested)?.shortLabel || suggested;
+    return {
+      method: '',
+      conflict: true,
+      conflictMessage: `Antes elegiste Editor ${storedLabel}; esta página parece usar ${suggestedLabel}. Cambiá el tab si no ves Visual/Código.`,
+      suggestedMethod: suggested,
+    };
+  }
+
+  if (stored) {
+    return {
+      method: stored,
+      conflict: false,
+      conflictMessage: null,
+      suggestedMethod: suggested,
+    };
+  }
+
+  if (suggested) {
+    return {
+      method: suggested,
+      conflict: false,
+      conflictMessage: null,
+      suggestedMethod: suggested,
+    };
+  }
+
+  return {
+    method: platformFallback || '',
+    conflict: false,
+    conflictMessage: null,
+    suggestedMethod: null,
+  };
+}
+
 const GUIDES = {
   wp_blocks: {
     title: 'WordPress con Editor de bloques (Gutenberg)',
     recognition:
-      'Elegí esta opción si editás la página agregando bloques con el botón “+”.',
+      'Elegí esta opción si editás la página agregando bloques con el botón “+”. Incluye muchas páginas de inicio modernas.',
     steps: [
-      'En WordPress, abrí **la misma página o producto que analizaste** y tocá **Editar**.',
-      'Bajá hasta el final del contenido principal y presioná el botón **+** para agregar un bloque.',
-      'Buscá **HTML personalizado** (también podés escribir **/html**) y elegí ese bloque.',
-      'Tocá **Copiar código** en SEO Jump y pegalo completo dentro del bloque, sin editarlo.',
+      'En WordPress, abrí **la misma página que analizaste** (también vale la home) y tocá **Editar**.',
+      'Bajá hasta el **final del contenido** de la página.',
+      'Hacé clic en el botón **+** (Añadir bloque).',
+      'Buscá y seleccioná el bloque **HTML personalizado** (también podés escribir **/html**).',
+      'Tocá **Copiar código** en SEO Jump y pegalo completo dentro de ese bloque, sin editarlo.',
       'Tocá **Actualizar** o **Publicar**. Si usás caché, borrala.',
       'Volvé a SEO Jump y tocá **Ya lo pegué** para comprobarlo.',
     ],
+    note:
+      'Si en el editor ves códigos tipo **[ux_banner]** y no el botón +, esta página usa un maquetador: cambiá a la pestaña **Elementor / Divi / maquetador** o leé la guía completa del blog.',
   },
   wp_classic: {
     title: 'WordPress con Editor clásico',
@@ -72,14 +210,16 @@ const GUIDES = {
       'Tocá **Actualizar**. Si usás caché, borrala.',
       'Volvé a SEO Jump y tocá **Ya lo pegué** para comprobarlo.',
     ],
+    note:
+      'Si no ves las pestañas Visual/Código (muy común en la home), esta página probablemente usa **bloques** o un **maquetador**. Cambiá de pestaña arriba.',
   },
   wp_builder: {
-    title: 'WordPress con Elementor, Divi u otro constructor',
+    title: 'WordPress con Elementor, Divi, Flatsome u otro maquetador',
     recognition:
-      'Elegí esta opción si abrís la página con un botón como “Editar con Elementor” o “Usar Divi”.',
+      'Elegí esta opción si abrís la página con “Editar con Elementor”, Divi, UX Builder / Flatsome, o ves shortcodes tipo [ux_banner].',
     steps: [
-      'En WordPress, abrí **la misma página que analizaste** con tu constructor visual.',
-      'Agregá al final un elemento **HTML** (Elementor) o **Código** (Divi). No uses un elemento de texto.',
+      'En WordPress, abrí **la misma página que analizaste** con tu constructor visual (Elementor, Divi, UX Builder, etc.).',
+      'Agregá al final un elemento **HTML** (Elementor), **Código** (Divi) o el bloque de código personalizado de tu maquetador. No uses un elemento de texto.',
       'Tocá **Copiar código** en SEO Jump y pegalo completo dentro de ese elemento.',
       'Guardá con **Actualizar** o **Publicar** y borrá la caché si corresponde.',
       'Volvé a SEO Jump y tocá **Ya lo pegué** para comprobarlo.',
@@ -135,4 +275,8 @@ const GUIDES = {
 
 export function getSchemaPasteGuide(methodId) {
   return GUIDES[methodId] || null;
+}
+
+export function getMethodLabel(methodId) {
+  return SCHEMA_INSTALL_METHODS.find((m) => m.id === methodId)?.label || methodId || '';
 }
