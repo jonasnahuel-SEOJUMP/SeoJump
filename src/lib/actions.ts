@@ -38,6 +38,7 @@ import {
   analyzeComprehension,
   getFaqStructurePasteGuide,
 } from './comprehension'
+import { detectSchemaInstallHints } from './schemaPasteGuide'
 import {
   isHomePage,
   isCatalogHubPage,
@@ -3723,6 +3724,8 @@ export async function getComprehensionMap(pageUrl: string, platformId?: string) 
     const offerCode = map.offer?.code ?? null;
     // faqCode: compat hacia atrás (solo si la oferta es FAQ).
     const faqCode = map.offer?.type === 'faq' ? map.offer.code : null;
+    // editorHint: sugerencia suave de dónde pegar el código (Gutenberg / maquetador / Shopify).
+    const editorHint = detectSchemaInstallHints(fetched.html);
 
     return {
       success: true,
@@ -3731,6 +3734,7 @@ export async function getComprehensionMap(pageUrl: string, platformId?: string) 
       offerCode,
       faqCode,
       guide,
+      editorHint,
     };
   } catch (error: any) {
     console.error('Error en getComprehensionMap:', error);

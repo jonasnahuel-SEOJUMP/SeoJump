@@ -4,11 +4,15 @@ import { useState, useEffect, useRef } from 'react';
 import { getComprehensionMap, verifyComprehensionFaqStructure } from '../lib/actions';
 import { getStoredPlatform } from '../lib/cmsGuide';
 import { PH_EVENTS, trackEvent } from '../lib/posthog';
+import Link from 'next/link';
 import {
   SCHEMA_INSTALL_METHODS,
+  SCHEMA_PASTE_BLOG_HREF,
   getSchemaPasteGuide,
   getStoredSchemaInstallMethod,
   setStoredSchemaInstallMethod,
+  resolveSchemaInstallMethod,
+  getMethodLabel,
 } from '../lib/schemaPasteGuide';
 
 /** Renderiza **negrita** de markdown como <strong> (evita mostrar asteriscos literales). */
@@ -64,6 +68,8 @@ export default function ComprehensionPanel({
   const [verifyMsg, setVerifyMsg] = useState(null);
   const [recheckNote, setRecheckNote] = useState(null);
   const [installMethod, setInstallMethod] = useState('');
+  const [editorConflictMsg, setEditorConflictMsg] = useState(null);
+  const [suggestedEditor, setSuggestedEditor] = useState(null);
   const urlInputRef = useRef(null);
 
   useEffect(() => {
@@ -71,9 +77,27 @@ export default function ComprehensionPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultUrl]);
 
-  useEffect(() => {
-    setInstallMethod(getStoredSchemaInstallMethod(getStoredPlatform()));
-  }, []);
+  const applyEditorResolution = (editorHint) => {
+    const platformId = getStoredPlatform();
+    const stored = getStoredSchemaInstallMethod(platformId);
+    const resolved = resolveSchemaInstallMethod({
+      platformId,
+      storedMethod: stored,
+      editorHint: editorHint || null,
+    });
+    setInstallMethod(resolved.method);
+    setEditorConflictMsg(resolved.conflictMessage);
+    setSuggestedEditor(resolved.suggestedMethod);
+  };
+
+  const selectInstallMethod = (methodId) => {
+    if (!methodId) return;
+    setInstallMethod(methodId);
+    setStoredSchemaInstallMethod(methodId);
+    setEditorConflictMsg(null);
+    setVerifyMsg(null);
+    if (playClick) playClick();
+  };
 
   const runAnalysis = async (targetUrl, { isRecheck = false } = {}) => {
     const clean = (targetUrl || '').trim();
@@ -90,16 +114,17 @@ export default function ComprehensionPanel({
 
     try {
       const platformId = getStoredPlatform();
-      setInstallMethod(getStoredSchemaInstallMethod(platformId));
       const res = await getComprehensionMap(clean, platformId);
       if (res.success) {
         const prevScore = payload?.map?.confidenceScore;
         setPayload(res);
+        applyEditorResolution(res.editorHint);
         trackEvent(PH_EVENTS.COMPREHENSION_ANALYZED, {
           page: clean,
           confidence: res.map?.confidence,
           canOfferFaq: !!res.map?.canOfferFaqStructure,
           recheck: isRecheck,
+          editorHint: res.editorHint?.suggestedMethod || null,
         });
         if (isRecheck && typeof prevScore === 'number' && res.map) {
           const delta = res.map.confidenceScore - prevScore;
@@ -152,6 +177,9 @@ export default function ComprehensionPanel({
     setVerifyMsg(null);
     setRecheckNote(null);
     setCopied(false);
+    setEditorConflictMsg(null);
+    setSuggestedEditor(null);
+    setInstallMethod('');
     setUrl('');
     setTimeout(() => urlInputRef.current?.focus(), 50);
   };
@@ -191,7 +219,10 @@ export default function ComprehensionPanel({
         }
         const platformId = getStoredPlatform();
         const refreshed = await getComprehensionMap(payload.map.pageUrl, platformId);
-        if (refreshed.success) setPayload(refreshed);
+        if (refreshed.success) {
+          setPayload(refreshed);
+          applyEditorResolution(refreshed.editorHint);
+        }
       }
     } catch (err) {
       setVerifyMsg({ ok: false, text: 'Error al verificar: ' + (err?.message || err) });
@@ -205,6 +236,8 @@ export default function ComprehensionPanel({
   const hasGaps = map?.checks?.some((c) => c.applicable && !c.present);
   const offer = payload?.offer || null;
   const pasteGuide = getSchemaPasteGuide(installMethod);
+  const wpMethods = SCHEMA_INSTALL_METHODS.filter((m) => m.group === 'wp');
+  const otherMethods = SCHEMA_INSTALL_METHODS.filter((m) => m.group === 'other');
   // Todo cubierto: no hay estructura nueva para ofrecer.
   const allCovered = map && !offer;
 
@@ -394,41 +427,102 @@ export default function ComprehensionPanel({
 
               <div className="rounded-xl border-2 border-cyan-500/30 bg-slate-950/50 p-4 space-y-4">
                 <div>
-                  <label
-                    htmlFor="schema-install-method"
-                    className="text-sm font-black text-white block mb-1"
-                  >
+                  <p className="text-sm font-black text-white block mb-1">
                     1. ¿Con qué editor modificás esta página?
-                  </label>
-                  <p className="text-xs font-bold text-slate-400 leading-relaxed mb-3">
-                    Elegilo para ver los botones y lugares exactos. No todos los WordPress se editan
-                    de la misma manera.
                   </p>
-                  <select
-                    id="schema-install-method"
-                    value={installMethod}
-                    onChange={(event) => {
-                      const method = event.target.value;
-                      setInstallMethod(method);
-                      if (method) setStoredSchemaInstallMethod(method);
-                      setVerifyMsg(null);
-                      if (playClick) playClick();
-                    }}
-                    className="w-full rounded-lg border-2 border-slate-600 bg-slate-900 px-3 py-3 text-sm font-black text-white focus:border-cyan-500 focus:outline-none"
-                  >
-                    <option value="">Elegí tu editor…</option>
-                    {SCHEMA_INSTALL_METHODS.map((method) => (
-                      <option key={method.id} value={method.id}>
-                        {method.icon} {method.label}
-                      </option>
-                    ))}
-                  </select>
+                  <p className="text-xs font-bold text-slate-400 leading-relaxed mb-3">
+                    Tocá la pestaña correcta. La home suele usar bloques o un maquetador; un producto
+                    a veces usa el editor clásico. No son lo mismo.
+                  </p>
+
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">
+                    WordPress
+                  </p>
+                  <div className="flex flex-wrap gap-2 mb-3" role="tablist" aria-label="Editor WordPress">
+                    {wpMethods.map((method) => {
+                      const active = installMethod === method.id;
+                      const isSuggested = suggestedEditor === method.id;
+                      return (
+                        <button
+                          key={method.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => selectInstallMethod(method.id)}
+                          className={`text-left px-3 py-2 rounded-xl border-2 text-xs font-black transition-all ${
+                            active
+                              ? 'border-cyan-400 bg-cyan-500/20 text-cyan-100'
+                              : 'border-slate-600 bg-slate-900/80 text-slate-300 hover:border-cyan-500/50 hover:text-white'
+                          }`}
+                        >
+                          <span className="block">
+                            {method.icon} {method.shortLabel}
+                          </span>
+                          {isSuggested && (
+                            <span className="block mt-0.5 text-[10px] font-bold text-cyan-300/90 normal-case tracking-normal">
+                              Sugerido para esta página
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">
+                    Otras plataformas
+                  </p>
+                  <div className="flex flex-wrap gap-2" role="tablist" aria-label="Otras plataformas">
+                    {otherMethods.map((method) => {
+                      const active = installMethod === method.id;
+                      const isSuggested = suggestedEditor === method.id;
+                      return (
+                        <button
+                          key={method.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() => selectInstallMethod(method.id)}
+                          className={`text-left px-3 py-2 rounded-xl border-2 text-xs font-black transition-all ${
+                            active
+                              ? 'border-cyan-400 bg-cyan-500/20 text-cyan-100'
+                              : 'border-slate-600 bg-slate-900/80 text-slate-300 hover:border-cyan-500/50 hover:text-white'
+                          }`}
+                        >
+                          <span className="block">
+                            {method.icon} {method.shortLabel}
+                          </span>
+                          {isSuggested && (
+                            <span className="block mt-0.5 text-[10px] font-bold text-cyan-300/90 normal-case tracking-normal">
+                              Sugerido para esta página
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
-                {!pasteGuide && (
+                {editorConflictMsg && (
+                  <div className="rounded-lg border border-amber-500/40 bg-amber-950/30 p-3 space-y-2">
+                    <p className="text-xs font-bold text-amber-200 leading-relaxed">
+                      ⚠️ {editorConflictMsg}
+                    </p>
+                    {suggestedEditor && (
+                      <button
+                        type="button"
+                        onClick={() => selectInstallMethod(suggestedEditor)}
+                        className="text-xs font-black text-cyan-300 underline underline-offset-2 hover:text-cyan-200"
+                      >
+                        Usar {getMethodLabel(suggestedEditor)}
+                      </button>
+                    )}
+                  </div>
+                )}
+
+                {!pasteGuide && !editorConflictMsg && (
                   <div className="rounded-lg border border-amber-500/30 bg-amber-950/30 p-3">
                     <p className="text-xs font-bold text-amber-200">
-                      Elegí una opción arriba. SEO Jump te va a indicar exactamente dónde entrar,
+                      Elegí una pestaña arriba. SEO Jump te va a indicar exactamente dónde entrar,
                       qué botón tocar y dónde pegar el código.
                     </p>
                   </div>
@@ -452,6 +546,11 @@ export default function ComprehensionPanel({
                         </li>
                       ))}
                     </ol>
+                    {pasteGuide.note && (
+                      <p className="text-xs font-bold text-slate-400 leading-relaxed">
+                        {renderWithBold(pasteGuide.note)}
+                      </p>
+                    )}
                     {pasteGuide.warning && (
                       <div className="rounded-lg border border-amber-500/40 bg-amber-950/30 p-3">
                         <p className="text-xs font-bold text-amber-200 leading-relaxed">
@@ -461,6 +560,16 @@ export default function ComprehensionPanel({
                     )}
                   </div>
                 )}
+
+                <Link
+                  href={SCHEMA_PASTE_BLOG_HREF}
+                  onClick={() => {
+                    if (playClick) playClick();
+                  }}
+                  className="inline-block text-xs font-black text-cyan-400 hover:text-cyan-300 underline underline-offset-2"
+                >
+                  ¿No encontrás las pestañas Visual/Código? Guía completa →
+                </Link>
               </div>
 
               <div className="space-y-2">
