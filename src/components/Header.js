@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import NotificationBell from "./NotificationBell";
 import AiCreditsBadge from "./AiCreditsBadge";
 import { useSubscription } from "../hooks/useSubscription";
@@ -90,7 +90,7 @@ export default function Header({
               router.push("/perfil");
             }}
             className="hover:scale-105 transition-transform focus:outline-none flex-shrink-0"
-            title="Ver Perfil"
+            title="Ver perfil"
           >
             {session?.user?.image ? (
               <img
@@ -104,6 +104,25 @@ export default function Header({
               </div>
             )}
           </button>
+          {session?.user && (
+            <button
+              type="button"
+              onClick={() => {
+                handleLinkClick();
+                try {
+                  localStorage.removeItem("seojump_site_url");
+                  localStorage.removeItem("seojump_missions");
+                  localStorage.removeItem("seojump_quick_wins");
+                  localStorage.removeItem("seojump_quick_wins_url");
+                } catch (e) {}
+                signOut({ callbackUrl: "/" });
+              }}
+              className="text-xs md:text-sm font-black text-slate-500 dark:text-slate-400 hover:text-red-500 dark:hover:text-red-400 underline underline-offset-2 flex-shrink-0 px-1"
+              title="Cerrar sesión"
+            >
+              Salir
+            </button>
+          )}
         </div>
       </div>
 
