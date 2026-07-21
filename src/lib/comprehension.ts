@@ -177,31 +177,100 @@ function collectTypes(node: unknown, out: string[]): void {
 }
 
 /**
- * Preguntas reales en la página: H2/H3 con "?" + párrafo siguiente.
- * También acepta dt/dd o bloques con clase faq.
+ * Preguntas reales en la página.
+ * Prioriza H2/H3 con "?", y también detecta patrones típicos de WooCommerce:
+ * negrita/strong, acordeones details/summary, dt/dd y bloques con clase faq.
  */
 export function extractFaqPairs(html: string, maxPairs = 12): FaqPair[] {
   const pairs: FaqPair[] = [];
+  const seen = new Set<string>();
+
+  const pushPair = (questionRaw: string, answerRaw: string) => {
+    if (pairs.length >= maxPairs) return;
+    const question = stripTags(questionRaw).replace(/\s+/g, ' ').trim();
+    const answer = stripTags(answerRaw).replace(/\s+/g, ' ').trim();
+    if (!looksLikeQuestion(question)) return;
+    if (answer.length < 20 || answer.length > 1200) return;
+    // Evitar que la "respuesta" sea otra pregunta.
+    if (looksLikeQuestion(answer.slice(0, 180))) return;
+    const key = question.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    pairs.push({ question: question.slice(0, 180), answer: answer.slice(0, 500) });
+  };
+
+  // 1) H2/H3 con interrogación + contenido hasta el próximo heading
   const headingRe = /<h([23])[^>]*>([\s\S]*?)<\/h\1>/gi;
   let m;
   while ((m = headingRe.exec(html)) !== null && pairs.length < maxPairs) {
-    const question = stripTags(m[2]);
-    if (!question.includes('?') && !question.includes('¿')) continue;
-    if (question.length < 8 || question.length > 180) continue;
-
     const after = html.slice(m.index + m[0].length);
     const nextHeading = after.search(/<h[1-6][\s>]/i);
     const slice = nextHeading === -1 ? after.slice(0, 2500) : after.slice(0, nextHeading);
     const pMatch = slice.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
-    let answer = pMatch ? stripTags(pMatch[1]) : '';
-    if (!answer || answer.length < 20) {
-      // fallback: texto plano del bloque
-      answer = stripTags(slice).slice(0, 400);
-    }
-    if (answer.length < 20) continue;
-    pairs.push({ question, answer: answer.slice(0, 500) });
+    const answer = pMatch ? pMatch[1] : slice;
+    pushPair(m[2], answer);
   }
+
+  // 2) <details>/<summary> (acordeones nativos y muchos FAQs de temas)
+  const detailsRe = /<details[^>]*>\s*<summary[^>]*>([\s\S]*?)<\/summary>([\s\S]*?)<\/details>/gi;
+  while ((m = detailsRe.exec(html)) !== null && pairs.length < maxPairs) {
+    pushPair(m[1], m[2]);
+  }
+
+  // 3) <dt>/<dd> (listas de definición)
+  const dtRe = /<dt[^>]*>([\s\S]*?)<\/dt>\s*<dd[^>]*>([\s\S]*?)<\/dd>/gi;
+  while ((m = dtRe.exec(html)) !== null && pairs.length < maxPairs) {
+    pushPair(m[1], m[2]);
+  }
+
+  // 4) Negrita / strong / b como pregunta + respuesta en el mismo bloque o párrafo siguiente
+  // Cubrey WooCommerce y editores que ponen FAQs en texto enriquecido sin H2/H3.
+  const boldQuestionRe =
+    /<(?:strong|b)[^>]*>\s*(¿[^<]{6,180}\?)\s*<\/(?:strong|b)>([\s\S]{0,1200}?)(?=<(?:strong|b|h[1-6]|details|dt)\b|$)/gi;
+  while ((m = boldQuestionRe.exec(html)) !== null && pairs.length < maxPairs) {
+    pushPair(m[1], m[2]);
+  }
+
+  // 5) Párrafo/div entero que es solo una pregunta, seguido de otro párrafo respuesta
+  const questionParagraphRe =
+    /<(p|div)[^>]*>\s*(¿[^<]{6,180}\?)\s*<\/\1>\s*<(p|div)[^>]*>([\s\S]*?)<\/\3>/gi;
+  while ((m = questionParagraphRe.exec(html)) !== null && pairs.length < maxPairs) {
+    pushPair(m[2], m[4]);
+  }
+
+  // 6) Pregunta en negrita DENTRO de un <p>, con respuesta en el mismo párrafo o el siguiente
+  // Caso típico WooCommerce: <p><strong>¿…?</strong><br>respuesta</p>
+  const boldInParagraphRe =
+    /<p[^>]*>\s*<(?:strong|b)[^>]*>\s*(¿[^<]{6,180}\?)\s*<\/(?:strong|b)>\s*(?:<br\s*\/?>|\s)*([\s\S]*?)<\/p>/gi;
+  while ((m = boldInParagraphRe.exec(html)) !== null && pairs.length < maxPairs) {
+    let answer = m[2];
+    if (stripTags(answer).replace(/\s+/g, ' ').trim().length < 20) {
+      const after = html.slice(m.index + m[0].length);
+      const nextP = after.match(/^\s*<p[^>]*>([\s\S]*?)<\/p>/i);
+      if (nextP) answer = nextP[1];
+    }
+    pushPair(m[1], answer);
+  }
+
+  // 7) Títulos de acordeón típicos (Flatsome, temas Woo, etc.)
+  const accordionTitleRe =
+    /<(?:div|span|a|button|p)[^>]*(?:class|id)=["'][^"']*(?:accordion[-_ ]?title|accordion[-_ ]?header|toggle[-_ ]?title|faq[-_ ]?question|faq[-_ ]?title)[^"']*["'][^>]*>([\s\S]*?)<\/(?:div|span|a|button|p)>([\s\S]{0,1200}?)(?=<(?:div|span|a|button|p)[^>]*(?:class|id)=["'][^"']*(?:accordion[-_ ]?title|accordion[-_ ]?header|toggle[-_ ]?title|faq[-_ ]?question|faq[-_ ]?title)|$)/gi;
+  while ((m = accordionTitleRe.exec(html)) !== null && pairs.length < maxPairs) {
+    pushPair(m[1], m[2]);
+  }
+
   return pairs;
+}
+
+function looksLikeQuestion(text: string): boolean {
+  const q = text.replace(/\s+/g, ' ').trim();
+  if (q.length < 8 || q.length > 180) return false;
+  if (!(q.includes('?') || q.includes('¿'))) return false;
+  // Evitar ruido de UI / navegación
+  if (/añadir al carrito|vista rápida|iniciar sesión|crear una cuenta|mi cuenta/i.test(q)) {
+    return false;
+  }
+  return true;
 }
 
 export function detectAuthor(html: string): { present: boolean; detail: string } {
@@ -637,7 +706,7 @@ export function analyzeComprehension(html: string, pageUrl: string): Comprehensi
         ? 'Ya hay preguntas frecuentes en formato que Google/IA pueden leer.'
         : questions.length > 0
           ? `Encontramos ${questions.length} pregunta(s) con respuesta en el contenido.`
-          : 'No hay preguntas frecuentes claras (¿Qué es…?, ¿Cómo…?).',
+          : 'No detectamos preguntas claras. Poné cada una como H2/H3 o en negrita con “¿…?”, y la respuesta en el párrafo de abajo.',
       applicable: true,
     },
     {

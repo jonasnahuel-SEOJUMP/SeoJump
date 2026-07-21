@@ -390,6 +390,13 @@ export default function ComprehensionPanel({
                 <span className="text-cyan-300">Volver a comprobar esta página</span> para ver si
                 mejoró el mapa.
               </p>
+              {map.checks.some((c) => c.id === 'questions' && !c.present) && (
+                <p className="text-xs font-bold text-amber-200/90 leading-relaxed">
+                  Tip: para que detectemos tus FAQs, poné cada pregunta como{' '}
+                  <span className="text-amber-100">H2/H3 o en negrita</span> con signos de
+                  interrogación (¿…?), y la respuesta en el párrafo de abajo.
+                </p>
+              )}
             </div>
           )}
 
