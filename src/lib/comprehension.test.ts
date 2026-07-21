@@ -32,6 +32,47 @@ describe('extractFaqPairs', () => {
     expect(pairs[0].question).toMatch(/sellado/i);
     expect(pairs[0].answer.length).toBeGreaterThan(20);
   });
+
+  it('detecta FAQs en negrita tipicas de WooCommerce (sin H2/H3)', () => {
+    const html = `
+      <div class="woocommerce-product-details__short-description">
+        <p><strong>¿Para qué sirve la pulidora rotativa 3D L-36?</strong><br>
+        La pulidora rotativa 3D L-36 sirve para eliminar rayas, marcas de lijado, hologramas, oxidación y defectos de la pintura.</p>
+        <p><strong>¿La pulidora 3D L-36 es apta para principiantes?</strong><br>
+        Puede ser utilizada por principiantes, aunque requiere práctica antes de trabajar sobre un vehículo.</p>
+        <p><strong>¿Qué diferencia hay entre una pulidora rotativa y una dual action?</strong></p>
+        <p>La pulidora rotativa ofrece mayor capacidad de corte y corrige defectos más rápidamente que una dual action.</p>
+      </div>`;
+    const pairs = extractFaqPairs(html);
+    expect(pairs.length).toBeGreaterThanOrEqual(3);
+    expect(pairs.some((p) => /principiantes/i.test(p.question))).toBe(true);
+    expect(pairs.some((p) => /dual action/i.test(p.question))).toBe(true);
+  });
+
+  it('detecta acordeones details/summary', () => {
+    const html = `
+      <details><summary>¿Cuánto dura el tratamiento cerámico?</summary>
+      <p>Un buen sellado cerámico dura entre 12 y 24 meses según el uso del vehículo.</p></details>`;
+    const pairs = extractFaqPairs(html);
+    expect(pairs.length).toBe(1);
+    expect(pairs[0].question).toMatch(/dura/i);
+  });
+
+  it('detecta titulos de acordeon con clase faq-question', () => {
+    const html = `
+      <div class="faq-question">¿Qué pads acepta esta máquina?</div>
+      <div class="faq-answer"><p>Acepta pads de 5 y 7 pulgadas con backing plate incluido de fábrica.</p></div>
+      <div class="faq-question">¿Incluye maletín?</div>
+      <div class="faq-answer"><p>Sí, incluye maletín rígido para transporte y almacenamiento seguro.</p></div>`;
+    const pairs = extractFaqPairs(html);
+    expect(pairs.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('ignora ruido de UI que parece pregunta', () => {
+    const html = `<p><strong>¿Añadir al carrito?</strong><br>Vista rápida</p>`;
+    const pairs = extractFaqPairs(html);
+    expect(pairs.length).toBe(0);
+  });
 });
 
 describe('extractExistingStructuredData', () => {
