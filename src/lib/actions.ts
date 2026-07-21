@@ -3725,7 +3725,8 @@ export async function getComprehensionMap(pageUrl: string, platformId?: string) 
     // faqCode: compat hacia atrás (solo si la oferta es FAQ).
     const faqCode = map.offer?.type === 'faq' ? map.offer.code : null;
     // editorHint: sugerencia suave de dónde pegar el código (Gutenberg / maquetador / Shopify).
-    const editorHint = detectSchemaInstallHints(fetched.html);
+    // En productos prioriza Editor clásico; maquetador queda sobre todo para home / constructores fuertes.
+    const editorHint = detectSchemaInstallHints(fetched.html, map.pageType);
 
     return {
       success: true,
