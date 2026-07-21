@@ -1414,6 +1414,31 @@ export default function HomeApp() {
                         )}
                       </div>
                     )}
+
+                    {/* En desktop el cerrar sesión está en el panel lateral; en móvil ese panel no existe. */}
+                    {session && (
+                      <div className="lg:hidden pt-4 border-t-2 border-slate-200 dark:border-slate-700 space-y-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            playClick();
+                            try {
+                              localStorage.removeItem("seojump_site_url");
+                              localStorage.removeItem("seojump_missions");
+                              localStorage.removeItem("seojump_quick_wins");
+                              localStorage.removeItem("seojump_quick_wins_url");
+                            } catch (e) {}
+                            signOut({ callbackUrl: "/" });
+                          }}
+                          className="btn-3d btn-white w-full text-slate-500 font-black hover:text-red-500 transition-colors text-base py-4"
+                        >
+                          🚪 CERRAR SESIÓN
+                        </button>
+                        <p className="text-center text-xs font-bold text-slate-400">
+                          También podés salir desde el enlace <span className="text-slate-300">Salir</span> arriba a la derecha.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
