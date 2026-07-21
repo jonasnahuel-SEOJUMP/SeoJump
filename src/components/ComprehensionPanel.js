@@ -77,13 +77,14 @@ export default function ComprehensionPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [defaultUrl]);
 
-  const applyEditorResolution = (editorHint) => {
+  const applyEditorResolution = (editorHint, pageType = '') => {
     const platformId = getStoredPlatform();
     const stored = getStoredSchemaInstallMethod(platformId);
     const resolved = resolveSchemaInstallMethod({
       platformId,
       storedMethod: stored,
       editorHint: editorHint || null,
+      pageType: pageType || '',
     });
     setInstallMethod(resolved.method);
     setEditorConflictMsg(resolved.conflictMessage);
@@ -118,13 +119,14 @@ export default function ComprehensionPanel({
       if (res.success) {
         const prevScore = payload?.map?.confidenceScore;
         setPayload(res);
-        applyEditorResolution(res.editorHint);
+        applyEditorResolution(res.editorHint, res.map?.pageType);
         trackEvent(PH_EVENTS.COMPREHENSION_ANALYZED, {
           page: clean,
           confidence: res.map?.confidence,
           canOfferFaq: !!res.map?.canOfferFaqStructure,
           recheck: isRecheck,
           editorHint: res.editorHint?.suggestedMethod || null,
+          pageType: res.map?.pageType || null,
         });
         if (isRecheck && typeof prevScore === 'number' && res.map) {
           const delta = res.map.confidenceScore - prevScore;
@@ -221,7 +223,7 @@ export default function ComprehensionPanel({
         const refreshed = await getComprehensionMap(payload.map.pageUrl, platformId);
         if (refreshed.success) {
           setPayload(refreshed);
-          applyEditorResolution(refreshed.editorHint);
+          applyEditorResolution(refreshed.editorHint, refreshed.map?.pageType);
         }
       }
     } catch (err) {

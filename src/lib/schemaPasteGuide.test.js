@@ -54,11 +54,28 @@ describe('detectSchemaInstallHints', () => {
     expect(hint.reasons.length).toBeGreaterThan(0);
   });
 
-  it('detecta Flatsome / shortcodes ux_banner como maquetador', () => {
+  it('en home: Flatsome / shortcodes ux_banner → maquetador', () => {
     const html = `<div class="flatsome">[ux_banner height="500"]contenido[/ux_banner]</div>`;
-    const hint = detectSchemaInstallHints(html);
+    const hint = detectSchemaInstallHints(html, 'home');
     expect(hint.suggestedMethod).toBe('wp_builder');
-    expect(hint.reasons.some((r) => /flatsome|ux_banner/i.test(r))).toBe(true);
+    expect(hint.reasons.some((r) => /flatsome|ux_banner|UX Builder/i.test(r))).toBe(true);
+  });
+
+  it('en producto: solo clases de tema Flatsome → Editor clásico (no maquetador)', () => {
+    const html = `<body class="theme-flatsome single-product"><div class="product">Aspiradora</div></body>`;
+    const hint = detectSchemaInstallHints(html, 'product');
+    expect(hint.suggestedMethod).toBe('wp_classic');
+  });
+
+  it('en producto: Elementor fuerte sigue sugiriendo maquetador', () => {
+    const html = `<div class="elementor elementor-123" data-elementor-type="product"><div class="elementor-widget">x</div></div>`;
+    expect(detectSchemaInstallHints(html, 'product').suggestedMethod).toBe('wp_builder');
+  });
+
+  it('en producto sin señales → sugiere Clásico', () => {
+    const hint = detectSchemaInstallHints('<html><body><h1>Aspiradora</h1></body></html>', 'product');
+    expect(hint.suggestedMethod).toBe('wp_classic');
+    expect(hint.confidence).toBe('baja');
   });
 
   it('detecta Elementor', () => {
@@ -79,7 +96,7 @@ describe('detectSchemaInstallHints', () => {
     expect(hint.confidence).toBe('alta');
   });
 
-  it('no inventa editor clásico sin señales', () => {
+  it('sin pageType ni señales, no inventa editor', () => {
     const hint = detectSchemaInstallHints('<html><body><h1>Hola</h1></body></html>');
     expect(hint.suggestedMethod).toBeNull();
     expect(hint.confidence).toBeNull();
@@ -126,5 +143,18 @@ describe('resolveSchemaInstallMethod', () => {
       editorHint: null,
     });
     expect(resolved.method).toBe('shopify');
+  });
+
+  it('en producto: no auto-aplica Maquetador guardado de la home si el hint es Clásico', () => {
+    const resolved = resolveSchemaInstallMethod({
+      platformId: 'wp_woo',
+      storedMethod: 'wp_builder',
+      editorHint: { suggestedMethod: 'wp_classic', confidence: 'media', reasons: [] },
+      pageType: 'product',
+    });
+    expect(resolved.conflict).toBe(true);
+    expect(resolved.method).toBe('');
+    expect(resolved.suggestedMethod).toBe('wp_classic');
+    expect(resolved.conflictMessage).toMatch(/producto|clásico/i);
   });
 });

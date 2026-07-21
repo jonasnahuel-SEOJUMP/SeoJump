@@ -51,26 +51,38 @@ export function setStoredSchemaInstallMethod(methodId) {
 }
 
 /**
- * Heurística suave: señales en el HTML público. Nunca fuerza Editor Clásico
- * (casi no deja huella). Prioridad: maquetador > bloques > Shopify.
+ * Heurística suave: señales en el HTML público + tipo de página.
+ *
+ * - Maquetadores "fuertes" (Elementor, Divi, UX Builder, WPBakery): siempre sugerir maquetador.
+ * - Marcas de tema Flatsome (clases globales): en home → maquetador; en producto → Clásico
+ *   (el tema marca todo el sitio, pero la ficha Woo se edita casi siempre en Editor clásico).
+ * - Producto sin señales fuertes: sugerir Clásico por defecto.
  *
  * @param {string} html
+ * @param {string} [pageType]  product | home | post | category | page | ...
  * @returns {{ suggestedMethod: string|null, confidence: 'alta'|'media'|'baja'|null, reasons: string[] }}
  */
-export function detectSchemaInstallHints(html) {
+export function detectSchemaInstallHints(html, pageType = '') {
   const raw = String(html || '');
   const lower = raw.toLowerCase();
+  const type = String(pageType || '').toLowerCase();
+  const isProduct = type === 'product';
+  const isHome = type === 'home';
   const reasons = [];
 
-  const hasBuilder =
-    /elementor|data-elementor|elementor-widget|et_pb_|et-pb-|flatsome|theme-flatsome|\[ux_|ux_banner|ux-builder|wpb_wrapper|vc_row|fusion-builder|oxygen-body/i.test(
+  // Constructores de página (señal fuerte: esta URL se edita con maquetador).
+  const hasStrongBuilder =
+    /elementor|data-elementor|elementor-widget|et_pb_|et-pb-|ux-builder|\[ux_|ux_banner|wpb_wrapper|vc_row|fusion-builder|oxygen-body/i.test(
       raw
     );
-  if (hasBuilder) {
+  // Solo tema Flatsome (clases globales en casi todas las URLs).
+  const hasThemeFlatsome = /flatsome|theme-flatsome/i.test(raw);
+
+  if (hasStrongBuilder) {
     if (/elementor|data-elementor/i.test(raw)) reasons.push('Marcas de Elementor en el HTML');
     if (/et_pb_|et-pb-/i.test(raw)) reasons.push('Marcas de Divi en el HTML');
-    if (/flatsome|\[ux_|ux_banner|ux-builder/i.test(raw)) {
-      reasons.push('Shortcodes o tema tipo Flatsome (ej. [ux_banner])');
+    if (/\[ux_|ux_banner|ux-builder/i.test(raw)) {
+      reasons.push('Shortcodes o UX Builder (ej. [ux_banner])');
     }
     if (/wpb_wrapper|vc_row/i.test(raw)) reasons.push('Marcas de WPBakery / Visual Composer');
     if (/fusion-builder|oxygen-body/i.test(raw)) reasons.push('Constructor visual detectado');
@@ -79,6 +91,28 @@ export function detectSchemaInstallHints(html) {
       confidence: reasons.length >= 2 ? 'alta' : 'media',
       reasons,
     };
+  }
+
+  // Tema Flatsome sin constructor fuerte en esta URL:
+  // - home → suele editarse con maquetador
+  // - producto → sugerir Clásico (WooCommerce)
+  if (hasThemeFlatsome) {
+    if (isProduct) {
+      return {
+        suggestedMethod: 'wp_classic',
+        confidence: 'media',
+        reasons: [
+          'Tema tipo Flatsome detectado, pero en fichas de producto WooCommerce suele usarse el Editor clásico (Visual / Código).',
+        ],
+      };
+    }
+    if (isHome || !type) {
+      return {
+        suggestedMethod: 'wp_builder',
+        confidence: 'media',
+        reasons: ['Tema tipo Flatsome (muy común editar la home con maquetador).'],
+      };
+    }
   }
 
   const hasBlocks =
@@ -106,6 +140,17 @@ export function detectSchemaInstallHints(html) {
     };
   }
 
+  // Producto Woo sin señales fuertes: Clásico es lo más habitual.
+  if (isProduct) {
+    return {
+      suggestedMethod: 'wp_classic',
+      confidence: 'baja',
+      reasons: [
+        'En fichas de producto WooCommerce lo más habitual es el Editor clásico (pestañas Visual / Código).',
+      ],
+    };
+  }
+
   return { suggestedMethod: null, confidence: null, reasons: [] };
 }
 
@@ -126,6 +171,7 @@ export function resolveSchemaInstallMethod({
   platformId = '',
   storedMethod = '',
   editorHint = null,
+  pageType = '',
 } = {}) {
   const suggested =
     editorHint?.suggestedMethod && VALID_METHODS.has(editorHint.suggestedMethod)
@@ -138,6 +184,7 @@ export function resolveSchemaInstallMethod({
       : '';
 
   const platformFallback = suggestedSchemaInstallMethod(platformId);
+  const type = String(pageType || '').toLowerCase();
 
   const conflicts =
     !!(suggested && stored && suggested !== stored && WP_METHODS.has(suggested) && WP_METHODS.has(stored));
@@ -147,10 +194,14 @@ export function resolveSchemaInstallMethod({
       SCHEMA_INSTALL_METHODS.find((m) => m.id === stored)?.shortLabel || stored;
     const suggestedLabel =
       SCHEMA_INSTALL_METHODS.find((m) => m.id === suggested)?.shortLabel || suggested;
+    const productHint =
+      type === 'product' && suggested === 'wp_classic' && stored === 'wp_builder'
+        ? 'Antes elegiste Maquetador (útil en la home). Esta ficha de producto suele editarse con Editor clásico (Visual / Código). Cambiá el tab si hace falta.'
+        : `Antes elegiste Editor ${storedLabel}; esta página parece usar ${suggestedLabel}. Cambiá el tab si no ves Visual/Código.`;
     return {
       method: '',
       conflict: true,
-      conflictMessage: `Antes elegiste Editor ${storedLabel}; esta página parece usar ${suggestedLabel}. Cambiá el tab si no ves Visual/Código.`,
+      conflictMessage: productHint,
       suggestedMethod: suggested,
     };
   }
