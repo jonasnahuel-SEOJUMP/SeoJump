@@ -461,7 +461,12 @@ export function detectProductInfo(html: string, title: string, h1: string): Prod
   return { name, image, description, price, currency, brand };
 }
 
-export function buildProductJsonLd(info: ProductInfo, pageUrl: string): string {
+export function buildProductJsonLd(
+  info: ProductInfo,
+  pageUrl: string,
+  opts: { includeOffers?: boolean } = {}
+): string {
+  const includeOffers = opts.includeOffers !== false; // por defecto incluye si hay precio
   const payload: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
@@ -470,7 +475,7 @@ export function buildProductJsonLd(info: ProductInfo, pageUrl: string): string {
   if (info.image) payload.image = info.image;
   if (info.description) payload.description = info.description.slice(0, 400);
   if (info.brand) payload.brand = { '@type': 'Brand', name: info.brand };
-  if (info.price) {
+  if (includeOffers && info.price) {
     payload.offers = {
       '@type': 'Offer',
       price: info.price,

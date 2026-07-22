@@ -40,6 +40,8 @@ import {
   extractExistingStructuredData,
   extractFaqPairs,
   buildFaqJsonLd,
+  detectProductInfo,
+  buildProductJsonLd,
 } from './comprehension'
 import { detectSchemaInstallHints } from './schemaPasteGuide'
 import {
@@ -3524,7 +3526,7 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
  */
 export async function verifySpyGap(
   pageUrl: string,
-  verifyKind: 'schema_faq' | 'faq_visible' | 'honor' = 'honor',
+  verifyKind: 'schema_faq' | 'schema_product' | 'faq_visible' | 'honor' = 'honor',
   expectedQuestions: string[] = []
 ) {
   if (!pageUrl?.trim()) {
@@ -3574,6 +3576,35 @@ export async function verifySpyGap(
       success: false,
       error:
         'Todavía no encontramos preguntas ni Schema en tu página en vivo. Verificá que la URL sea la correcta (la de la página donde pegaste las FAQ) y que hayas guardado/publicado los cambios; después borrá la caché del sitio y reintentá.',
+    };
+  }
+
+  if (verifyKind === 'schema_product') {
+    const structured = extractExistingStructuredData(page.html);
+    if (structured.hasProduct) {
+      return { success: true, verified: true, detail: 'Detectamos Schema Product en tu página. ¡Listo!' };
+    }
+    const titleM = page.html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+    const h1M = page.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+    const title = titleM ? titleM[1].replace(/<[^>]+>/g, '').trim() : '';
+    const h1 = h1M ? h1M[1].replace(/<[^>]+>/g, '').trim() : '';
+    const info = detectProductInfo(page.html, title, h1);
+    if (info.name) {
+      // Generamos SIN precio a propósito: pegado a mano, un precio fijo se
+      // desactualiza y si no coincide con el visible Google puede ignorar el
+      // rich result. El precio/stock conviene dejarlos al plugin de la tienda.
+      return {
+        success: false,
+        schemaReady: true,
+        schemaCode: buildProductJsonLd(info, target, { includeOffers: false }),
+        error:
+          'Todavía no encontramos el Schema Product en tu HTML. Te generamos uno SIN precio (a propósito: un precio fijo pegado a mano se desactualiza y Google puede ignorarlo). Pegalo antes de </body>, guardá, borrá caché y reintentá. Para precio y stock automáticos, lo ideal es el plugin de tu tienda (WooCommerce/Shopify).',
+      };
+    }
+    return {
+      success: false,
+      error:
+        'No pudimos leer datos de producto (nombre/precio) en tu página. Verificá que sea la URL de la ficha del producto y que esté publicada; después reintentá.',
     };
   }
 
