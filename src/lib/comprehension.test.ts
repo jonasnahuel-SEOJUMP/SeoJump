@@ -82,6 +82,19 @@ describe('extractExistingStructuredData', () => {
     expect(data.hasFaqPage).toBe(true);
   });
 
+  it('detecta FAQPage con URL schema.org en @type', () => {
+    const html = `<script type="application/ld+json">{"@type":"https://schema.org/FAQPage","mainEntity":[]}</script>`;
+    const data = extractExistingStructuredData(html);
+    expect(data.hasFaqPage).toBe(true);
+    expect(data.typesFound).toContain('FAQPage');
+  });
+
+  it('detecta FAQPage en microdata', () => {
+    const html = `<div itemscope itemtype="https://schema.org/FAQPage"><h2 itemprop="name">FAQ</h2></div>`;
+    const data = extractExistingStructuredData(html);
+    expect(data.hasFaqPage).toBe(true);
+  });
+
   it('no marca FAQ si no hay', () => {
     const data = extractExistingStructuredData(SAMPLE_HTML);
     expect(data.hasFaqPage).toBe(false);

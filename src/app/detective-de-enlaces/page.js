@@ -1459,14 +1459,27 @@ export default function DetectiveDeEnlaces() {
                         <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-2">
                           <p className="text-xs font-black text-emerald-400 uppercase">🟢 Vos</p>
                           <p className="text-xs font-bold text-slate-400">
-                            Schema FAQ:{" "}
+                            Preguntas visibles:{" "}
+                            <span className={(spyResult.you?.faqQuestions?.length > 0) ? "text-emerald-300" : "text-amber-300"}>
+                              {(spyResult.you?.faqQuestions?.length > 0)
+                                ? `✅ ${spyResult.you.faqQuestions.length}`
+                                : "❌ No"}
+                            </span>
+                          </p>
+                          <p className="text-xs font-bold text-slate-400">
+                            Schema FAQPage (código):{" "}
                             <span className={spyResult.you?.hasFaqSchema ? "text-emerald-300" : "text-amber-300"}>
                               {spyResult.you?.hasFaqSchema ? "✅ Sí" : "❌ No"}
                             </span>
                           </p>
+                          {!spyResult.you?.hasFaqSchema && (spyResult.you?.faqQuestions?.length > 0) && (
+                            <p className="text-[11px] font-bold text-amber-200/90 leading-snug">
+                              Vemos tus preguntas en la página, pero falta el bloque técnico FAQPage (JSON-LD) que leen Google y las IA. No es lo mismo que el texto de las FAQ.
+                            </p>
+                          )}
                           {(spyResult.you?.schemaTypes?.length > 0) && (
                             <p className="text-[11px] text-slate-500 font-bold">
-                              Schema: {spyResult.you.schemaTypes.slice(0, 4).join(", ")}
+                              Schema detectado: {spyResult.you.schemaTypes.slice(0, 4).join(", ")}
                             </p>
                           )}
                           {(spyResult.you?.faqQuestions?.length > 0) ? (
@@ -1482,14 +1495,22 @@ export default function DetectiveDeEnlaces() {
                         <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-2">
                           <p className="text-xs font-black text-purple-400 uppercase">🕵️ Competidor</p>
                           <p className="text-xs font-bold text-slate-400">
-                            Schema FAQ:{" "}
+                            Preguntas visibles:{" "}
+                            <span className={(spyResult.competitor?.faqQuestions?.length > 0) ? "text-emerald-300" : "text-amber-300"}>
+                              {(spyResult.competitor?.faqQuestions?.length > 0)
+                                ? `✅ ${spyResult.competitor.faqQuestions.length}`
+                                : "❌ No"}
+                            </span>
+                          </p>
+                          <p className="text-xs font-bold text-slate-400">
+                            Schema FAQPage (código):{" "}
                             <span className={spyResult.competitor?.hasFaqSchema ? "text-emerald-300" : "text-amber-300"}>
                               {spyResult.competitor?.hasFaqSchema ? "✅ Sí" : "❌ No"}
                             </span>
                           </p>
                           {(spyResult.competitor?.schemaTypes?.length > 0) && (
                             <p className="text-[11px] text-slate-500 font-bold">
-                              Schema: {spyResult.competitor.schemaTypes.slice(0, 4).join(", ")}
+                              Schema detectado: {spyResult.competitor.schemaTypes.slice(0, 4).join(", ")}
                             </p>
                           )}
                           {(spyResult.competitor?.faqQuestions?.length > 0) ? (
