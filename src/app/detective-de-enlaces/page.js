@@ -286,8 +286,20 @@ export default function DetectiveDeEnlaces() {
     }
   };
 
+  // Clave única y estable por gap del Espía (evita colisiones del btoa recortado,
+  // que hacía que completar un gap marcara todos en verde).
+  const spyFixId = (identifier) => {
+    let h = 5381;
+    for (let i = 0; i < identifier.length; i++) {
+      h = ((h << 5) + h + identifier.charCodeAt(i)) | 0;
+    }
+    return `fase4-spy-${(h >>> 0).toString(36)}`;
+  };
+
+  const isSpyFixCompleted = (identifier) => completedFixes.has(spyFixId(identifier));
+
   const markSpyFixComplete = (identifier) => {
-    const fixId = `fase4-spy-${btoa(identifier).slice(0, 12)}`;
+    const fixId = spyFixId(identifier);
     if (completedFixes.has(fixId)) return;
 
     playSuccess();
@@ -1453,7 +1465,7 @@ export default function DetectiveDeEnlaces() {
                   {spyResult.gaps?.length > 0 ? (
                     spyResult.gaps.map((gap, index) => {
                       const identifier = `${spyResult.competitorUrl}-${gap.area}-${index}`;
-                      const completed = isFixCompleted("spy", identifier);
+                      const completed = isSpyFixCompleted(identifier);
                       const verifying = spyVerifyLoading === identifier;
                       const verifyErr = spyVerifyError[identifier];
                       const needsLive = !!gap.requiresLiveVerify && gap.verifyKind !== "honor";
