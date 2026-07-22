@@ -3,10 +3,15 @@ import Link from "next/link";
 import PublicComprehension from "./PublicComprehension";
 
 /** Landing principal (AEO + misiones diarias). variant="spy" solo para /espia-competencia (ads). */
-export default function LandingPage({ onStart, playClick, variant = "default" }) {
+export default function LandingPage({ onStart, onStartSpy, playClick, variant = "default" }) {
   const handleStart = () => {
     if (playClick) playClick();
     onStart();
+  };
+
+  const handleStartSpy = () => {
+    if (playClick) playClick();
+    (onStartSpy || onStart)();
   };
 
   const scrollToHow = (e) => {
@@ -38,7 +43,7 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
             Sin Semrush. Sin informes de 50 páginas. Comparación en castellano y misiones para ejecutar en minutos.
           </p>
           <button
-            onClick={handleStart}
+            onClick={handleStartSpy}
             className="btn-3d btn-green text-lg md:text-xl px-8 py-5 w-full sm:w-auto max-w-md transform hover:scale-105 transition-all"
           >
             🕵️ Espiar a mi competidor gratis
@@ -78,7 +83,7 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
 
         <div className="relative flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
           <button
-            onClick={handleStart}
+            onClick={handleStartSpy}
             className="btn-3d btn-green text-xl md:text-2xl px-8 py-5 w-full sm:w-auto transform hover:scale-105 transition-all"
           >
             🕵️ Espiar a mi competencia gratis
@@ -109,7 +114,7 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
       </section>
 
       {/* ESPÍA — Explicación del gancho (cómo funciona espiar) */}
-      <SpyHeroExplainer playClick={playClick} onStart={handleStart} />
+      <SpyHeroExplainer playClick={playClick} onStart={handleStartSpy} />
 
       {/* GANCHO SECUNDARIO — ¿Las IA entienden tu página? (herramienta pública gratis, sin registro) */}
       <section id="mapa-ia" className="w-full px-4 pb-8 md:pb-16">

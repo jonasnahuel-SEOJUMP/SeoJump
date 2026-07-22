@@ -20,6 +20,10 @@ export default function LandingShell() {
           playClick();
           signIn("google", { callbackUrl: "/" });
         }}
+        onStartSpy={() => {
+          playClick();
+          signIn("google", { callbackUrl: "/detective-de-enlaces?view=spy" });
+        }}
         playClick={playClick}
         onShowPrivacy={() => setShowPrivacyModal(true)}
         onShowTerms={() => setShowTermsModal(true)}

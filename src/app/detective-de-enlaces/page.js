@@ -226,15 +226,30 @@ export default function DetectiveDeEnlaces() {
     }
   }, [session, status, router]);
 
-  // Lock protection — FRENO TRIPLE: sesión + admin resuelto + no es admin
+  // ── Espía libre ──────────────────────────────────────────────────────────
+  // El Espía de la Competencia es el gancho de entrada (lo que la gente busca):
+  // está disponible para cualquier usuario registrado, sin exigir Fase 4.
+  // El resto del Detective (auditoría de enlaces) sí sigue detrás del gate.
+  const wantsSpy =
+    detectiveView === "spy" ||
+    (typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("view") === "spy");
+  const p4Locked = !!(prog && !prog.p4.unlocked) && !isAdmin;
+  // Modo "solo Espía": llegó al Detective sin Fase 4 desbloqueada.
+  const spyOnly = p4Locked;
+  // Vista efectiva: en modo solo-Espía se fuerza spy (la de enlaces queda gateada).
+  const effectiveView = spyOnly ? "spy" : detectiveView;
+
+  // Lock protection — FRENO TRIPLE: sesión + admin resuelto + no es admin.
+  // Excepción: el Espía (view=spy) es accesible sin Fase 4.
   useEffect(() => {
     if (status === 'loading') return;
     if (!isAdminResolved) return;           // esperar que checkIsAdmin() termine
     if (isAdmin) return;
-    if (prog && !prog.p4.unlocked) {
+    if (prog && !prog.p4.unlocked && !wantsSpy) {
       router.push('/optimizacion');
     }
-  }, [prog, router, status, isAdmin, isAdminResolved]);
+  }, [prog, router, status, isAdmin, isAdminResolved, wantsSpy]);
 
   // ── Handlers ──
   const handleScan = async () => {
@@ -485,10 +500,12 @@ export default function DetectiveDeEnlaces() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-purple-500/20 blur-3xl rounded-full pointer-events-none"></div>
         <div className="text-5xl md:text-6xl drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">🕵️‍♂️</div>
         <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-purple-300 to-purple-600 drop-shadow-md">
-          Detective de Enlaces
+          {spyOnly ? "Espía de la Competencia" : "Detective de Enlaces"}
         </h1>
         <p className="text-base md:text-lg font-bold text-slate-600 dark:text-slate-400">
-          Fase 4: Conectá los puntos de tu sitio
+          {spyOnly
+            ? "Espiá a tu competencia y descubrí qué cambiar hoy"
+            : "Fase 4: Conectá los puntos de tu sitio"}
         </p>
         <div className="pt-2">
           <button
@@ -587,17 +604,25 @@ export default function DetectiveDeEnlaces() {
             )}
           </div>
 
-          {/* Back to Phase 3 */}
-          <Link href="/optimizacion" onClick={playClick}
-            className="btn-3d btn-green w-full text-center text-lg font-black py-4">
-            🛠️ SEGUIR EN FASE 3
-          </Link>
+          {/* Back to Phase 3 / Dashboard */}
+          {spyOnly ? (
+            <Link href="/" onClick={playClick}
+              className="btn-3d btn-green w-full text-center text-lg font-black py-4">
+              🏠 VOLVER AL DASHBOARD
+            </Link>
+          ) : (
+            <Link href="/optimizacion" onClick={playClick}
+              className="btn-3d btn-green w-full text-center text-lg font-black py-4">
+              🛠️ SEGUIR EN FASE 3
+            </Link>
+          )}
         </div>
 
         {/* Center Content */}
         <div className="w-full lg:flex-1 min-w-0 flex flex-col gap-8">
 
-          {/* ═══ VIEW TOGGLE: Enlaces | Espía ═══ */}
+          {/* ═══ VIEW TOGGLE: Enlaces | Espía (oculto en modo solo-Espía) ═══ */}
+          {!spyOnly && (
           <div className="flex gap-2 bg-slate-900/60 border border-slate-700 rounded-2xl p-1.5">
             <button
               onClick={() => { playClick(); setDetectiveView("links"); }}
@@ -620,8 +645,20 @@ export default function DetectiveDeEnlaces() {
               🕵️ Espía Competencia
             </button>
           </div>
+          )}
 
-          {detectiveView === "links" && (
+          {/* En modo solo-Espía, invitar a desbloquear el resto del Detective */}
+          {spyOnly && (
+            <div className="w-full rounded-2xl border border-purple-500/30 bg-purple-950/20 p-4 text-center">
+              <p className="text-sm font-bold text-slate-300">
+                🔓 La auditoría de enlaces internos se desbloquea al llegar a la{" "}
+                <Link href="/optimizacion" onClick={playClick} className="text-purple-300 underline">Fase 4</Link>.
+                El Espía lo tenés disponible siempre.
+              </p>
+            </div>
+          )}
+
+          {effectiveView === "links" && (
           <>
           {/* ═══ STATE: PRESTIGE COMPLETE ═══ */}
           {prog?.cycleCompleted ? (
@@ -1029,7 +1066,7 @@ export default function DetectiveDeEnlaces() {
           )}
 
           {/* ═══ VIEW: ESPÍA DE LA COMPETENCIA ═══ */}
-          {detectiveView === "spy" && (
+          {effectiveView === "spy" && (
             <div className="w-full space-y-6">
               {/* Intro + input */}
               <div className="w-full bg-slate-900 rounded-3xl border-2 border-slate-700 shadow-2xl overflow-hidden relative p-8 md:p-10 space-y-6">
