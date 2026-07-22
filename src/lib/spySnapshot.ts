@@ -10,23 +10,42 @@ import { decodeHtmlEntities } from './textUtils';
 import {
   extractFaqPairs,
   extractExistingStructuredData,
+  buildFaqJsonLd,
+  type FaqPair,
 } from './comprehension';
 
 export type SpyAeoSignals = {
   faqQuestions: string[];
+  faqPairs: FaqPair[];
   hasFaqSchema: boolean;
   schemaTypes: string[];
+};
+
+export type SpyGapEnriched = {
+  area: string;
+  problem: string;
+  suggestion: string;
+  /** Código Schema FAQ listo para pegar (si aplica). */
+  schemaCode?: string;
+  /** Nota / instrucción sobre el Schema. */
+  schemaNote?: string;
+  /** Preguntas del rival que el usuario todavía no responde. */
+  questionsToAdd?: string[];
+  /** Si true, "Ya lo apliqué" debe verificar en vivo (no honor system). */
+  requiresLiveVerify?: boolean;
+  verifyKind?: 'schema_faq' | 'faq_visible' | 'honor';
 };
 
 /** Extrae señales AEO (FAQ + Schema) desde HTML ya descargado. Pura / testeable. */
 export function extractSpyAeoSignals(html: string, maxFaqs = 8): SpyAeoSignals {
   if (!html) {
-    return { faqQuestions: [], hasFaqSchema: false, schemaTypes: [] };
+    return { faqQuestions: [], faqPairs: [], hasFaqSchema: false, schemaTypes: [] };
   }
   const faqs = extractFaqPairs(html, maxFaqs);
   const structured = extractExistingStructuredData(html);
   return {
     faqQuestions: faqs.map((f) => f.question),
+    faqPairs: faqs,
     hasFaqSchema: structured.hasFaqPage,
     schemaTypes: structured.typesFound.slice(0, 10),
   };
@@ -72,6 +91,7 @@ export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSn
     headings: [],
     scrapedAt: new Date().toISOString(),
     faqQuestions: [],
+    faqPairs: [],
     hasFaqSchema: false,
     schemaTypes: [],
   };
@@ -93,7 +113,85 @@ export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSn
     headings: extractHeadings(page.html),
     scrapedAt: new Date().toISOString(),
     faqQuestions: aeo.faqQuestions,
+    faqPairs: aeo.faqPairs,
     hasFaqSchema: aeo.hasFaqSchema,
     schemaTypes: aeo.schemaTypes,
   };
+}
+
+function normQ(q: string): string {
+  return q.trim().toLowerCase();
+}
+
+export function isSchemaGapArea(area: string): boolean {
+  return /schema/i.test(area || '');
+}
+
+export function isFaqGapArea(area: string): boolean {
+  return /pregunta|faq/i.test(area || '');
+}
+
+/**
+ * Enriquece gaps del Espía con código Schema copiable y metadatos de verificación.
+ * - Schema AEO: si el usuario ya tiene FAQ visibles sin Schema → genera el JSON-LD.
+ * - Si no tiene FAQ visibles → lista preguntas del rival a agregar primero (sin inventar respuestas).
+ */
+export function enrichSpyGaps(
+  gaps: Array<{ area: string; problem: string; suggestion: string }>,
+  own: CompetitorSnapshot | null,
+  rival: CompetitorSnapshot
+): SpyGapEnriched[] {
+  const ownPairs = own?.faqPairs || [];
+  const ownQs = new Set((own?.faqQuestions || []).map(normQ));
+  const rivalQs = rival.faqQuestions || [];
+  const questionsToAdd = rivalQs.filter((q) => !ownQs.has(normQ(q))).slice(0, 5);
+
+  return gaps.map((g) => {
+    const out: SpyGapEnriched = {
+      area: g.area,
+      problem: g.problem,
+      suggestion: g.suggestion,
+      verifyKind: 'honor',
+      requiresLiveVerify: false,
+    };
+
+    if (isSchemaGapArea(g.area)) {
+      out.requiresLiveVerify = true;
+      out.verifyKind = 'schema_faq';
+      out.questionsToAdd = questionsToAdd.length ? questionsToAdd : undefined;
+
+      if (own?.hasFaqSchema) {
+        out.schemaNote =
+          'En el scrape anterior no vimos Schema FAQ, pero si ya lo pegaste, tocá verificar y lo confirmamos en vivo.';
+      } else if (ownPairs.length >= 1) {
+        out.schemaCode = buildFaqJsonLd(ownPairs);
+        out.schemaNote =
+          'Copiá este bloque y pegalo en el HTML de tu página (antes de </body>). Si usás WordPress/Shopify, mirá la guía del Mapa de comprensión.';
+      } else {
+        out.schemaNote =
+          'Todavía no detectamos preguntas con respuesta en tu página. Primero agregá las FAQ visibles (texto que se ve); después volvé a espiar o usá el Mapa de comprensión para generar el Schema.';
+        if (questionsToAdd.length) {
+          out.questionsToAdd = questionsToAdd;
+        }
+      }
+      return out;
+    }
+
+    if (isFaqGapArea(g.area)) {
+      out.requiresLiveVerify = true;
+      out.verifyKind = 'faq_visible';
+      if (questionsToAdd.length) {
+        out.questionsToAdd = questionsToAdd;
+      }
+      // Si ya tiene FAQ visibles pero sin schema, ofrecer el código como bonus en gaps FAQ
+      if (ownPairs.length >= 1 && !own?.hasFaqSchema) {
+        out.schemaCode = buildFaqJsonLd(ownPairs);
+        out.schemaNote =
+          'Cuando tengas las preguntas en la página, pegá también este Schema FAQPage para que Google y las IA las lean.';
+      }
+      return out;
+    }
+
+    return out;
+  });
 }

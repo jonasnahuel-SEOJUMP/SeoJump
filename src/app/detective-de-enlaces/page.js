@@ -6,7 +6,7 @@ import { useSession } from "next-auth/react";
 import Link from "next/link";
 import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
-import { auditSiteLinks, requestGoogleIndexing, checkIsAdmin, spyCompetitor } from "../../lib/actions";
+import { auditSiteLinks, requestGoogleIndexing, checkIsAdmin, spyCompetitor, verifySpyGap } from "../../lib/actions";
 import UpgradeModal from "../../components/UpgradeModal";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
@@ -14,7 +14,7 @@ import { useSubscription } from "../../hooks/useSubscription";
 
 const SPY_LOADING_MESSAGES = [
   "Estoy leyendo la web de tu competidor...",
-  "Ahora comparo título, H1 y temas con tu sitio...",
+  "Comparo título, H1, preguntas FAQ y Schema...",
   "Buscando brechas que podés cerrar hoy...",
 ];
 
@@ -54,6 +54,9 @@ export default function DetectiveDeEnlaces() {
   const [spyError, setSpyError] = useState(null);
   const [showSpyOwl, setShowSpyOwl] = useState(true);
   const [spyLoadingMsg, setSpyLoadingMsg] = useState(0);
+  const [spyVerifyLoading, setSpyVerifyLoading] = useState(null); // identifier | null
+  const [spyVerifyError, setSpyVerifyError] = useState({}); // { [identifier]: string }
+  const [spyCopiedGap, setSpyCopiedGap] = useState(null);
   const { refresh: refreshCredits } = useSubscription();
 
   useEffect(() => {
@@ -283,7 +286,42 @@ export default function DetectiveDeEnlaces() {
     }
   };
 
+  const markSpyFixComplete = (identifier) => {
+    const fixId = `fase4-spy-${btoa(identifier).slice(0, 12)}`;
+    if (completedFixes.has(fixId)) return;
+
+    playSuccess();
+    setShowConfetti(true);
+    setTimeout(() => setShowConfetti(false), 3000);
+
+    const newXp = xp + 15;
+    setXp(newXp);
+    localStorage.setItem("seojump_xp", newXp.toString());
+    setXpPopup({ id: fixId, amount: 15 });
+    setTimeout(() => setXpPopup(null), 2000);
+
+    setCompletedFixes((prev) => {
+      const updated = new Set([...prev, fixId]);
+      localStorage.setItem("seojump_detective_fixes", JSON.stringify(Array.from(updated)));
+      return updated;
+    });
+
+    setCompletedIds((prev) => {
+      const updated = new Set([...prev, fixId]);
+      localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
+      setTimeout(() => {
+        syncStateWithServer();
+      }, 100);
+      return updated;
+    });
+  };
+
   const handleVerifyFix = (type, identifier) => {
+    // Gaps del Espía con Schema/FAQ usan handleVerifySpyGap (verificación en vivo).
+    if (type === "spy") {
+      markSpyFixComplete(identifier);
+      return;
+    }
     const fixId = `fase4-${type}-${btoa(identifier).slice(0, 12)}`;
     if (completedFixes.has(fixId)) return;
 
@@ -295,23 +333,82 @@ export default function DetectiveDeEnlaces() {
     setXp(newXp);
     localStorage.setItem("seojump_xp", newXp.toString());
 
-    // XP popup
     setXpPopup({ id: fixId, amount: 15 });
     setTimeout(() => setXpPopup(null), 2000);
 
-    setCompletedFixes(prev => {
+    setCompletedFixes((prev) => {
       const updated = new Set([...prev, fixId]);
       localStorage.setItem("seojump_detective_fixes", JSON.stringify(Array.from(updated)));
       return updated;
     });
 
-    // Also add to global completed missions
-    setCompletedIds(prev => {
+    setCompletedIds((prev) => {
       const updated = new Set([...prev, fixId]);
       localStorage.setItem("seojump_completed_missions", JSON.stringify(Array.from(updated)));
-      setTimeout(() => { syncStateWithServer(); }, 100);
+      setTimeout(() => {
+        syncStateWithServer();
+      }, 100);
       return updated;
     });
+  };
+
+  const handleVerifySpyGap = async (gap, identifier) => {
+    playClick();
+    setSpyVerifyError((prev) => {
+      const next = { ...prev };
+      delete next[identifier];
+      return next;
+    });
+
+    const needsLive = !!gap.requiresLiveVerify && gap.verifyKind && gap.verifyKind !== "honor";
+    if (!needsLive) {
+      markSpyFixComplete(identifier);
+      return;
+    }
+
+    const pageToCheck = (ownComparisonUrl || spyResult?.comparedAgainst || siteUrl || "").trim();
+    if (!pageToCheck) {
+      setSpyVerifyError((prev) => ({
+        ...prev,
+        [identifier]:
+          'Para verificar necesitamos tu URL. Completá "Tu página equivalente" arriba y volvé a espiar.',
+      }));
+      return;
+    }
+
+    setSpyVerifyLoading(identifier);
+    try {
+      const res = await verifySpyGap(pageToCheck, gap.verifyKind, gap.questionsToAdd || []);
+      if (res.success && res.verified) {
+        markSpyFixComplete(identifier);
+      } else {
+        setSpyVerifyError((prev) => ({
+          ...prev,
+          [identifier]: res.error || "Todavía no detectamos el cambio en tu web.",
+        }));
+      }
+    } catch {
+      setSpyVerifyError((prev) => ({
+        ...prev,
+        [identifier]: "Error de conexión al verificar. Intentá de nuevo.",
+      }));
+    } finally {
+      setSpyVerifyLoading(null);
+    }
+  };
+
+  const handleCopySchema = async (code, identifier) => {
+    playClick();
+    try {
+      await navigator.clipboard.writeText(code);
+      setSpyCopiedGap(identifier);
+      setTimeout(() => setSpyCopiedGap(null), 2000);
+    } catch {
+      setSpyVerifyError((prev) => ({
+        ...prev,
+        [identifier]: "No pudimos copiar al portapapeles. Seleccioná el código a mano.",
+      }));
+    }
   };
 
   const handleSpy = async () => {
@@ -323,6 +420,7 @@ export default function DetectiveDeEnlaces() {
     setSpyLoading(true);
     setSpyError(null);
     setSpyResult(null);
+    setSpyVerifyError({});
 
     try {
       const res = await spyCompetitor(competitorUrl.trim(), siteUrl || "", goldKeyword || undefined, ownComparisonUrl.trim() || undefined);
@@ -1356,6 +1454,9 @@ export default function DetectiveDeEnlaces() {
                     spyResult.gaps.map((gap, index) => {
                       const identifier = `${spyResult.competitorUrl}-${gap.area}-${index}`;
                       const completed = isFixCompleted("spy", identifier);
+                      const verifying = spyVerifyLoading === identifier;
+                      const verifyErr = spyVerifyError[identifier];
+                      const needsLive = !!gap.requiresLiveVerify && gap.verifyKind !== "honor";
                       return (
                         <div key={index} className={`card-3d p-5 md:p-6 space-y-4 ${completed ? 'bg-emerald-950/30 border-emerald-500/40' : 'bg-slate-800 border-slate-700/50'}`}>
                           <div className="flex items-center gap-3">
@@ -1371,16 +1472,68 @@ export default function DetectiveDeEnlaces() {
                               <p className="text-base font-black text-white">{gap.suggestion}</p>
                             </div>
                           )}
+
+                          {gap.questionsToAdd?.length > 0 && (
+                            <div className="bg-cyan-950/20 border border-cyan-700/40 rounded-xl p-3 space-y-2">
+                              <p className="text-xs font-black text-cyan-300 uppercase">Preguntas a sumar</p>
+                              <ul className="space-y-1.5">
+                                {gap.questionsToAdd.map((q, qi) => (
+                                  <li key={qi} className="text-sm font-bold text-slate-200">❓ {q}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+
+                          {gap.schemaNote && (
+                            <p className="text-xs font-bold text-slate-400 leading-relaxed">{gap.schemaNote}</p>
+                          )}
+
+                          {gap.schemaCode && (
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between gap-2">
+                                <p className="text-xs font-black text-duo-yellow uppercase">Código Schema FAQ (listo para pegar)</p>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopySchema(gap.schemaCode, identifier)}
+                                  className="btn-3d btn-yellow !py-1.5 !px-3 text-xs font-black"
+                                >
+                                  {spyCopiedGap === identifier ? "✅ Copiado" : "📋 Copiar"}
+                                </button>
+                              </div>
+                              <pre className="max-h-48 overflow-auto rounded-xl border border-slate-700 bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-300 whitespace-pre-wrap break-words">
+                                {gap.schemaCode}
+                              </pre>
+                              <Link
+                                href="/mapa-comprension"
+                                onClick={playClick}
+                                className="inline-block text-cyan-400 font-bold text-xs hover:underline"
+                              >
+                                ¿Dónde pegarlo? Guía en el Mapa de comprensión →
+                              </Link>
+                            </div>
+                          )}
+
+                          {verifyErr && (
+                            <div className="p-3 rounded-xl border-2 border-red-800 bg-red-950/30 text-red-300 text-sm font-bold">
+                              ⚠️ {verifyErr}
+                            </div>
+                          )}
+
                           {completed ? (
                             <button disabled className="w-full py-3 rounded-xl border border-green-500/35 bg-green-950/20 text-green-400 font-black cursor-not-allowed text-base">
                               ✅ Aplicado (+15 XP)
                             </button>
                           ) : (
                             <button
-                              onClick={() => handleVerifyFix("spy", identifier)}
-                              className="w-full btn-3d bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white font-black py-3 text-base transition-all"
+                              onClick={() => handleVerifySpyGap(gap, identifier)}
+                              disabled={verifying}
+                              className="w-full btn-3d bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white font-black py-3 text-base transition-all disabled:opacity-60"
                             >
-                              ✅ YA LO APLIQUÉ
+                              {verifying
+                                ? "🔎 VERIFICANDO EN VIVO..."
+                                : needsLive
+                                  ? "🔎 VERIFICAR EN MI WEB"
+                                  : "✅ YA LO APLIQUÉ"}
                             </button>
                           )}
                         </div>
