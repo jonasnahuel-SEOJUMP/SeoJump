@@ -3527,7 +3527,9 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
 export async function verifySpyGap(
   pageUrl: string,
   verifyKind: 'schema_faq' | 'schema_product' | 'faq_visible' | 'honor' = 'honor',
-  expectedQuestions: string[] = []
+  expectedQuestions: string[] = [],
+  /** true = el usuario ya recibió el código y dice haberlo pegado; no regenerar, fallar claro. */
+  alreadyGenerated = false
 ) {
   if (!pageUrl?.trim()) {
     return {
@@ -3559,6 +3561,15 @@ export async function verifySpyGap(
     if (structured.hasFaqPage) {
       return { success: true, verified: true, detail: 'Detectamos Schema FAQPage en tu página. ¡Listo!' };
     }
+    // Segundo click: ya le dimos el código y dice haberlo pegado → error claro, no regenerar.
+    if (alreadyGenerated) {
+      return {
+        success: false,
+        missingAfterPaste: true,
+        error:
+          'Todavía no vemos el Schema FAQPage en tu HTML. Causas típicas: (1) WordPress/Elementor borró el <script> al guardar — pegalo como HTML personalizado / en el theme, no en un párrafo; (2) la URL no es la misma página; (3) falta publicar o borrar caché. Revisá, guardá y reintentá.',
+      };
+    }
     // El Schema no está, pero si ya tenés las preguntas visibles generamos el
     // código en el momento para que solo tengas que copiarlo y pegarlo.
     const livePairs = extractFaqPairs(page.html, 12);
@@ -3583,6 +3594,14 @@ export async function verifySpyGap(
     const structured = extractExistingStructuredData(page.html);
     if (structured.hasProduct) {
       return { success: true, verified: true, detail: 'Detectamos Schema Product en tu página. ¡Listo!' };
+    }
+    if (alreadyGenerated) {
+      return {
+        success: false,
+        missingAfterPaste: true,
+        error:
+          'Todavía no vemos el Schema Product en tu HTML. Causas típicas: (1) el editor borró el <script> al guardar — usá HTML personalizado / código en el theme; (2) URL distinta a la ficha; (3) falta publicar o borrar caché. Revisá y reintentá.',
+      };
     }
     const titleM = page.html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     const h1M = page.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);

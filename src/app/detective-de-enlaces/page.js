@@ -396,18 +396,31 @@ export default function DetectiveDeEnlaces() {
       return;
     }
 
+    // Si ya le mostramos el código, el click es "ya lo pegué" (no regenerar).
+    const alreadyGenerated = !!(spyVerifiedCode[identifier] || gap.schemaCode);
+
     setSpyVerifyLoading(identifier);
     try {
-      const res = await verifySpyGap(pageToCheck, gap.verifyKind, gap.questionsToAdd || []);
+      const res = await verifySpyGap(
+        pageToCheck,
+        gap.verifyKind,
+        gap.questionsToAdd || [],
+        alreadyGenerated
+      );
       if (res.success && res.verified) {
         setSpyVerifyError((prev) => {
           const next = { ...prev };
           delete next[identifier];
           return next;
         });
+        setSpyVerifyInfo((prev) => {
+          const next = { ...prev };
+          delete next[identifier];
+          return next;
+        });
         markSpyFixComplete(identifier);
-      } else if (res.schemaReady && res.schemaCode) {
-        // Contenido OK → código generado. Es progreso, no un error.
+      } else if (res.schemaReady && res.schemaCode && !alreadyGenerated) {
+        // Primer click: contenido OK → código generado. Es progreso, no un error.
         setSpyVerifiedCode((prev) => ({ ...prev, [identifier]: res.schemaCode }));
         setSpyVerifyInfo((prev) => ({
           ...prev,
@@ -415,15 +428,21 @@ export default function DetectiveDeEnlaces() {
             "✅ Listo tu código. Copialo, pegalo en tu web, guardá/borrá caché y tocá “Ya lo pegué — verificar”.",
         }));
       } else {
-        if (res.schemaCode) {
+        // Segundo click (o fallo): mostrar error visible — nunca “no hacer nada”.
+        if (res.schemaCode && !alreadyGenerated) {
           setSpyVerifiedCode((prev) => ({ ...prev, [identifier]: res.schemaCode }));
         }
         setSpyVerifyError((prev) => ({
           ...prev,
-          [identifier]: res.error || "Todavía no detectamos el cambio en tu web.",
+          [identifier]:
+            res.error ||
+            (alreadyGenerated
+              ? "Todavía no encontramos el Schema en tu HTML. Revisá que lo hayas pegado, publicado y sin caché."
+              : "Todavía no detectamos el cambio en tu web."),
         }));
       }
-    } catch {
+    } catch (err) {
+      console.error("[Espía] verifySpyGap falló:", err);
       setSpyVerifyError((prev) => ({
         ...prev,
         [identifier]: "Error de conexión al verificar. Intentá de nuevo.",
@@ -1570,6 +1589,10 @@ export default function DetectiveDeEnlaces() {
                                 <pre className="max-h-48 overflow-auto rounded-xl border border-slate-700 bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-300 whitespace-pre-wrap break-words">
                                   {effectiveSchemaCode}
                                 </pre>
+                                <p className="text-[11px] font-bold text-amber-300/90 leading-snug">
+                                  ⚠️ Importante: no lo pegues en un párrafo normal de WordPress/Elementor — suelen borrar el{" "}
+                                  <code className="text-amber-200">&lt;script&gt;</code>. Usá “HTML personalizado” / código en el theme, o seguí la guía.
+                                </p>
                               </div>
                               <SchemaPasteGuideBox
                                 playClick={playClick}
