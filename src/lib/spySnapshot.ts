@@ -34,6 +34,9 @@ export type SpyGapEnriched = {
   /** Si true, "Ya lo apliqué" debe verificar en vivo (no honor system). */
   requiresLiveVerify?: boolean;
   verifyKind?: 'schema_faq' | 'schema_product' | 'faq_visible' | 'honor';
+  /** Gap de Schema (código): va último y usa flujo por pasos en la UI. */
+  isSchemaGap?: boolean;
+  schemaKind?: 'faq' | 'product';
 };
 
 /** Extrae señales AEO (FAQ + Schema) desde HTML ya descargado. Pura / testeable. */
@@ -154,7 +157,7 @@ export function enrichSpyGaps(
   const rivalQs = rival.faqQuestions || [];
   const questionsToAdd = rivalQs.filter((q) => !ownQs.has(normQ(q))).slice(0, 5);
 
-  return gaps.map((g) => {
+  const enriched = gaps.map((g) => {
     const out: SpyGapEnriched = {
       area: g.area,
       problem: g.problem,
@@ -165,31 +168,25 @@ export function enrichSpyGaps(
 
     if (isSchemaGapArea(g.area)) {
       out.requiresLiveVerify = true;
+      out.isSchemaGap = true;
 
       // Schema de Producto (precio, disponibilidad, etc.) — distinto de FAQ.
       if (isProductSchemaGap(g.area, g.problem, g.suggestion)) {
         out.verifyKind = 'schema_product';
+        out.schemaKind = 'product';
         out.schemaNote =
-          'Tocá "Verificar en mi web": si ya tenés el Schema Product lo confirmamos; si no, te generamos el código listo para pegar con los datos de tu página.';
+          'Último paso: generamos el código con los datos de tu página (sin precio, para que no quede desactualizado). Si tu tienda ya lo pone, lo confirmamos y listo.';
         return out;
       }
 
       out.verifyKind = 'schema_faq';
+      out.schemaKind = 'faq';
       out.questionsToAdd = questionsToAdd.length ? questionsToAdd : undefined;
-
-      if (own?.hasFaqSchema) {
-        out.schemaNote =
-          'En el scrape anterior no vimos Schema FAQ, pero si ya lo pegaste, tocá verificar y lo confirmamos en vivo.';
-      } else if (ownPairs.length >= 1) {
+      out.schemaNote =
+        'Este es el ÚLTIMO paso. Primero asegurate de tener las preguntas visibles en tu página; después generamos el código Schema para pegar.';
+      // Si ya tiene FAQ visibles, adelantamos el código.
+      if (!own?.hasFaqSchema && ownPairs.length >= 1) {
         out.schemaCode = buildFaqJsonLd(ownPairs);
-        out.schemaNote =
-          'Copiá este bloque y pegalo en el HTML de tu página (antes de </body>). Si usás WordPress/Shopify, mirá la guía del Mapa de comprensión.';
-      } else {
-        out.schemaNote =
-          'Si ya agregaste las preguntas visibles en tu página, tocá "Verificar en mi web" y te generamos el código Schema al instante. Si todavía no las pusiste, agregalas primero (texto que se ve).';
-        if (questionsToAdd.length) {
-          out.questionsToAdd = questionsToAdd;
-        }
       }
       return out;
     }
@@ -200,15 +197,20 @@ export function enrichSpyGaps(
       if (questionsToAdd.length) {
         out.questionsToAdd = questionsToAdd;
       }
-      // Si ya tiene FAQ visibles pero sin schema, ofrecer el código como bonus en gaps FAQ
-      if (ownPairs.length >= 1 && !own?.hasFaqSchema) {
-        out.schemaCode = buildFaqJsonLd(ownPairs);
-        out.schemaNote =
-          'Cuando tengas las preguntas en la página, pegá también este Schema FAQPage para que Google y las IA las lean.';
-      }
       return out;
     }
 
     return out;
   });
+
+  // Orden lógico: primero título/H1/contenido, el Schema (código) SIEMPRE al final.
+  const rank = (g: SpyGapEnriched) => {
+    if (g.isSchemaGap) return 3;
+    if (g.verifyKind === 'faq_visible') return 2;
+    return 1; // título, H1, intención, temas
+  };
+  return enriched
+    .map((g, i) => ({ g, i }))
+    .sort((a, b) => rank(a.g) - rank(b.g) || a.i - b.i)
+    .map(({ g }) => g);
 }

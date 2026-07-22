@@ -56,6 +56,7 @@ export default function DetectiveDeEnlaces() {
   const [spyLoadingMsg, setSpyLoadingMsg] = useState(0);
   const [spyVerifyLoading, setSpyVerifyLoading] = useState(null); // identifier | null
   const [spyVerifyError, setSpyVerifyError] = useState({}); // { [identifier]: string }
+  const [spyVerifyInfo, setSpyVerifyInfo] = useState({}); // { [identifier]: string } (neutral)
   const [spyVerifiedCode, setSpyVerifiedCode] = useState({}); // { [identifier]: schemaCode }
   const [spyCopiedGap, setSpyCopiedGap] = useState(null);
   const { refresh: refreshCredits } = useSubscription();
@@ -372,6 +373,11 @@ export default function DetectiveDeEnlaces() {
       delete next[identifier];
       return next;
     });
+    setSpyVerifyInfo((prev) => {
+      const next = { ...prev };
+      delete next[identifier];
+      return next;
+    });
 
     const needsLive = !!gap.requiresLiveVerify && gap.verifyKind && gap.verifyKind !== "honor";
     if (!needsLive) {
@@ -399,6 +405,14 @@ export default function DetectiveDeEnlaces() {
           return next;
         });
         markSpyFixComplete(identifier);
+      } else if (res.schemaReady && res.schemaCode) {
+        // Contenido OK → código generado. Es progreso, no un error.
+        setSpyVerifiedCode((prev) => ({ ...prev, [identifier]: res.schemaCode }));
+        setSpyVerifyInfo((prev) => ({
+          ...prev,
+          [identifier]:
+            "✅ Listo tu código. Copialo, pegalo en tu web, guardá/borrá caché y tocá “Ya lo pegué — verificar”.",
+        }));
       } else {
         if (res.schemaCode) {
           setSpyVerifiedCode((prev) => ({ ...prev, [identifier]: res.schemaCode }));
@@ -442,6 +456,7 @@ export default function DetectiveDeEnlaces() {
     setSpyError(null);
     setSpyResult(null);
     setSpyVerifyError({});
+    setSpyVerifyInfo({});
     setSpyVerifiedCode({});
 
     try {
@@ -1480,6 +1495,13 @@ export default function DetectiveDeEnlaces() {
                       const verifyErr = spyVerifyError[identifier];
                       const needsLive = !!gap.requiresLiveVerify && gap.verifyKind !== "honor";
                       const effectiveSchemaCode = spyVerifiedCode[identifier] || gap.schemaCode;
+                      const isSchema = !!gap.isSchemaGap;
+                      const schemaLabel = gap.schemaKind === "product" ? "Product" : "FAQ";
+                      let spyBtnLabel = "✅ YA LO APLIQUÉ";
+                      if (verifying) spyBtnLabel = "🔎 VERIFICANDO EN VIVO...";
+                      else if (isSchema && !effectiveSchemaCode) spyBtnLabel = "🔎 GENERAR MI CÓDIGO SCHEMA";
+                      else if (isSchema && effectiveSchemaCode) spyBtnLabel = "✅ YA LO PEGUÉ — VERIFICAR";
+                      else if (needsLive) spyBtnLabel = "🔎 VERIFICAR EN MI WEB";
                       return (
                         <div key={index} className={`card-3d p-5 md:p-6 space-y-4 ${completed ? 'bg-emerald-950/30 border-emerald-500/40' : 'bg-slate-800 border-slate-700/50'}`}>
                           <div className="flex items-center gap-3">
@@ -1507,14 +1529,32 @@ export default function DetectiveDeEnlaces() {
                             </div>
                           )}
 
-                          {gap.schemaNote && (
+                          {isSchema && !completed && (
+                            <div className="bg-slate-900/40 border border-slate-700 rounded-xl p-3">
+                              <p className="text-xs font-black text-slate-300 uppercase mb-2">Cómo se hace (por pasos)</p>
+                              <ol className="list-decimal list-inside space-y-1 text-xs font-bold text-slate-400">
+                                <li className={effectiveSchemaCode ? "line-through text-slate-600" : ""}>
+                                  {gap.schemaKind === "product"
+                                    ? "Tené la ficha del producto publicada (nombre, imagen, descripción)."
+                                    : "Agregá las preguntas y respuestas visibles en tu página."}
+                                </li>
+                                <li className={effectiveSchemaCode ? "line-through text-slate-600" : ""}>
+                                  Tocá <span className="text-slate-200">“Generar mi código Schema”</span> y lo armamos con tus datos.
+                                </li>
+                                <li className={effectiveSchemaCode ? "text-slate-200" : ""}>Copiá el código y pegalo en tu web (antes de <code>&lt;/body&gt;</code>).</li>
+                                <li>Tocá <span className="text-slate-200">“Ya lo pegué — verificar”</span> y confirmamos que quedó online.</li>
+                              </ol>
+                            </div>
+                          )}
+
+                          {gap.schemaNote && !completed && (
                             <p className="text-xs font-bold text-slate-400 leading-relaxed">{gap.schemaNote}</p>
                           )}
 
                           {effectiveSchemaCode && (
                             <div className="space-y-2">
                               <div className="flex items-center justify-between gap-2">
-                                <p className="text-xs font-black text-duo-yellow uppercase">Código Schema FAQ (listo para pegar)</p>
+                                <p className="text-xs font-black text-duo-yellow uppercase">Código Schema {schemaLabel} (listo para pegar)</p>
                                 <button
                                   type="button"
                                   onClick={() => handleCopySchema(effectiveSchemaCode, identifier)}
@@ -1536,6 +1576,12 @@ export default function DetectiveDeEnlaces() {
                             </div>
                           )}
 
+                          {spyVerifyInfo[identifier] && (
+                            <div className="p-3 rounded-xl border-2 border-cyan-700/50 bg-cyan-950/20 text-cyan-200 text-sm font-bold">
+                              {spyVerifyInfo[identifier]}
+                            </div>
+                          )}
+
                           {verifyErr && (
                             <div className="p-3 rounded-xl border-2 border-red-800 bg-red-950/30 text-red-300 text-sm font-bold">
                               ⚠️ {verifyErr}
@@ -1552,11 +1598,7 @@ export default function DetectiveDeEnlaces() {
                               disabled={verifying}
                               className="w-full btn-3d bg-amber-500 border-amber-600 border-b-4 hover:bg-amber-450 active:border-b-0 active:translate-y-1 text-white font-black py-3 text-base transition-all disabled:opacity-60"
                             >
-                              {verifying
-                                ? "🔎 VERIFICANDO EN VIVO..."
-                                : needsLive
-                                  ? "🔎 VERIFICAR EN MI WEB"
-                                  : "✅ YA LO APLIQUÉ"}
+                              {spyBtnLabel}
                             </button>
                           )}
                         </div>
