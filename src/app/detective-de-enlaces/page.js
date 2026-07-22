@@ -56,6 +56,7 @@ export default function DetectiveDeEnlaces() {
   const [spyLoadingMsg, setSpyLoadingMsg] = useState(0);
   const [spyVerifyLoading, setSpyVerifyLoading] = useState(null); // identifier | null
   const [spyVerifyError, setSpyVerifyError] = useState({}); // { [identifier]: string }
+  const [spyVerifiedCode, setSpyVerifiedCode] = useState({}); // { [identifier]: schemaCode }
   const [spyCopiedGap, setSpyCopiedGap] = useState(null);
   const { refresh: refreshCredits } = useSubscription();
 
@@ -392,8 +393,16 @@ export default function DetectiveDeEnlaces() {
     try {
       const res = await verifySpyGap(pageToCheck, gap.verifyKind, gap.questionsToAdd || []);
       if (res.success && res.verified) {
+        setSpyVerifyError((prev) => {
+          const next = { ...prev };
+          delete next[identifier];
+          return next;
+        });
         markSpyFixComplete(identifier);
       } else {
+        if (res.schemaCode) {
+          setSpyVerifiedCode((prev) => ({ ...prev, [identifier]: res.schemaCode }));
+        }
         setSpyVerifyError((prev) => ({
           ...prev,
           [identifier]: res.error || "Todavía no detectamos el cambio en tu web.",
@@ -433,6 +442,7 @@ export default function DetectiveDeEnlaces() {
     setSpyError(null);
     setSpyResult(null);
     setSpyVerifyError({});
+    setSpyVerifiedCode({});
 
     try {
       const res = await spyCompetitor(competitorUrl.trim(), siteUrl || "", goldKeyword || undefined, ownComparisonUrl.trim() || undefined);
@@ -1469,6 +1479,7 @@ export default function DetectiveDeEnlaces() {
                       const verifying = spyVerifyLoading === identifier;
                       const verifyErr = spyVerifyError[identifier];
                       const needsLive = !!gap.requiresLiveVerify && gap.verifyKind !== "honor";
+                      const effectiveSchemaCode = spyVerifiedCode[identifier] || gap.schemaCode;
                       return (
                         <div key={index} className={`card-3d p-5 md:p-6 space-y-4 ${completed ? 'bg-emerald-950/30 border-emerald-500/40' : 'bg-slate-800 border-slate-700/50'}`}>
                           <div className="flex items-center gap-3">
@@ -1500,20 +1511,20 @@ export default function DetectiveDeEnlaces() {
                             <p className="text-xs font-bold text-slate-400 leading-relaxed">{gap.schemaNote}</p>
                           )}
 
-                          {gap.schemaCode && (
+                          {effectiveSchemaCode && (
                             <div className="space-y-2">
                               <div className="flex items-center justify-between gap-2">
                                 <p className="text-xs font-black text-duo-yellow uppercase">Código Schema FAQ (listo para pegar)</p>
                                 <button
                                   type="button"
-                                  onClick={() => handleCopySchema(gap.schemaCode, identifier)}
+                                  onClick={() => handleCopySchema(effectiveSchemaCode, identifier)}
                                   className="btn-3d btn-yellow !py-1.5 !px-3 text-xs font-black"
                                 >
                                   {spyCopiedGap === identifier ? "✅ Copiado" : "📋 Copiar"}
                                 </button>
                               </div>
                               <pre className="max-h-48 overflow-auto rounded-xl border border-slate-700 bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-300 whitespace-pre-wrap break-words">
-                                {gap.schemaCode}
+                                {effectiveSchemaCode}
                               </pre>
                               <Link
                                 href="/mapa-comprension"
