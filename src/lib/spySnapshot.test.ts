@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { extractSpyAeoSignals, enrichSpyGaps } from './spySnapshot';
+import { extractSpyAeoSignals, enrichSpyGaps, isProductSchemaGap } from './spySnapshot';
 
 const HTML_WITH_FAQ = `
 <html><head>
@@ -89,6 +89,42 @@ describe('enrichSpyGaps', () => {
     expect(enriched[0].requiresLiveVerify).toBe(true);
     expect(enriched[0].verifyKind).toBe('schema_faq');
     expect(enriched[0].questionsToAdd).toContain('¿Tienen seguro de carga?');
+  });
+
+  it('clasifica gap de Schema Product y no lo trata como FAQ', () => {
+    expect(
+      isProductSchemaGap('Schema AEO', "El competidor tiene un Schema de tipo 'Product'", 'Agregá el Schema Product')
+    ).toBe(true);
+    expect(isProductSchemaGap('Schema AEO', 'Le falta el Schema FAQPage', 'Agregá FAQ')).toBe(false);
+
+    const own = {
+      title: 'Cera',
+      h1: 'Cera',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: [],
+      faqPairs: [],
+      hasFaqSchema: false,
+      schemaTypes: [],
+    };
+    const rival = {
+      title: 'Rival',
+      h1: 'Rival',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: [],
+      hasFaqSchema: false,
+      schemaTypes: ['Product'],
+    };
+    const enriched = enrichSpyGaps(
+      [{ area: 'Schema AEO', problem: "tiene Schema 'Product'", suggestion: 'Agregá Product' }],
+      own,
+      rival
+    );
+    expect(enriched[0].verifyKind).toBe('schema_product');
+    expect(enriched[0].requiresLiveVerify).toBe(true);
+    // No debe mostrar el mensaje de FAQ
+    expect(enriched[0].schemaNote || '').not.toMatch(/preguntas visibles/i);
   });
 
   it('no inventa schemaCode si el usuario no tiene FAQ visibles', () => {
