@@ -434,6 +434,8 @@ export type CompetitorSnapshot = {
   scrapedAt: string;
   /** Preguntas detectadas en la página (FAQ visible, H2 con ?, acordeones). */
   faqQuestions?: string[];
+  /** Pares pregunta+respuesta (para generar Schema FAQ copiable). */
+  faqPairs?: Array<{ question: string; answer: string }>;
   /** Tiene Schema FAQPage (lo que Google/IA leen para rich results). */
   hasFaqSchema?: boolean;
   /** Tipos Schema.org encontrados (Product, FAQPage, Organization…). */

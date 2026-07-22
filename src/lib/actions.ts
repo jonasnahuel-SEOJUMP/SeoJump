@@ -26,7 +26,7 @@ import {
   isUiNavigationHeading,
   isUiNoiseText,
 } from './scraping'
-import { buildCompetitorSnapshot } from './spySnapshot'
+import { buildCompetitorSnapshot, enrichSpyGaps, type SpyGapEnriched } from './spySnapshot'
 import {
   computeHumanScore,
   humanDimensionPasses,
@@ -37,6 +37,8 @@ import { fitSeoTitle, extractBrandHints, MAX_SEO_TITLE_LENGTH } from './seoTitle
 import {
   analyzeComprehension,
   getFaqStructurePasteGuide,
+  extractExistingStructuredData,
+  extractFaqPairs,
 } from './comprehension'
 import { detectSchemaInstallHints } from './schemaPasteGuide'
 import {
@@ -3119,11 +3121,7 @@ export async function verifyAeoMission(pageUrl: string, headingText: string, opt
 // Guarda un snapshot por rival para detección de cambios al volver a espiar.
 // ════════════════════════════════════════════════════════════════════════════
 
-type SpyGap = {
-  area: string;
-  problem: string;
-  suggestion: string;
-};
+type SpyGap = SpyGapEnriched;
 
 type SpyChange = {
   field: string;
@@ -3454,7 +3452,7 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
     const parsed = JSON.parse(jsonStart !== -1 ? raw.substring(jsonStart, jsonEnd + 1) : raw);
     verdict = String(parsed.verdict || '').trim();
     if (Array.isArray(parsed.gaps)) {
-      gaps = parsed.gaps
+      const rawGaps = parsed.gaps
         .filter((g: any) => g && (g.problem || g.suggestion))
         .slice(0, 4)
         .map((g: any) => ({
@@ -3462,6 +3460,7 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
           problem: String(g.problem || '').trim(),
           suggestion: String(g.suggestion || '').trim(),
         }));
+      gaps = enrichSpyGaps(rawGaps, ownSnapshot, rivalSnapshot);
     }
   } catch (err) {
     console.error('[spyCompetitor] Error parseando respuesta IA:', err);
@@ -3469,9 +3468,16 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
   }
 
   // ── Guardar snapshot para detección de cambios futura ───────────────────────
+  // No persistimos faqPairs (pueden ser largos); sí las señales livianas.
   if (userEmail) {
     try {
-      await saveCompetitorSnapshot(userEmail, rivalUrl, rivalSnapshot);
+      const { faqPairs: _pairs, ...slimRival } = rivalSnapshot as CompetitorSnapshot & {
+        faqPairs?: unknown;
+      };
+      await saveCompetitorSnapshot(userEmail, rivalUrl, {
+        ...slimRival,
+        faqPairs: undefined,
+      });
     } catch (err) {
       console.warn('[spyCompetitor] No se pudo guardar el snapshot:', err);
     }
@@ -3509,6 +3515,85 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
     },
     credits: geminiResult.credits,
   };
+}
+
+/**
+ * Verifica en vivo una brecha del Espía (Schema FAQ / FAQ visibles).
+ * Evita dar XP por "Ya lo apliqué" cuando el cambio no está en la web.
+ */
+export async function verifySpyGap(
+  pageUrl: string,
+  verifyKind: 'schema_faq' | 'faq_visible' | 'honor' = 'honor',
+  expectedQuestions: string[] = []
+) {
+  if (!pageUrl?.trim()) {
+    return {
+      success: false,
+      error: 'Necesitamos la URL de tu página para verificar. Pegala en "Tu página equivalente" y volvé a espiar.',
+    };
+  }
+
+  let target = pageUrl.trim();
+  if (!target.startsWith('http://') && !target.startsWith('https://')) {
+    target = 'https://' + target;
+  }
+
+  // Honor system: título/H1/etc. (sin scrape obligatorio)
+  if (verifyKind === 'honor') {
+    return { success: true, verified: true, honor: true };
+  }
+
+  const page = await fetchPage(target);
+  if (!page.ok || !page.html) {
+    return {
+      success: false,
+      error: 'No pudimos leer tu página en vivo. ¿La URL es pública? Probá sin caché del hosting.',
+    };
+  }
+
+  if (verifyKind === 'schema_faq') {
+    const structured = extractExistingStructuredData(page.html);
+    if (structured.hasFaqPage) {
+      return { success: true, verified: true, detail: 'Detectamos Schema FAQPage en tu página. ¡Listo!' };
+    }
+    return {
+      success: false,
+      error:
+        'Todavía no encontramos el Schema FAQPage en tu HTML. Pegá el bloque <script type="application/ld+json">…, guardá, borrá caché del sitio y reintentá.',
+    };
+  }
+
+  if (verifyKind === 'faq_visible') {
+    const pairs = extractFaqPairs(page.html, 12);
+    if (pairs.length === 0) {
+      return {
+        success: false,
+        error:
+          'No detectamos preguntas con respuesta visibles en tu página. Agregá las FAQ en texto (H2/acordeón) y reintentá.',
+      };
+    }
+    if (expectedQuestions.length > 0) {
+      const live = pairs.map((p) => p.question.toLowerCase());
+      const hit = expectedQuestions.some((q) =>
+        live.some((lq) => lq.includes(q.toLowerCase().slice(0, 40)) || q.toLowerCase().includes(lq.slice(0, 40)))
+      );
+      if (!hit) {
+        return {
+          success: false,
+          error: `Vimos ${pairs.length} pregunta(s), pero todavía no las que sugerimos. Revisá el texto y reintentá.`,
+          foundQuestions: pairs.map((p) => p.question).slice(0, 5),
+        };
+      }
+    }
+    return {
+      success: true,
+      verified: true,
+      detail: `Detectamos ${pairs.length} pregunta(s) en tu página.`,
+      foundQuestions: pairs.map((p) => p.question).slice(0, 5),
+    };
+  }
+
+  return { success: true, verified: true, honor: true };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
