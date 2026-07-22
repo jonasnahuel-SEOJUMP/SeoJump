@@ -1117,7 +1117,7 @@ export default function DetectiveDeEnlaces() {
                               <strong className="text-duo-yellow">Cómo funciona:</strong>
                             </p>
                             <ol className="list-decimal list-inside space-y-1 text-slate-300 mb-2">
-                              <li>Pegás la URL del rival (ej: <span className="text-slate-400">otrotaller.com/pulidoras</span>).</li>
+                              <li>Pegás la URL del rival (ej: <span className="text-slate-400">competencia.com/servicio</span>).</li>
                               <li>Leo el título, el H1, los temas… y también <strong className="text-cyan-300">qué preguntas responde</strong> y si tiene Schema para IA.</li>
                               <li>Te doy hasta 4 cosas concretas para copiar o mejorar en tu sitio (SEO + AEO).</li>
                             </ol>

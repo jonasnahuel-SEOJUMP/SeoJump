@@ -73,7 +73,7 @@ export default function LandingPage({ onStart, onStartSpy, playClick, variant = 
           <span className="text-duo-green">Después ganásle</span> con una misión por día.
         </h1>
         <p className="relative text-slate-300 font-semibold text-lg md:text-2xl leading-relaxed max-w-3xl mb-10">
-          Pegá la URL de un rival —sus pulidoras, sus microfibras, la página que quieras— y la IA te muestra{" "}
+          Pegá la URL de un rival —su home, una categoría, una ficha, la página que quieras— y la IA te muestra{" "}
           <strong className="text-white">qué hace mejor que vos en Google</strong>. Desde ahí, SEO Jump te arma las{" "}
           <strong className="text-white">misiones diarias</strong> para cerrar esas brechas y aparecer también en{" "}
           <strong className="text-purple-400">ChatGPT y Gemini</strong>.
@@ -403,7 +403,7 @@ export default function LandingPage({ onStart, onStartSpy, playClick, variant = 
           <Faq q="¿Qué diferencia hay entre SEO y AEO?" a="SEO = aparecer en los enlaces de Google. AEO = que ChatGPT y Gemini te citen como respuesta. SEO Jump trabaja ambos con misiones concretas." />
           <Faq q="¿Por qué conectar Search Console?" a="Es la fuente oficial de Google sobre tu web. Sin adivinar: usamos tus datos reales de clics, impresiones y posiciones. Además cruzamos esos datos con lo que vemos de tu competencia." />
           <Faq q="¿Cómo funciona el Espía de la Competencia?" a="Pegás la URL de un rival y la IA compara su web con la tuya: título, H1, temas e intención. Te dice qué hace mejor y qué cambiar hoy en la tuya. Es el punto de partida ideal — y desde ahí SEO Jump te arma las misiones diarias para superarlo." />
-          <Faq q="¿Puedo espiar varias páginas del mismo competidor?" a="Sí. Podés espiar página por página: sus pulidoras, sus microfibras, cada categoría que te interese. Cada URL distinta cuenta como un espionaje. El plan gratis incluye 3 URLs, PRO llega a 15 y Agencia a 50. Volver a espiar la misma URL para ver cambios no consume un lugar nuevo." />
+          <Faq q="¿Puedo espiar varias páginas del mismo competidor?" a="Sí. Podés espiar página por página: su home, una categoría, cada ficha que te interese. Cada URL distinta cuenta como un espionaje. El plan gratis incluye 3 URLs, PRO llega a 15 y Agencia a 50. Volver a espiar la misma URL para ver cambios no consume un lugar nuevo." />
           <Faq q="¿Qué es el Human Score?" a="Es nuestra métrica en evolución que mide el valor humano de tu contenido: experiencia, evidencia propia, casos reales, opinión y datos. No detecta si un texto fue hecho con IA; mide si aporta algo que los demás no tienen. La vamos refinando con el uso real." />
           <Faq q="¿Qué es el Mapa de comprensión?" a="Te muestra qué entienden Google y las IA de una página (tipo, temas, preguntas, autor, empresa) y qué falta. Si tenés preguntas frecuentes, genera la estructura lista para pegar — sin pelearte con código técnico. El objetivo no es magia: es reducir ambigüedad para que te puedan citar." />
           <Faq q="¿Es seguro conectar Google?" a="Sí. OAuth oficial de Google. No vemos tu contraseña." />
@@ -557,7 +557,7 @@ function SpyHeroExplainer({ playClick, onStart }) {
     {
       n: "1",
       title: "Pegás la URL de tu rival",
-      desc: "La página que quieras: su home, sus pulidoras, sus microfibras… cada URL que te interese.",
+      desc: "La página que quieras: su home, una categoría, una ficha… cada URL que te interese.",
     },
     {
       n: "2",
@@ -617,16 +617,14 @@ function SpyFeatureBlock({ playClick, compact = false }) {
               🕵️ Espía de la Competencia
             </h2>
             <p className="text-slate-300 leading-relaxed">
-              ¿Querés saber qué hace mejor un rival en Google? Pegá su URL —y la de cada página que te interese: pulidoras,
-              microfibras, lo que vendas— y la IA compara título, H1 y temas con tu web, sin pagar Semrush. Es el mejor
-              punto de partida antes de tus misiones diarias.
+              ¿Querés saber qué hace mejor un rival en Google? Pegá su URL —y la de cada página que te interese— y la IA compara título, H1, temas, <strong className="text-white">preguntas que responde</strong> y Schema, sin pagar Semrush. Es el mejor punto de partida antes de tus misiones diarias.
             </p>
             <Link
-              href="/blog/como-espiar-competencia-google-sin-semrush"
+              href="/blog/datos-vs-decisiones-seo-competencia"
               onClick={playClick}
               className="inline-block text-cyan-400 font-bold text-sm hover:underline"
             >
-              Guía: espiar competencia sin Semrush →
+              Por qué vendemos decisiones, no datos →
             </Link>
           </div>
           <Link

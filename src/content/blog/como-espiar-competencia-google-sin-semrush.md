@@ -2,7 +2,7 @@
 title: "Cómo espiar a tu competencia en Google sin pagar Semrush"
 description: "Querés saber qué hace mejor tu rival en Google pero no vas a gastar 140 USD/mes en Semrush. Guía honesta: qué podés hacer gratis, qué no hace Search Console y cómo comparar webs de forma táctica."
 date: "2026-06-18"
-dateModified: "2026-06-18"
+dateModified: "2026-07-22"
 readTime: "9 min"
 author: "SeoJump"
 ---
@@ -133,19 +133,19 @@ En SEO Jump construimos algo para el **nivel táctico** — la pregunta que el 8
 
 ### ¿Qué hace el Espía?
 
-1. **Pegás la URL de un rival** (ej: `competencia.com`)
-2. La app **lee su web en vivo**: título, H1, encabezados principales
+1. **Pegás la URL de un rival** (ej: `competencia.com/servicio`)
+2. La app **lee su web en vivo**: título, H1, encabezados, **preguntas que responde** y **Schema** (FAQ / tipos detectados)
 3. **Compara con la tuya** (misma lectura)
 4. **Gemini interpreta** y te devuelve:
    - un veredicto en castellano claro
-   - hasta **3 brechas accionables** (qué mejorar y cómo)
-5. Si **volvés a espiar** al mismo rival más adelante, te avisa si cambió título, H1 o sumó secciones nuevas
+   - hasta **4 brechas accionables** (SEO + AEO: qué mejorar y cómo)
+5. Si **volvés a espiar** al mismo rival más adelante, te avisa si cambió título, H1, sumó secciones o **agregó preguntas**
 
-No necesitás saber SEO. No necesitás dashboard de Semrush. Es el método manual de arriba, automatizado y traducido a *"hacé esto"*.
+No necesitás saber SEO. No necesitás dashboard de Semrush. Es el método manual de arriba, automatizado y traducido a *"hacé esto"* — la diferencia entre **vender datos** y **vender decisiones**: [Semrush vende datos. Vos necesitás decisiones](/blog/datos-vs-decisiones-seo-competencia).
 
 ### ¿Dónde está?
 
-En la **Fase 4: Detective de Enlaces**, pestaña **🕵️ Espía Competencia**. Hay que desbloquear la fase jugando (o tener plan PRO con más consultas). Cada espionaje usa **1 consulta IA**, igual que Quick Wins o AEO.
+En **🕵️ Espía de la Competencia** (también desde el dashboard). Está disponible **desde el primer día** — no hace falta desbloquear la Fase 4. Cada espionaje usa **1 consulta IA**, igual que Quick Wins o AEO.
 
 [Probar el Espía de la Competencia →](/detective-de-enlaces?view=spy)
 
@@ -157,7 +157,7 @@ En la **Fase 4: Detective de Enlaces**, pestaña **🕵️ Espía Competencia**.
 | PRO | 15 URLs | 12 / día |
 | Agencia | 50 URLs | 40 / día |
 
-Cada URL distinta cuenta como un espionaje: podés seguir varias páginas de un mismo rival (su home, sus pulidoras, sus microfibras…). Volver a espiar la misma URL para detectar cambios **no** consume un lugar nuevo.
+Cada URL distinta cuenta como un espionaje: podés seguir varias páginas de un mismo rival (su home, una categoría, una ficha…). Volver a espiar la misma URL para detectar cambios **no** consume un lugar nuevo.
 
 Un solo precio PRO — el Espía **no se vende aparte**. Está incluido porque es el gancho que te empuja a ejecutar, no un módulo escondido.
 
