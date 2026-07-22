@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { PLANS, formatArs, formatUsd } from "../../lib/planLimits";
+import { PLANS, formatArs, formatUsd, MAX_COMPETITORS_BY_PLAN } from "../../lib/planLimits";
 import SubscribeProButton from "../../components/SubscribeProButton";
 import LemonCheckoutButton from "../../components/LemonCheckoutButton";
 import { PH_EVENTS, trackEvent } from "../../lib/posthog";
@@ -178,6 +178,7 @@ export default function PreciosPage() {
               <ul className="space-y-2 text-sm font-bold text-slate-300 flex-1">
                 <li>🤖 {plan.aiPerDay} consultas IA / día</li>
                 <li>📅 {plan.aiPerMonth} consultas IA / mes</li>
+                <li>🕵️ Espiá hasta {MAX_COMPETITORS_BY_PLAN[plan.id]} URLs de competencia</li>
                 <li>🌐 {plan.maxSites} sitio{plan.maxSites > 1 ? "s" : ""}</li>
                 <li>✅ Misiones ilimitadas (sin IA)</li>
               </ul>

@@ -56,71 +56,76 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
   return (
     <div className="w-full text-slate-100 font-fredoka flex flex-col items-center max-w-7xl mx-auto animate-in fade-in zoom-in duration-500">
 
-      {/* HERO — Mejora diaria + AEO */}
-      <section className="w-full flex flex-col items-center text-center py-12 md:py-20 px-4">
-        <span className="px-4 py-1.5 bg-duo-green/20 border border-duo-green/40 rounded-full text-duo-green text-xs md:text-sm font-black uppercase tracking-widest mb-6">
-          Mejorá tu web cada día — sin ser experto en SEO
+      {/* HERO — Espía de la competencia (gancho principal) */}
+      <section className="w-full flex flex-col items-center text-center py-12 md:py-20 px-4 relative">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[400px] bg-red-500/10 blur-[120px] rounded-full pointer-events-none" />
+        <span className="relative px-4 py-1.5 bg-red-500/20 border border-red-400/40 rounded-full text-red-200 text-xs md:text-sm font-black uppercase tracking-widest mb-6">
+          🕵️ Espiá a tu competencia en Google
         </span>
-        <img src="/images/logo-full.png" alt="SEO Jump" className="w-48 md:w-64 h-auto object-contain mb-6 drop-shadow-2xl" />
-        <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.1] max-w-4xl mb-6">
-          Convertí tu web en una máquina de atraer <span className="text-duo-green">clientes reales.</span>
+        <img src="/images/logo-full.png" alt="SEO Jump" className="relative w-48 md:w-64 h-auto object-contain mb-6 drop-shadow-2xl" />
+        <h1 className="relative text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.1] max-w-4xl mb-6">
+          Espiá a tu competencia.{" "}
+          <span className="text-duo-green">Después ganásle</span> con una misión por día.
         </h1>
-        <p className="text-slate-300 font-semibold text-lg md:text-2xl leading-relaxed max-w-3xl mb-10">
-          SEO Jump conecta tu sitio, detecta oportunidades ocultas en Google y te asigna{" "}
-          <strong className="text-white">misiones diarias</strong> para que empresarios, profesionales y emprendedores
-          mejoren su web paso a paso — incluido aparecer en{" "}
-          <strong className="text-purple-400">ChatGPT, Gemini</strong> y las búsquedas con IA.
+        <p className="relative text-slate-300 font-semibold text-lg md:text-2xl leading-relaxed max-w-3xl mb-10">
+          Pegá la URL de un rival —sus pulidoras, sus microfibras, la página que quieras— y la IA te muestra{" "}
+          <strong className="text-white">qué hace mejor que vos en Google</strong>. Desde ahí, SEO Jump te arma las{" "}
+          <strong className="text-white">misiones diarias</strong> para cerrar esas brechas y aparecer también en{" "}
+          <strong className="text-purple-400">ChatGPT y Gemini</strong>.
           <br />
-          <span className="text-slate-400 text-base md:text-lg">Sin tecnicismos. Sin informes aburridos. 15 minutos por día.</span>
+          <span className="text-slate-400 text-base md:text-lg">Sin Semrush. Sin informes de 50 páginas. 15 minutos por día.</span>
         </p>
 
-        <div className="flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
+        <div className="relative flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
           <button
             onClick={handleStart}
             className="btn-3d btn-green text-xl md:text-2xl px-8 py-5 w-full sm:w-auto transform hover:scale-105 transition-all"
           >
-            🚀 Analizar Mi Web Gratis
+            🕵️ Espiar a mi competencia gratis
           </button>
           <a
             href="#mapa-ia"
             onClick={scrollToMapa}
             className="btn-3d text-lg md:text-xl px-6 py-5 w-full sm:w-auto bg-cyan-500/10 border-2 border-cyan-400/40 text-cyan-200 hover:bg-cyan-500/20 hover:scale-105 transition-all font-black text-center"
           >
-            🤖 ¿Las IA entienden tu web?
+            🤖 Probar gratis sin registrarme
           </a>
         </div>
         <a
           href="#como-funciona"
           onClick={scrollToHow}
-          className="text-slate-400 hover:text-white font-bold underline underline-offset-4 decoration-slate-600 transition-colors mt-5"
+          className="relative text-slate-400 hover:text-white font-bold underline underline-offset-4 decoration-slate-600 transition-colors mt-5"
         >
           ▶ Ver cómo funciona
         </a>
 
-        <div className="mt-8 flex flex-col items-center">
+        <div className="relative mt-8 flex flex-col items-center">
           <div className="flex text-yellow-400 text-xl mb-2">⭐⭐⭐⭐⭐</div>
           <p className="text-slate-400 text-sm font-medium max-w-xl">
             <strong className="text-slate-300">4.9/5</strong> – Negocios locales, e-commerce y profesionales que prefieren
-            una misión clara cada día antes que otro dashboard de SEO.
+            saber qué cambiar hoy antes que otro dashboard de SEO.
           </p>
         </div>
       </section>
 
-      {/* GANCHO — ¿Las IA entienden tu página? (herramienta pública gratis) */}
+      {/* ESPÍA — Explicación del gancho (cómo funciona espiar) */}
+      <SpyHeroExplainer playClick={playClick} onStart={handleStart} />
+
+      {/* GANCHO SECUNDARIO — ¿Las IA entienden tu página? (herramienta pública gratis, sin registro) */}
       <section id="mapa-ia" className="w-full px-4 pb-8 md:pb-16">
         <div className="relative rounded-3xl border-2 border-cyan-500/30 bg-gradient-to-b from-slate-900/80 to-slate-950 p-6 md:p-12 shadow-2xl overflow-hidden">
           <div className="absolute -top-24 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-cyan-500/10 blur-[120px] rounded-full pointer-events-none" />
           <div className="relative text-center mb-8">
             <span className="inline-block px-4 py-1.5 bg-purple-500/20 border border-purple-400/40 rounded-full text-purple-200 text-xs md:text-sm font-black uppercase tracking-widest mb-5">
-              🤖 Nuevo · Optimización para IA (AEO)
+              🤖 Gratis · Sin registro · Optimización para IA (AEO)
             </span>
             <h2 className="text-3xl md:text-5xl font-black text-white tracking-tight leading-[1.1] max-w-3xl mx-auto mb-4">
-              ¿Las IA entienden tu página?{" "}
-              <span className="text-cyan-400">Descubrilo gratis.</span>
+              ¿Todavía no querés espiar? Empezá por tu propia web{" "}
+              <span className="text-cyan-400">gratis.</span>
             </h2>
             <p className="text-slate-300 font-semibold text-base md:text-xl max-w-2xl mx-auto">
               Pegá tu URL y en segundos te mostramos qué entiende (y qué NO entiende){" "}
-              <strong className="text-white">ChatGPT, Gemini y Google</strong> sobre tu negocio.
+              <strong className="text-white">ChatGPT, Gemini y Google</strong> sobre tu negocio — sin crear cuenta.
             </p>
           </div>
           <PublicComprehension onRegister={handleStart} playClick={playClick} />
@@ -201,21 +206,28 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
 
           <div className="flex-1 space-y-8 text-left w-full">
             <div className="flex gap-4 items-start">
-              <div className="w-10 h-10 bg-duo-blue text-white rounded-full flex items-center justify-center font-black shrink-0 text-xl shadow-lg border-2 border-blue-400">1</div>
+              <div className="w-10 h-10 bg-red-500 text-white rounded-full flex items-center justify-center font-black shrink-0 text-xl shadow-lg border-2 border-red-400">1</div>
+              <div>
+                <h3 className="text-xl font-bold text-white">Espiás a tu competencia</h3>
+                <p className="text-slate-400 mt-2">Pegás la URL de un rival —o de cada una de sus páginas clave— y la IA te dice qué hace mejor que vos.</p>
+              </div>
+            </div>
+            <div className="flex gap-4 items-start">
+              <div className="w-10 h-10 bg-duo-blue text-white rounded-full flex items-center justify-center font-black shrink-0 text-xl shadow-lg border-2 border-blue-400">2</div>
               <div>
                 <h3 className="text-xl font-bold text-white">Conectás tu Search Console</h3>
-                <p className="text-slate-400 mt-2">En segundos, con tu cuenta de Google. Datos reales de tu web, no estimaciones.</p>
+                <p className="text-slate-400 mt-2">En segundos, con tu cuenta de Google. Sumás tus datos reales para cruzarlos con lo que vimos del rival.</p>
               </div>
             </div>
             <div className="flex gap-4 items-start">
-              <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-black shrink-0 text-xl shadow-lg border-2 border-purple-400">2</div>
+              <div className="w-10 h-10 bg-purple-600 text-white rounded-full flex items-center justify-center font-black shrink-0 text-xl shadow-lg border-2 border-purple-400">3</div>
               <div>
                 <h3 className="text-xl font-bold text-white">La IA detecta oportunidades</h3>
-                <p className="text-slate-400 mt-2">Quick Wins en Google, oportunidades AEO para ChatGPT y Gemini, y prioridades claras.</p>
+                <p className="text-slate-400 mt-2">Quick Wins en Google, oportunidades AEO para ChatGPT y Gemini, y las brechas contra tu competencia.</p>
               </div>
             </div>
             <div className="flex gap-4 items-start">
-              <div className="w-10 h-10 bg-duo-green text-white rounded-full flex items-center justify-center font-black shrink-0 text-xl shadow-lg border-2 border-green-400">3</div>
+              <div className="w-10 h-10 bg-duo-green text-white rounded-full flex items-center justify-center font-black shrink-0 text-xl shadow-lg border-2 border-green-400">4</div>
               <div>
                 <h3 className="text-xl font-bold text-white">Completás misiones diarias</h3>
                 <p className="text-slate-400 mt-2">Cambiás un título, un H1, un FAQ. Verificamos que quedó en vivo. Sumás XP. Mañana, otra misión.</p>
@@ -234,7 +246,15 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
           Cada herramienta te empuja a mejorar un poco tu web hoy — no a mirar gráficos toda la tarde.
         </p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-5xl mx-auto">
-          <div className="bg-slate-800/50 p-8 rounded-2xl border-2 border-purple-500/40 hover:border-purple-400/60 transition-colors">
+          <div className="bg-slate-800/50 p-8 rounded-2xl border-2 border-red-500/40 hover:border-red-400/60 transition-colors">
+            <div className="text-4xl mb-4">🕵️</div>
+            <h3 className="text-xl font-bold text-white mb-3">Espía de la Competencia</h3>
+            <p className="text-slate-400 leading-relaxed">
+              Pegás la URL de un rival —cada producto o página que quieras— y la IA compara título, H1 y temas con tu web.
+              El punto de partida: saber exactamente qué te gana hoy.
+            </p>
+          </div>
+          <div className="bg-slate-800/50 p-8 rounded-2xl border border-slate-700 hover:border-purple-500/50 transition-colors">
             <div className="text-4xl mb-4">🤖</div>
             <h3 className="text-xl font-bold text-white mb-3">Oportunidades AEO</h3>
             <p className="text-slate-400 leading-relaxed">
@@ -376,8 +396,9 @@ export default function LandingPage({ onStart, playClick, variant = "default" })
         <div className="space-y-6">
           <Faq q="¿Tengo que ser experto en SEO?" a="No. SEO Jump traduce todo a instrucciones simples. Si sabés copiar, pegar y editar un texto en tu web, alcanza." />
           <Faq q="¿Qué diferencia hay entre SEO y AEO?" a="SEO = aparecer en los enlaces de Google. AEO = que ChatGPT y Gemini te citen como respuesta. SEO Jump trabaja ambos con misiones concretas." />
-          <Faq q="¿Por qué conectar Search Console?" a="Es la fuente oficial de Google sobre tu web. Sin adivinar: usamos tus datos reales de clics, impresiones y posiciones." />
-          <Faq q="¿Y el Espía de la Competencia?" a="Es una herramienta extra: pegás la URL de un rival y la IA compara su web con la tuya. Útil, pero el corazón de SEO Jump son las misiones diarias y el AEO." />
+          <Faq q="¿Por qué conectar Search Console?" a="Es la fuente oficial de Google sobre tu web. Sin adivinar: usamos tus datos reales de clics, impresiones y posiciones. Además cruzamos esos datos con lo que vemos de tu competencia." />
+          <Faq q="¿Cómo funciona el Espía de la Competencia?" a="Pegás la URL de un rival y la IA compara su web con la tuya: título, H1, temas e intención. Te dice qué hace mejor y qué cambiar hoy en la tuya. Es el punto de partida ideal — y desde ahí SEO Jump te arma las misiones diarias para superarlo." />
+          <Faq q="¿Puedo espiar varias páginas del mismo competidor?" a="Sí. Podés espiar página por página: sus pulidoras, sus microfibras, cada categoría que te interese. Cada URL distinta cuenta como un espionaje. El plan gratis incluye 3 URLs, PRO llega a 15 y Agencia a 50. Volver a espiar la misma URL para ver cambios no consume un lugar nuevo." />
           <Faq q="¿Qué es el Human Score?" a="Es nuestra métrica en evolución que mide el valor humano de tu contenido: experiencia, evidencia propia, casos reales, opinión y datos. No detecta si un texto fue hecho con IA; mide si aporta algo que los demás no tienen. La vamos refinando con el uso real." />
           <Faq q="¿Qué es el Mapa de comprensión?" a="Te muestra qué entienden Google y las IA de una página (tipo, temas, preguntas, autor, empresa) y qué falta. Si tenés preguntas frecuentes, genera la estructura lista para pegar — sin pelearte con código técnico. El objetivo no es magia: es reducir ambigüedad para que te puedan citar." />
           <Faq q="¿Es seguro conectar Google?" a="Sí. OAuth oficial de Google. No vemos tu contraseña." />
@@ -525,6 +546,60 @@ function Faq({ q, a }) {
   );
 }
 
+/** Explicación del gancho Espía — justo debajo del hero de la home. */
+function SpyHeroExplainer({ playClick, onStart }) {
+  const steps = [
+    {
+      n: "1",
+      title: "Pegás la URL de tu rival",
+      desc: "La página que quieras: su home, sus pulidoras, sus microfibras… cada URL que te interese.",
+    },
+    {
+      n: "2",
+      title: "La IA compara con tu web",
+      desc: "Título, H1, temas e intención. En castellano, sin gráficos ni informes de 50 páginas.",
+    },
+    {
+      n: "3",
+      title: "Te decimos qué cambiar hoy",
+      desc: "Convertimos cada brecha en una misión concreta que ejecutás en minutos y verificamos en vivo.",
+    },
+  ];
+  return (
+    <section className="w-full px-4 pb-4 md:pb-10">
+      <div className="max-w-6xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+          {steps.map((s) => (
+            <div key={s.n} className="bg-slate-900/70 border-2 border-slate-800 rounded-2xl p-6 text-left relative overflow-hidden">
+              <div className="absolute -top-6 -right-4 text-7xl font-black text-red-500/10 select-none">{s.n}</div>
+              <div className="w-9 h-9 bg-red-500 text-white rounded-full flex items-center justify-center font-black text-lg shadow-lg border-2 border-red-400 mb-3">
+                {s.n}
+              </div>
+              <h3 className="text-lg font-bold text-white mb-1.5 relative z-10">{s.title}</h3>
+              <p className="text-slate-400 text-sm leading-relaxed relative z-10">{s.desc}</p>
+            </div>
+          ))}
+        </div>
+        <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
+          <button
+            onClick={onStart}
+            className="btn-3d btn-yellow font-black px-6 py-4 text-sm md:text-base w-full sm:w-auto"
+          >
+            🕵️ Empezar espiando gratis
+          </button>
+          <Link
+            href="/blog/como-espiar-competencia-google-sin-semrush"
+            onClick={playClick}
+            className="text-cyan-400 font-bold text-sm hover:underline"
+          >
+            Guía: espiar competencia sin Semrush →
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
 /** Bloque Espía — secundario en home, principal en /espia-competencia */
 function SpyFeatureBlock({ playClick, compact = false }) {
   return (
@@ -532,13 +607,14 @@ function SpyFeatureBlock({ playClick, compact = false }) {
       <div className="max-w-4xl mx-auto rounded-3xl border-2 border-red-500/30 bg-gradient-to-br from-slate-900 via-red-950/20 to-slate-900 p-8 md:p-10">
         <div className="flex flex-col md:flex-row md:items-center gap-6">
           <div className="flex-1 space-y-3">
-            <span className="text-xs font-black uppercase tracking-wider text-red-400">También incluido · Fase Detective</span>
+            <span className="text-xs font-black uppercase tracking-wider text-red-400">Por acá se empieza</span>
             <h2 className="text-2xl md:text-3xl font-black text-white">
               🕵️ Espía de la Competencia
             </h2>
             <p className="text-slate-300 leading-relaxed">
-              ¿Querés saber qué hace mejor un rival en Google? Pegá su URL y la IA compara título, H1 y temas con tu web —
-              sin pagar Semrush. Es un complemento de las misiones diarias, no el centro de la app.
+              ¿Querés saber qué hace mejor un rival en Google? Pegá su URL —y la de cada página que te interese: pulidoras,
+              microfibras, lo que vendas— y la IA compara título, H1 y temas con tu web, sin pagar Semrush. Es el mejor
+              punto de partida antes de tus misiones diarias.
             </p>
             <Link
               href="/blog/como-espiar-competencia-google-sin-semrush"

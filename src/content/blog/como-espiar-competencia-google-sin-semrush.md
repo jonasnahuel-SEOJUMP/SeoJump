@@ -151,11 +151,13 @@ En la **Fase 4: Detective de Enlaces**, pestaña **🕵️ Espía Competencia**.
 
 ### Límites por plan (honestos)
 
-| Plan | Rivales rastreables | Consultas IA |
+| Plan | URLs de competencia | Consultas IA |
 |------|---------------------|--------------|
-| Gratis | 1 competidor | 2 / día |
-| PRO | 3 competidores | 12 / día |
-| Agencia | 8 competidores | 40 / día |
+| Gratis | 3 URLs | 2 / día |
+| PRO | 15 URLs | 12 / día |
+| Agencia | 50 URLs | 40 / día |
+
+Cada URL distinta cuenta como un espionaje: podés seguir varias páginas de un mismo rival (su home, sus pulidoras, sus microfibras…). Volver a espiar la misma URL para detectar cambios **no** consume un lugar nuevo.
 
 Un solo precio PRO — el Espía **no se vende aparte**. Está incluido porque es el gancho que te empuja a ejecutar, no un módulo escondido.
 
