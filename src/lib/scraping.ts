@@ -164,7 +164,11 @@ export function extractTitleFromHtml(html: string): string {
   return match ? match[1].replace(/<[^>]+>/g, '').trim() : "";
 }
 
-export async function fetchPage(url: string): Promise<{ html: string; ok: boolean; status: number }> {
+export async function fetchPage(
+  url: string,
+  opts: { timeoutMs?: number } = {}
+): Promise<{ html: string; ok: boolean; status: number }> {
+  const timeoutMs = opts.timeoutMs ?? 5000;
   try {
     const finalUrl = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
     const response = await fetch(finalUrl, {
@@ -174,7 +178,7 @@ export async function fetchPage(url: string): Promise<{ html: string; ok: boolea
         'Accept': 'text/html,application/xhtml+xml',
         'Cache-Control': 'no-cache',
       },
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) return { html: '', ok: false, status: response.status };
     const html = await response.text();

@@ -3531,133 +3531,152 @@ export async function verifySpyGap(
   /** true = el usuario ya recibió el código y dice haberlo pegado; no regenerar, fallar claro. */
   alreadyGenerated = false
 ) {
-  if (!pageUrl?.trim()) {
-    return {
-      success: false,
-      error: 'Necesitamos la URL de tu página para verificar. Pegala en "Tu página equivalente" y volvé a espiar.',
-    };
-  }
-
-  let target = pageUrl.trim();
-  if (!target.startsWith('http://') && !target.startsWith('https://')) {
-    target = 'https://' + target;
-  }
-
-  // Honor system: título/H1/etc. (sin scrape obligatorio)
-  if (verifyKind === 'honor') {
-    return { success: true, verified: true, honor: true };
-  }
-
-  const page = await fetchPage(target);
-  if (!page.ok || !page.html) {
-    return {
-      success: false,
-      error: 'No pudimos leer tu página en vivo. ¿La URL es pública? Probá sin caché del hosting.',
-    };
-  }
-
-  if (verifyKind === 'schema_faq') {
-    const structured = extractExistingStructuredData(page.html);
-    if (structured.hasFaqPage) {
-      return { success: true, verified: true, detail: 'Detectamos Schema FAQPage en tu página. ¡Listo!' };
-    }
-    // Segundo click: ya le dimos el código y dice haberlo pegado → error claro, no regenerar.
-    if (alreadyGenerated) {
+  try {
+    if (!pageUrl?.trim()) {
       return {
         success: false,
-        missingAfterPaste: true,
-        error:
-          'Todavía no vemos el Schema FAQPage en tu HTML. Causas típicas: (1) WordPress/Elementor borró el <script> al guardar — pegalo como HTML personalizado / en el theme, no en un párrafo; (2) la URL no es la misma página; (3) falta publicar o borrar caché. Revisá, guardá y reintentá.',
+        error: 'Necesitamos la URL de tu página para verificar. Pegala en "Tu página equivalente" y volvé a espiar.',
       };
     }
-    // El Schema no está, pero si ya tenés las preguntas visibles generamos el
-    // código en el momento para que solo tengas que copiarlo y pegarlo.
-    const livePairs = extractFaqPairs(page.html, 12);
-    if (livePairs.length >= 1) {
-      return {
-        success: false,
-        schemaReady: true,
-        schemaCode: buildFaqJsonLd(livePairs),
-        foundQuestions: livePairs.map((p) => p.question).slice(0, 8),
-        error:
-          `Detectamos ${livePairs.length} pregunta(s) en tu página ✅, pero todavía falta el Schema FAQPage (el código que leen Google y las IA). Copiá el bloque de acá abajo, pegalo en el HTML antes de </body>, guardá, borrá caché y reintentá.`,
-      };
-    }
-    return {
-      success: false,
-      error:
-        'Todavía no encontramos preguntas ni Schema en tu página en vivo. Verificá que la URL sea la correcta (la de la página donde pegaste las FAQ) y que hayas guardado/publicado los cambios; después borrá la caché del sitio y reintentá.',
-    };
-  }
 
-  if (verifyKind === 'schema_product') {
-    const structured = extractExistingStructuredData(page.html);
-    if (structured.hasProduct) {
-      return { success: true, verified: true, detail: 'Detectamos Schema Product en tu página. ¡Listo!' };
+    let target = pageUrl.trim();
+    if (!target.startsWith('http://') && !target.startsWith('https://')) {
+      target = 'https://' + target;
     }
-    if (alreadyGenerated) {
-      return {
-        success: false,
-        missingAfterPaste: true,
-        error:
-          'Todavía no vemos el Schema Product en tu HTML. Causas típicas: (1) el editor borró el <script> al guardar — usá HTML personalizado / código en el theme; (2) URL distinta a la ficha; (3) falta publicar o borrar caché. Revisá y reintentá.',
-      };
-    }
-    const titleM = page.html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-    const h1M = page.html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
-    const title = titleM ? titleM[1].replace(/<[^>]+>/g, '').trim() : '';
-    const h1 = h1M ? h1M[1].replace(/<[^>]+>/g, '').trim() : '';
-    const info = detectProductInfo(page.html, title, h1);
-    if (info.name) {
-      // Generamos SIN precio a propósito: pegado a mano, un precio fijo se
-      // desactualiza y si no coincide con el visible Google puede ignorar el
-      // rich result. El precio/stock conviene dejarlos al plugin de la tienda.
-      return {
-        success: false,
-        schemaReady: true,
-        schemaCode: buildProductJsonLd(info, target, { includeOffers: false }),
-        error:
-          'Todavía no encontramos el Schema Product en tu HTML. Te generamos uno SIN precio (a propósito: un precio fijo pegado a mano se desactualiza y Google puede ignorarlo). Pegalo antes de </body>, guardá, borrá caché y reintentá. Para precio y stock automáticos, lo ideal es el plugin de tu tienda (WooCommerce/Shopify).',
-      };
-    }
-    return {
-      success: false,
-      error:
-        'No pudimos leer datos de producto (nombre/precio) en tu página. Verificá que sea la URL de la ficha del producto y que esté publicada; después reintentá.',
-    };
-  }
 
-  if (verifyKind === 'faq_visible') {
-    const pairs = extractFaqPairs(page.html, 12);
-    if (pairs.length === 0) {
+    const kind = verifyKind || 'honor';
+    const expected = (Array.isArray(expectedQuestions) ? expectedQuestions : [])
+      .map((q) => (typeof q === 'string' ? q.trim() : ''))
+      .filter(Boolean);
+
+    // Honor system: título/H1/etc. (sin scrape obligatorio)
+    if (kind === 'honor') {
+      return { success: true, verified: true, honor: true };
+    }
+
+    // Verificación en vivo: un poco más de paciencia (Woo/Elementor suelen ser lentos).
+    const page = await fetchPage(target, { timeoutMs: 10000 });
+    if (!page.ok || !page.html) {
       return {
         success: false,
-        error:
-          'No detectamos preguntas con respuesta visibles en tu página. Agregá las FAQ en texto (H2/acordeón) y reintentá.',
+        error: 'No pudimos leer tu página en vivo. ¿La URL es pública? Probá sin caché del hosting.',
       };
     }
-    if (expectedQuestions.length > 0) {
-      const live = pairs.map((p) => p.question.toLowerCase());
-      const hit = expectedQuestions.some((q) =>
-        live.some((lq) => lq.includes(q.toLowerCase().slice(0, 40)) || q.toLowerCase().includes(lq.slice(0, 40)))
-      );
-      if (!hit) {
+
+    // Evitar regex lentos sobre HTML enorme (temas con mucho JS inline).
+    const html = page.html.length > 900_000 ? page.html.slice(0, 900_000) : page.html;
+
+    if (kind === 'schema_faq') {
+      const structured = extractExistingStructuredData(html);
+      if (structured.hasFaqPage) {
+        return { success: true, verified: true, detail: 'Detectamos Schema FAQPage en tu página. ¡Listo!' };
+      }
+      // Segundo click: ya le dimos el código y dice haberlo pegado → error claro, no regenerar.
+      if (alreadyGenerated) {
         return {
           success: false,
-          error: `Vimos ${pairs.length} pregunta(s), pero todavía no las que sugerimos. Revisá el texto y reintentá.`,
-          foundQuestions: pairs.map((p) => p.question).slice(0, 5),
+          missingAfterPaste: true,
+          error:
+            'Todavía no vemos el Schema FAQPage en tu HTML. Causas típicas: (1) WordPress/Elementor borró el <script> al guardar — pegalo como HTML personalizado / en el theme, no en un párrafo; (2) la URL no es la misma página; (3) falta publicar o borrar caché. Revisá, guardá y reintentá.',
         };
       }
+      // El Schema no está, pero si ya tenés las preguntas visibles generamos el
+      // código en el momento para que solo tengas que copiarlo y pegarlo.
+      const livePairs = extractFaqPairs(html, 12);
+      if (livePairs.length >= 1) {
+        return {
+          success: false,
+          schemaReady: true,
+          schemaCode: buildFaqJsonLd(livePairs),
+          foundQuestions: livePairs.map((p) => p.question).slice(0, 8),
+          error:
+            `Detectamos ${livePairs.length} pregunta(s) en tu página ✅, pero todavía falta el Schema FAQPage (el código que leen Google y las IA). Copiá el bloque de acá abajo, pegalo en el HTML antes de </body>, guardá, borrá caché y reintentá.`,
+        };
+      }
+      return {
+        success: false,
+        error:
+          'Todavía no encontramos preguntas ni Schema en tu página en vivo. Verificá que la URL sea la correcta (la de la página donde pegaste las FAQ) y que hayas guardado/publicado los cambios; después borrá la caché del sitio y reintentá.',
+      };
     }
+
+    if (kind === 'schema_product') {
+      const structured = extractExistingStructuredData(html);
+      if (structured.hasProduct) {
+        return { success: true, verified: true, detail: 'Detectamos Schema Product en tu página. ¡Listo!' };
+      }
+      if (alreadyGenerated) {
+        return {
+          success: false,
+          missingAfterPaste: true,
+          error:
+            'Todavía no vemos el Schema Product en tu HTML. Causas típicas: (1) el editor borró el <script> al guardar — usá HTML personalizado / código en el theme; (2) URL distinta a la ficha; (3) falta publicar o borrar caché. Revisá y reintentá.',
+        };
+      }
+      const titleM = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+      const h1M = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
+      const title = titleM ? titleM[1].replace(/<[^>]+>/g, '').trim() : '';
+      const h1 = h1M ? h1M[1].replace(/<[^>]+>/g, '').trim() : '';
+      const info = detectProductInfo(html, title, h1);
+      if (info.name) {
+        // Generamos SIN precio a propósito: pegado a mano, un precio fijo se
+        // desactualiza y si no coincide con el visible Google puede ignorar el
+        // rich result. El precio/stock conviene dejarlos al plugin de la tienda.
+        return {
+          success: false,
+          schemaReady: true,
+          schemaCode: buildProductJsonLd(info, target, { includeOffers: false }),
+          error:
+            'Todavía no encontramos el Schema Product en tu HTML. Te generamos uno SIN precio (a propósito: un precio fijo pegado a mano se desactualiza y Google puede ignorarlo). Pegalo antes de </body>, guardá, borrá caché y reintentá. Para precio y stock automáticos, lo ideal es el plugin de tu tienda (WooCommerce/Shopify).',
+        };
+      }
+      return {
+        success: false,
+        error:
+          'No pudimos leer datos de producto (nombre/precio) en tu página. Verificá que sea la URL de la ficha del producto y que esté publicada; después reintentá.',
+      };
+    }
+
+    if (kind === 'faq_visible') {
+      const pairs = extractFaqPairs(html, 12);
+      if (pairs.length === 0) {
+        return {
+          success: false,
+          error:
+            'No detectamos preguntas con respuesta visibles en tu página. Agregá las FAQ en texto (H2/acordeón) y reintentá.',
+        };
+      }
+      if (expected.length > 0) {
+        const live = pairs.map((p) => p.question.toLowerCase());
+        const hit = expected.some((q) => {
+          const needle = q.toLowerCase().slice(0, 40);
+          return live.some((lq) => lq.includes(needle) || q.toLowerCase().includes(lq.slice(0, 40)));
+        });
+        if (!hit) {
+          return {
+            success: false,
+            error: `Vimos ${pairs.length} pregunta(s), pero todavía no las que sugerimos. Revisá el texto y reintentá.`,
+            foundQuestions: pairs.map((p) => p.question).slice(0, 5),
+          };
+        }
+      }
+      return {
+        success: true,
+        verified: true,
+        detail: `Detectamos ${pairs.length} pregunta(s) en tu página.`,
+        foundQuestions: pairs.map((p) => p.question).slice(0, 5),
+      };
+    }
+
+    return { success: true, verified: true, honor: true };
+  } catch (err) {
+    console.error('[verifySpyGap] falló:', err);
     return {
-      success: true,
-      verified: true,
-      detail: `Detectamos ${pairs.length} pregunta(s) en tu página.`,
-      foundQuestions: pairs.map((p) => p.question).slice(0, 5),
+      success: false,
+      error:
+        'No pudimos completar la verificación ahora. Recargá la página (F5) e intentá de nuevo. Si sigue fallando, revisá que la URL de tu producto sea pública.',
     };
   }
-
-  return { success: true, verified: true, honor: true };
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
