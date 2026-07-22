@@ -8,6 +8,7 @@ import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { auditSiteLinks, requestGoogleIndexing, checkIsAdmin, spyCompetitor, verifySpyGap } from "../../lib/actions";
 import UpgradeModal from "../../components/UpgradeModal";
+import SchemaPasteGuideBox from "../../components/SchemaPasteGuideBox";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 import { useSubscription } from "../../hooks/useSubscription";
@@ -1560,7 +1561,9 @@ export default function DetectiveDeEnlaces() {
                                 <li className={effectiveSchemaCode ? "line-through text-slate-600" : ""}>
                                   Tocá <span className="text-slate-200">“Generar mi código Schema”</span> y lo armamos con tus datos.
                                 </li>
-                                <li className={effectiveSchemaCode ? "text-slate-200" : ""}>Copiá el código y pegalo en tu web (antes de <code>&lt;/body&gt;</code>).</li>
+                                <li className={effectiveSchemaCode ? "text-slate-200" : ""}>
+                                  Copiá el código, elegí tu editor abajo y pegalo donde indica la guía.
+                                </li>
                                 <li>Tocá <span className="text-slate-200">“Ya lo pegué — verificar”</span> y confirmamos que quedó online.</li>
                               </ol>
                             </div>
@@ -1571,31 +1574,30 @@ export default function DetectiveDeEnlaces() {
                           )}
 
                           {effectiveSchemaCode && (
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between gap-2">
-                                <p className="text-xs font-black text-duo-yellow uppercase">Código Schema {schemaLabel} (listo para pegar)</p>
-                                <button
-                                  type="button"
-                                  onClick={() => handleCopySchema(effectiveSchemaCode, identifier)}
-                                  className="btn-3d btn-yellow !py-1.5 !px-3 text-xs font-black"
-                                >
-                                  {spyCopiedGap === identifier ? "✅ Copiado" : "📋 Copiar"}
-                                </button>
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <p className="text-xs font-black text-duo-yellow uppercase">Código Schema {schemaLabel} (listo para pegar)</p>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleCopySchema(effectiveSchemaCode, identifier)}
+                                    className="btn-3d btn-yellow !py-1.5 !px-3 text-xs font-black"
+                                  >
+                                    {spyCopiedGap === identifier ? "✅ Copiado" : "📋 Copiar"}
+                                  </button>
+                                </div>
+                                <pre className="max-h-48 overflow-auto rounded-xl border border-slate-700 bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-300 whitespace-pre-wrap break-words">
+                                  {effectiveSchemaCode}
+                                </pre>
+                                <p className="text-[11px] font-bold text-amber-300/90 leading-snug">
+                                  ⚠️ Importante: no lo pegues en un párrafo normal de WordPress/Elementor — suelen borrar el{" "}
+                                  <code className="text-amber-200">&lt;script&gt;</code>. Usá “HTML personalizado” / código en el theme, o seguí la guía.
+                                </p>
                               </div>
-                              <pre className="max-h-48 overflow-auto rounded-xl border border-slate-700 bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-300 whitespace-pre-wrap break-words">
-                                {effectiveSchemaCode}
-                              </pre>
-                              <p className="text-[11px] font-bold text-amber-300/90 leading-snug">
-                                ⚠️ Importante: no lo pegues en un párrafo normal de WordPress/Elementor — suelen borrar el{" "}
-                                <code className="text-amber-200">&lt;script&gt;</code>. Usá “HTML personalizado” / código en el theme, o seguí la guía.
-                              </p>
-                              <Link
-                                href="/mapa-comprension"
-                                onClick={playClick}
-                                className="inline-block text-cyan-400 font-bold text-xs hover:underline"
-                              >
-                                ¿Dónde pegarlo? Guía en el Mapa de comprensión →
-                              </Link>
+                              <SchemaPasteGuideBox
+                                playClick={playClick}
+                                heading="¿Dónde lo pego? Elegí tu editor"
+                              />
                             </div>
                           )}
 
