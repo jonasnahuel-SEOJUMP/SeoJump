@@ -1,5 +1,7 @@
 /**
- * Decodifica entidades HTML comunes (WordPress / Yoast suelen usar &#8211;, etc.)
+ * Decodifica entidades HTML comunes (WordPress / Yoast suelen usar &#8211;, etc.).
+ * También convierte entidades numéricas (&#8243; → ″, &#x2033; → ″) para que
+ * el Espía y las verificaciones muestren lo mismo que ve el usuario en el browser.
  */
 export function decodeHtmlEntities(text) {
   if (!text) return '';
@@ -22,6 +24,20 @@ export function decodeHtmlEntities(text) {
     .replace(/&lt;/g, '<')
     .replace(/&gt;/g, '>')
     .replace(/&nbsp;/g, ' ')
+    // Entidades numéricas decimales (&#8243; = pulgadas ″) y hex (&#x2033;)
+    .replace(/&#(\d+);/g, (_, code) => {
+      const n = Number(code);
+      return Number.isFinite(n) && n > 0 && n < 0x110000
+        ? String.fromCodePoint(n)
+        : _;
+    })
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => {
+      const n = parseInt(hex, 16);
+      return Number.isFinite(n) && n > 0 && n < 0x110000
+        ? String.fromCodePoint(n)
+        : _;
+    })
+    // &amp; al final para no re-abrir otras entidades
     .replace(/&amp;/g, '&');
 }
 
