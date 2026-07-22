@@ -39,6 +39,7 @@ import {
   getFaqStructurePasteGuide,
   extractExistingStructuredData,
   extractFaqPairs,
+  buildFaqJsonLd,
 } from './comprehension'
 import { detectSchemaInstallHints } from './schemaPasteGuide'
 import {
@@ -3556,10 +3557,23 @@ export async function verifySpyGap(
     if (structured.hasFaqPage) {
       return { success: true, verified: true, detail: 'Detectamos Schema FAQPage en tu página. ¡Listo!' };
     }
+    // El Schema no está, pero si ya tenés las preguntas visibles generamos el
+    // código en el momento para que solo tengas que copiarlo y pegarlo.
+    const livePairs = extractFaqPairs(page.html, 12);
+    if (livePairs.length >= 1) {
+      return {
+        success: false,
+        schemaReady: true,
+        schemaCode: buildFaqJsonLd(livePairs),
+        foundQuestions: livePairs.map((p) => p.question).slice(0, 8),
+        error:
+          `Detectamos ${livePairs.length} pregunta(s) en tu página ✅, pero todavía falta el Schema FAQPage (el código que leen Google y las IA). Copiá el bloque de acá abajo, pegalo en el HTML antes de </body>, guardá, borrá caché y reintentá.`,
+      };
+    }
     return {
       success: false,
       error:
-        'Todavía no encontramos el Schema FAQPage en tu HTML. Pegá el bloque <script type="application/ld+json">…, guardá, borrá caché del sitio y reintentá.',
+        'Todavía no encontramos preguntas ni Schema en tu página en vivo. Verificá que la URL sea la correcta (la de la página donde pegaste las FAQ) y que hayas guardado/publicado los cambios; después borrá la caché del sitio y reintentá.',
     };
   }
 
