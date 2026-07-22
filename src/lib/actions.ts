@@ -3590,12 +3590,15 @@ export async function verifySpyGap(
     const h1 = h1M ? h1M[1].replace(/<[^>]+>/g, '').trim() : '';
     const info = detectProductInfo(page.html, title, h1);
     if (info.name) {
+      // Generamos SIN precio a propósito: pegado a mano, un precio fijo se
+      // desactualiza y si no coincide con el visible Google puede ignorar el
+      // rich result. El precio/stock conviene dejarlos al plugin de la tienda.
       return {
         success: false,
         schemaReady: true,
-        schemaCode: buildProductJsonLd(info, target),
+        schemaCode: buildProductJsonLd(info, target, { includeOffers: false }),
         error:
-          'Todavía no encontramos el Schema Product en tu HTML. Armamos uno con los datos de tu página (revisá precio/disponibilidad antes de publicar), pegalo antes de </body>, guardá, borrá caché y reintentá.',
+          'Todavía no encontramos el Schema Product en tu HTML. Te generamos uno SIN precio (a propósito: un precio fijo pegado a mano se desactualiza y Google puede ignorarlo). Pegalo antes de </body>, guardá, borrá caché y reintentá. Para precio y stock automáticos, lo ideal es el plugin de tu tienda (WooCommerce/Shopify).',
       };
     }
     return {
