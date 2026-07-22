@@ -562,7 +562,7 @@ function SpyHeroExplainer({ playClick, onStart }) {
     {
       n: "2",
       title: "La IA compara con tu web",
-      desc: "Título, H1, temas e intención. En castellano, sin gráficos ni informes de 50 páginas.",
+      desc: "Título, H1, temas… y también qué preguntas responde (FAQ) y si tiene Schema para IA. En castellano, sin informes de 50 páginas.",
     },
     {
       n: "3",

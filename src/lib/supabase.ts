@@ -432,6 +432,12 @@ export type CompetitorSnapshot = {
   h1: string;
   headings: string[];
   scrapedAt: string;
+  /** Preguntas detectadas en la página (FAQ visible, H2 con ?, acordeones). */
+  faqQuestions?: string[];
+  /** Tiene Schema FAQPage (lo que Google/IA leen para rich results). */
+  hasFaqSchema?: boolean;
+  /** Tipos Schema.org encontrados (Product, FAQPage, Organization…). */
+  schemaTypes?: string[];
 };
 
 /** Resuelve (o crea) el profile id por email. Devuelve null si Supabase no está. */

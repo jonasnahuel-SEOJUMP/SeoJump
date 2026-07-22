@@ -1077,7 +1077,7 @@ export default function DetectiveDeEnlaces() {
                     Espiá a tu competencia
                   </h2>
                   <p className="text-base font-bold text-slate-400 max-w-lg mx-auto leading-relaxed">
-                    Pegá la web de un competidor y la IA la compara con la tuya: te dice qué está haciendo mejor y qué cambiar para superarlo.
+                    Pegá la web de un competidor y la IA la compara con la tuya: título, H1, temas… y también qué preguntas responde (AEO) y si tiene Schema para Google e IA.
                   </p>
 
                   {/* Explicación del Búho — qué es y cómo funciona */}
@@ -1117,12 +1117,12 @@ export default function DetectiveDeEnlaces() {
                               <strong className="text-duo-yellow">Cómo funciona:</strong>
                             </p>
                             <ol className="list-decimal list-inside space-y-1 text-slate-300 mb-2">
-                              <li>Pegás la URL del rival (ej: <span className="text-slate-400">otrotaller.com</span>).</li>
-                              <li>Leo el título, el H1 y los temas de las dos webs.</li>
-                              <li>Te doy hasta 3 cosas concretas para copiar o mejorar en tu sitio.</li>
+                              <li>Pegás la URL del rival (ej: <span className="text-slate-400">otrotaller.com/pulidoras</span>).</li>
+                              <li>Leo el título, el H1, los temas… y también <strong className="text-cyan-300">qué preguntas responde</strong> y si tiene Schema para IA.</li>
+                              <li>Te doy hasta 4 cosas concretas para copiar o mejorar en tu sitio (SEO + AEO).</li>
                             </ol>
                             <p className="text-slate-400 text-xs">
-                              Si volvés a espiar al mismo rival más adelante, te aviso si cambió el título o sumó contenido nuevo. Cada espionaje usa <strong className="text-slate-300">1 consulta IA</strong> (como Quick Wins o AEO).
+                              Si volvés a espiar al mismo rival más adelante, te aviso si cambió el título, sumó contenido o agregó preguntas nuevas. Cada espionaje usa <strong className="text-slate-300">1 consulta IA</strong> (como Quick Wins o AEO).
                             </p>
                             <div className="absolute top-0 -left-2 w-0 h-0 border-t-[10px] border-t-slate-800 border-l-[10px] border-l-transparent" />
                           </div>
@@ -1286,6 +1286,67 @@ export default function DetectiveDeEnlaces() {
                         <p className="text-xs font-black text-purple-400 uppercase">🕵️ Competidor</p>
                         <p className="text-xs text-slate-500 font-bold">Título: <span className="text-slate-300">{spyResult.competitor.title || "(vacío)"}</span></p>
                         <p className="text-xs text-slate-500 font-bold">H1: <span className="text-slate-300">{spyResult.competitor.h1 || "(vacío)"}</span></p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Comparación AEO: preguntas + Schema */}
+                  {(spyResult.you || spyResult.competitor) && (
+                    <div className="card-3d bg-slate-900/80 border-cyan-500/30 p-5 md:p-6 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">🤖</span>
+                        <div>
+                          <h3 className="text-sm font-black text-cyan-300 uppercase">Respuestas a preguntas (AEO)</h3>
+                          <p className="text-xs text-slate-500 font-bold">Lo que Google, ChatGPT y Gemini pueden citar</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-2">
+                          <p className="text-xs font-black text-emerald-400 uppercase">🟢 Vos</p>
+                          <p className="text-xs font-bold text-slate-400">
+                            Schema FAQ:{" "}
+                            <span className={spyResult.you?.hasFaqSchema ? "text-emerald-300" : "text-amber-300"}>
+                              {spyResult.you?.hasFaqSchema ? "✅ Sí" : "❌ No"}
+                            </span>
+                          </p>
+                          {(spyResult.you?.schemaTypes?.length > 0) && (
+                            <p className="text-[11px] text-slate-500 font-bold">
+                              Schema: {spyResult.you.schemaTypes.slice(0, 4).join(", ")}
+                            </p>
+                          )}
+                          {(spyResult.you?.faqQuestions?.length > 0) ? (
+                            <ul className="space-y-1.5 pt-1">
+                              {spyResult.you.faqQuestions.slice(0, 5).map((q, i) => (
+                                <li key={i} className="text-xs text-slate-300 font-bold leading-snug">❓ {q}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-xs text-slate-500 font-bold italic">Sin preguntas detectadas en la página</p>
+                          )}
+                        </div>
+                        <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-2">
+                          <p className="text-xs font-black text-purple-400 uppercase">🕵️ Competidor</p>
+                          <p className="text-xs font-bold text-slate-400">
+                            Schema FAQ:{" "}
+                            <span className={spyResult.competitor?.hasFaqSchema ? "text-emerald-300" : "text-amber-300"}>
+                              {spyResult.competitor?.hasFaqSchema ? "✅ Sí" : "❌ No"}
+                            </span>
+                          </p>
+                          {(spyResult.competitor?.schemaTypes?.length > 0) && (
+                            <p className="text-[11px] text-slate-500 font-bold">
+                              Schema: {spyResult.competitor.schemaTypes.slice(0, 4).join(", ")}
+                            </p>
+                          )}
+                          {(spyResult.competitor?.faqQuestions?.length > 0) ? (
+                            <ul className="space-y-1.5 pt-1">
+                              {spyResult.competitor.faqQuestions.slice(0, 5).map((q, i) => (
+                                <li key={i} className="text-xs text-slate-300 font-bold leading-snug">❓ {q}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-xs text-slate-500 font-bold italic">Sin preguntas detectadas en la página</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}

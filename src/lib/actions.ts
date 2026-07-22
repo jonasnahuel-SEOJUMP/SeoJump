@@ -20,13 +20,13 @@ import { decodeHtmlEntities } from './textUtils'
 import {
   scrapeMetadata,
   scrapeHeadingSections,
-  buildCompetitorSnapshot,
   fetchPage,
   extractLinksFromHtml,
   extractHumanSignals,
   isUiNavigationHeading,
   isUiNoiseText,
 } from './scraping'
+import { buildCompetitorSnapshot } from './spySnapshot'
 import {
   computeHumanScore,
   humanDimensionPasses,
@@ -3131,7 +3131,7 @@ type SpyChange = {
   after: string;
 };
 
-/** Compara dos snapshots y devuelve los cambios significativos (título/H1/headings nuevos). */
+/** Compara dos snapshots y devuelve los cambios significativos (título/H1/headings/FAQ). */
 function diffSnapshots(prev: CompetitorSnapshot, next: CompetitorSnapshot): SpyChange[] {
   const changes: SpyChange[] = [];
 
@@ -3149,6 +3149,24 @@ function diffSnapshots(prev: CompetitorSnapshot, next: CompetitorSnapshot): SpyC
       field: 'Contenido nuevo',
       before: `${prev.headings?.length || 0} secciones`,
       after: `Sumó: ${newHeadings.slice(0, 3).join(' · ')}`,
+    });
+  }
+
+  const prevFaqs = new Set((prev.faqQuestions || []).map((q) => q.trim().toLowerCase()));
+  const newFaqs = (next.faqQuestions || []).filter((q) => !prevFaqs.has(q.trim().toLowerCase()));
+  if (newFaqs.length > 0) {
+    changes.push({
+      field: 'Preguntas / FAQ',
+      before: `${prev.faqQuestions?.length || 0} preguntas`,
+      after: `Sumó: ${newFaqs.slice(0, 3).join(' · ')}`,
+    });
+  }
+
+  if (!!prev.hasFaqSchema !== !!next.hasFaqSchema) {
+    changes.push({
+      field: 'Schema FAQ',
+      before: prev.hasFaqSchema ? 'Tenía FAQPage' : 'Sin FAQPage',
+      after: next.hasFaqSchema ? 'Ahora tiene FAQPage' : 'Sacó FAQPage',
     });
   }
 
@@ -3346,16 +3364,18 @@ export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, g
     return { success: false, error: 'GEMINI_API_KEY no configurada en el servidor.' };
   }
 
-  const systemInstructions = `Sos un consultor SEO senior que ayuda a dueños de PyMES (sin conocimientos técnicos) a entender qué hace mejor su competencia y cómo superarla. Hablás en español rioplatense, claro y directo, sin jerga.
+  const systemInstructions = `Sos un consultor SEO + AEO senior que ayuda a dueños de PyMES (sin conocimientos técnicos) a entender qué hace mejor su competencia y cómo superarla. Hablás en español rioplatense, claro y directo, sin jerga.
 
-Te paso dos webs: la del USUARIO y la de un COMPETIDOR. Compará el posicionamiento on-page (título SEO, H1 y temas que cubre cada uno).
+Te paso dos webs: la del USUARIO y la de un COMPETIDOR. Compará:
+1) On-page SEO: título, H1, temas/encabezados.
+2) Respuestas a preguntas (AEO): qué preguntas responde cada uno (FAQ visible) y si tiene Schema FAQPage / Product (lo que Google, ChatGPT y Gemini leen para citar).
 
 Devolvé ESTRICTAMENTE un JSON (sin markdown) con esta forma:
 {
-  "verdict": "1 frase resumen honesta de quién está mejor parado y por qué",
+  "verdict": "1 frase resumen honesta de quién está mejor parado y por qué (mencionar SEO y/o respuestas a preguntas si aplica)",
   "gaps": [
     {
-      "area": "Título SEO" | "Encabezado H1" | "Contenido/Temas" | "Intención de búsqueda",
+      "area": "Título SEO" | "Encabezado H1" | "Contenido/Temas" | "Intención de búsqueda" | "Preguntas/FAQ" | "Schema AEO",
       "problem": "Qué hace mejor el competidor o qué le falta al usuario (concreto, 1-2 frases)",
       "suggestion": "Acción exacta que el usuario puede copiar/hacer hoy para cerrar la brecha"
     }
@@ -3363,33 +3383,46 @@ Devolvé ESTRICTAMENTE un JSON (sin markdown) con esta forma:
 }
 
 Reglas:
-- Máximo 3 gaps, los más importantes. Si el usuario ya está mejor, devolvé menos gaps y un verdict positivo.
+- Máximo 4 gaps, priorizando impacto. Si el rival responde preguntas que el usuario no, ESO es un gap de alta prioridad (área "Preguntas/FAQ"): listá 1-3 preguntas concretas que debería agregar.
+- Si el rival tiene Schema FAQPage (o Product) y el usuario no, incluí un gap "Schema AEO" con acción clara (ej: "Agregá el bloque FAQPage con estas preguntas…").
+- Si el usuario ya está mejor, devolvé menos gaps y un verdict positivo.
 - No inventes datos que no estén en la info provista. Si no tenés la web del usuario, basá las sugerencias en buenas prácticas vs el competidor.
-- Las sugerencias deben ser accionables y específicas (ej: "Cambiá tu H1 a 'X' para atacar la búsqueda Y"), nunca genéricas como "mejorá tu SEO".`;
+- Las sugerencias deben ser accionables y específicas (ej: "Cambiá tu H1 a 'X'" o "Agregá la pregunta '¿Cuánto dura el efecto?' con una respuesta de 2-3 frases"), nunca genéricas como "mejorá tu SEO".`;
 
   const mismatchNote = pageTypeMismatch
     ? `
 ATENCIÓN — DESAJUSTE DE PÁGINAS: La web del USUARIO que recibís es su PÁGINA DE INICIO (home), que por naturaleza es general y representa la marca y todas las categorías. La del COMPETIDOR es una PÁGINA DE PRODUCTO ESPECÍFICA. NO penalices al usuario por ser "genérico" ni le digas que su título/H1 es demasiado amplio: en una home eso es correcto. La brecha REAL y tu sugerencia PRINCIPAL deben ser que el usuario probablemente NO tiene una página dedicada para este producto/búsqueda específica, y que para competirle debe CREAR u OPTIMIZAR una página de producto propia que ataque esa keyword. Compará la home solo a nivel marca/confianza, no producto contra producto.`
     : '';
 
+  const packSnapshot = (s: CompetitorSnapshot) => ({
+    title: s.title,
+    h1: s.h1,
+    headings: s.headings,
+    faqQuestions: s.faqQuestions || [],
+    hasFaqSchema: !!s.hasFaqSchema,
+    schemaTypes: s.schemaTypes || [],
+  });
+
   const userPrompt = `Tema/keyword en juego: "${effectiveKeyword || 'no especificada'}"
 ${mismatchNote}
 WEB DEL USUARIO (${pageTypeMismatch ? 'PÁGINA DE INICIO / HOME' : effectiveOwnUrl || 'no disponible'}):
-${ownSnapshot ? JSON.stringify({ title: ownSnapshot.title, h1: ownSnapshot.h1, headings: ownSnapshot.headings }, null, 2) : '(no disponible — analizá solo al competidor y sugerí cómo competirle)'}
+${ownSnapshot ? JSON.stringify(packSnapshot(ownSnapshot), null, 2) : '(no disponible — analizá solo al competidor y sugerí cómo competirle)'}
 
 WEB DEL COMPETIDOR (${rivalUrl}):
-${JSON.stringify({ title: rivalSnapshot.title, h1: rivalSnapshot.h1, headings: rivalSnapshot.headings }, null, 2)}`;
+${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
 
   const cacheKey = buildGeminiCacheKey([
-    'competitor_spy_v2',
+    'competitor_spy_v3_aeo',
     userEmail || 'dev@localhost',
     rivalUrl,
     effectiveOwnUrl,
     effectiveKeyword,
     pageTypeMismatch ? 'mismatch' : 'match',
     JSON.stringify(rivalSnapshot.headings.slice(0, 8)),
+    JSON.stringify((rivalSnapshot.faqQuestions || []).slice(0, 6)),
     rivalSnapshot.title,
     rivalSnapshot.h1,
+    rivalSnapshot.hasFaqSchema ? 'faqSchema' : 'noFaqSchema',
   ]);
 
   const geminiResult = await invokeGeminiWithCredits({
@@ -3423,7 +3456,7 @@ ${JSON.stringify({ title: rivalSnapshot.title, h1: rivalSnapshot.h1, headings: r
     if (Array.isArray(parsed.gaps)) {
       gaps = parsed.gaps
         .filter((g: any) => g && (g.problem || g.suggestion))
-        .slice(0, 3)
+        .slice(0, 4)
         .map((g: any) => ({
           area: String(g.area || 'Oportunidad').trim(),
           problem: String(g.problem || '').trim(),
@@ -3448,8 +3481,23 @@ ${JSON.stringify({ title: rivalSnapshot.title, h1: rivalSnapshot.h1, headings: r
     success: true,
     data: {
       competitorUrl: rivalUrl,
-      competitor: { title: rivalSnapshot.title, h1: rivalSnapshot.h1, headings: rivalSnapshot.headings },
-      you: ownSnapshot ? { title: ownSnapshot.title, h1: ownSnapshot.h1 } : null,
+      competitor: {
+        title: rivalSnapshot.title,
+        h1: rivalSnapshot.h1,
+        headings: rivalSnapshot.headings,
+        faqQuestions: rivalSnapshot.faqQuestions || [],
+        hasFaqSchema: !!rivalSnapshot.hasFaqSchema,
+        schemaTypes: rivalSnapshot.schemaTypes || [],
+      },
+      you: ownSnapshot
+        ? {
+            title: ownSnapshot.title,
+            h1: ownSnapshot.h1,
+            faqQuestions: ownSnapshot.faqQuestions || [],
+            hasFaqSchema: !!ownSnapshot.hasFaqSchema,
+            schemaTypes: ownSnapshot.schemaTypes || [],
+          }
+        : null,
       comparedAgainst: effectiveOwnUrl || null,
       pageTypeMismatch,
       autoMatched: !!autoMatchedOwnUrl,

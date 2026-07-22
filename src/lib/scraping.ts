@@ -5,7 +5,6 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { decodeHtmlEntities } from './textUtils'
-import type { CompetitorSnapshot } from './supabase'
 
 /**
  * Detecta el tipo real de página desde el HTML (huellas de WooCommerce/WordPress
@@ -362,22 +361,6 @@ export async function scrapeHeadingSections(pageUrl: string): Promise<HeadingSec
   }
 }
 
-/** Scrapea un sitio y arma el snapshot (título, H1, headings) reusando los scrapers existentes. */
-export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSnapshot> {
-  const [meta, sections] = await Promise.all([
-    scrapeMetadata(url),
-    scrapeHeadingSections(url),
-  ]);
-  return {
-    title: meta.title || '',
-    h1: meta.h1 || '',
-    headings: sections.map((s) => s.heading).slice(0, 8),
-    scrapedAt: new Date().toISOString(),
-  };
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-// HUMAN SIGNALS — Señales de "valor humano" en el contenido (para Human Score)
 // Detección 100% determinística (sin IA): mide rastros de experiencia real,
 // evidencia propia, opinión, casos reales y datos concretos. La usa el módulo
 // humanScore.ts para calcular el puntaje. NO decide "esto es IA": mide si el
