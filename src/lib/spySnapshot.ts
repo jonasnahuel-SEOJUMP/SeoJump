@@ -33,7 +33,7 @@ export type SpyGapEnriched = {
   questionsToAdd?: string[];
   /** Si true, "Ya lo apliqué" debe verificar en vivo (no honor system). */
   requiresLiveVerify?: boolean;
-  verifyKind?: 'schema_faq' | 'faq_visible' | 'honor';
+  verifyKind?: 'schema_faq' | 'schema_product' | 'faq_visible' | 'honor';
 };
 
 /** Extrae señales AEO (FAQ + Schema) desde HTML ya descargado. Pura / testeable. */
@@ -131,6 +131,14 @@ export function isFaqGapArea(area: string): boolean {
   return /pregunta|faq/i.test(area || '');
 }
 
+/** ¿El gap de Schema se refiere a Product (no a FAQ)? Se decide por el texto. */
+export function isProductSchemaGap(area: string, problem: string, suggestion: string): boolean {
+  const txt = `${area} ${problem} ${suggestion}`.toLowerCase();
+  const mentionsProduct = /\bproduct\b|\bproducto\b/.test(txt);
+  const mentionsFaq = /faq|pregunta/.test(txt);
+  return mentionsProduct && !mentionsFaq;
+}
+
 /**
  * Enriquece gaps del Espía con código Schema copiable y metadatos de verificación.
  * - Schema AEO: si el usuario ya tiene FAQ visibles sin Schema → genera el JSON-LD.
@@ -157,6 +165,15 @@ export function enrichSpyGaps(
 
     if (isSchemaGapArea(g.area)) {
       out.requiresLiveVerify = true;
+
+      // Schema de Producto (precio, disponibilidad, etc.) — distinto de FAQ.
+      if (isProductSchemaGap(g.area, g.problem, g.suggestion)) {
+        out.verifyKind = 'schema_product';
+        out.schemaNote =
+          'Tocá "Verificar en mi web": si ya tenés el Schema Product lo confirmamos; si no, te generamos el código listo para pegar con los datos de tu página.';
+        return out;
+      }
+
       out.verifyKind = 'schema_faq';
       out.questionsToAdd = questionsToAdd.length ? questionsToAdd : undefined;
 
@@ -169,7 +186,7 @@ export function enrichSpyGaps(
           'Copiá este bloque y pegalo en el HTML de tu página (antes de </body>). Si usás WordPress/Shopify, mirá la guía del Mapa de comprensión.';
       } else {
         out.schemaNote =
-          'Todavía no detectamos preguntas con respuesta en tu página. Primero agregá las FAQ visibles (texto que se ve); después volvé a espiar o usá el Mapa de comprensión para generar el Schema.';
+          'Si ya agregaste las preguntas visibles en tu página, tocá "Verificar en mi web" y te generamos el código Schema al instante. Si todavía no las pusiste, agregalas primero (texto que se ve).';
         if (questionsToAdd.length) {
           out.questionsToAdd = questionsToAdd;
         }
