@@ -102,7 +102,7 @@ function QuickWinsHighlight({ quickWins, completedQuickWins, playClick, router }
 }
 
 
-// Banner Espía de la Competencia (usuarios con Fase 4 desbloqueada)
+// Banner Espía de la Competencia (disponible para todos los usuarios registrados)
 function CompetitorSpyHighlight({ playClick }) {
   return (
     <div className="w-full mb-8 relative rounded-3xl border-2 border-red-500/40 bg-gradient-to-r from-red-950/80 via-purple-950/85 to-slate-900/90 p-6 md:p-8 shadow-[0_0_40px_rgba(239,68,68,0.25)] hover:scale-[1.01] transition-transform duration-300">
@@ -1224,9 +1224,8 @@ export default function HomeApp() {
                       router={router} 
                     />
 
-                    {(prog?.p4?.unlocked || isAdmin) && (
-                      <CompetitorSpyHighlight playClick={playClick} />
-                    )}
+                    <CompetitorSpyHighlight playClick={playClick} />
+
 
                     {/* --- BANNER INTELIGENTE DE SEARCH CONSOLE (detecta el caso real) --- */}
                     {missions.length > 0 && missions.some((m) => m.source === 'web') && (

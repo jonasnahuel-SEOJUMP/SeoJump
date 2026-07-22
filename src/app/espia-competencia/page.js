@@ -15,7 +15,7 @@ export default function EspiaCompetenciaPage() {
   const handleStart = () => {
     playClick();
     if (!session) {
-      signIn("google");
+      signIn("google", { callbackUrl: "/detective-de-enlaces?view=spy" });
       return;
     }
     window.location.href = "/detective-de-enlaces?view=spy";

@@ -68,11 +68,16 @@ export const AI_FEATURE_LABELS: Record<AiFeature, string> = {
   human_score: 'Human Score',
 };
 
-/** Máximo de competidores rastreables por plan (Espía de la Competencia). */
+/**
+ * Máximo de competidores rastreables por plan (Espía de la Competencia).
+ * El límite cuenta URLs distintas: espiar varias páginas de un mismo rival
+ * (ej. /pulidoras, /microfibras) consume varios slots. Por eso el umbral es
+ * generoso — el costo real está acotado por las consultas IA por día/mes.
+ */
 export const MAX_COMPETITORS_BY_PLAN: Record<PlanId, number> = {
-  free: 1,
-  pro: 3,
-  agency: 8,
+  free: 3,
+  pro: 15,
+  agency: 50,
 };
 
 export function getPlanLimits(plan: PlanId): PlanLimits {

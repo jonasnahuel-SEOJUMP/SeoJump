@@ -3,13 +3,13 @@ import HomeApp from "./HomeApp";
 import LandingShell from "../components/LandingShell";
 
 export const metadata = {
-  title: "SEO Jump — Mejorá tu web cada día con misiones SEO y AEO",
+  title: "Espiá a tu competencia en Google — y superala con misiones diarias | SEO Jump",
   description:
-    "Conectá tu sitio, detectá oportunidades en Google y completá misiones diarias para posicionar tu negocio — sin tecnicismos. Incluye AEO para ChatGPT y Gemini.",
+    "Pegá la URL de tu competencia y la IA te muestra qué hace mejor en Google. Después SEO Jump te da misiones diarias para superarla — con AEO para ChatGPT y Gemini. Empezá gratis.",
   openGraph: {
-    title: "SEO Jump — Misiones SEO y AEO para tu negocio",
+    title: "Espiá a tu competencia y superala — SEO Jump",
     description:
-      "Mejorá tu web cada día con misiones guiadas, Quick Wins con IA y espionaje de competencia.",
+      "Espiá a tu competencia en Google sin Semrush, descubrí sus brechas y ganáles con misiones diarias, Quick Wins con IA y AEO.",
     type: "website",
     locale: "es_AR",
   },

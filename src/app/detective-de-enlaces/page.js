@@ -226,15 +226,30 @@ export default function DetectiveDeEnlaces() {
     }
   }, [session, status, router]);
 
-  // Lock protection — FRENO TRIPLE: sesión + admin resuelto + no es admin
+  // ── Espía libre ──────────────────────────────────────────────────────────
+  // El Espía de la Competencia es el gancho de entrada (lo que la gente busca):
+  // está disponible para cualquier usuario registrado, sin exigir Fase 4.
+  // El resto del Detective (auditoría de enlaces) sí sigue detrás del gate.
+  const wantsSpy =
+    detectiveView === "spy" ||
+    (typeof window !== "undefined" &&
+      new URLSearchParams(window.location.search).get("view") === "spy");
+  const p4Locked = !!(prog && !prog.p4.unlocked) && !isAdmin;
+  // Modo "solo Espía": llegó al Detective sin Fase 4 desbloqueada.
+  const spyOnly = p4Locked;
+  // Vista efectiva: en modo solo-Espía se fuerza spy (la de enlaces queda gateada).
+  const effectiveView = spyOnly ? "spy" : detectiveView;
+
+  // Lock protection — FRENO TRIPLE: sesión + admin resuelto + no es admin.
+  // Excepción: el Espía (view=spy) es accesible sin Fase 4.
   useEffect(() => {
     if (status === 'loading') return;
     if (!isAdminResolved) return;           // esperar que checkIsAdmin() termine
     if (isAdmin) return;
-    if (prog && !prog.p4.unlocked) {
+    if (prog && !prog.p4.unlocked && !wantsSpy) {
       router.push('/optimizacion');
     }
-  }, [prog, router, status, isAdmin, isAdminResolved]);
+  }, [prog, router, status, isAdmin, isAdminResolved, wantsSpy]);
 
   // ── Handlers ──
   const handleScan = async () => {
@@ -485,10 +500,12 @@ export default function DetectiveDeEnlaces() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-purple-500/20 blur-3xl rounded-full pointer-events-none"></div>
         <div className="text-5xl md:text-6xl drop-shadow-[0_0_15px_rgba(168,85,247,0.5)]">🕵️‍♂️</div>
         <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-b from-purple-300 to-purple-600 drop-shadow-md">
-          Detective de Enlaces
+          {spyOnly ? "Espía de la Competencia" : "Detective de Enlaces"}
         </h1>
         <p className="text-base md:text-lg font-bold text-slate-600 dark:text-slate-400">
-          Fase 4: Conectá los puntos de tu sitio
+          {spyOnly
+            ? "Espiá a tu competencia y descubrí qué cambiar hoy"
+            : "Fase 4: Conectá los puntos de tu sitio"}
         </p>
         <div className="pt-2">
           <button
@@ -587,17 +604,25 @@ export default function DetectiveDeEnlaces() {
             )}
           </div>
 
-          {/* Back to Phase 3 */}
-          <Link href="/optimizacion" onClick={playClick}
-            className="btn-3d btn-green w-full text-center text-lg font-black py-4">
-            🛠️ SEGUIR EN FASE 3
-          </Link>
+          {/* Back to Phase 3 / Dashboard */}
+          {spyOnly ? (
+            <Link href="/" onClick={playClick}
+              className="btn-3d btn-green w-full text-center text-lg font-black py-4">
+              🏠 VOLVER AL DASHBOARD
+            </Link>
+          ) : (
+            <Link href="/optimizacion" onClick={playClick}
+              className="btn-3d btn-green w-full text-center text-lg font-black py-4">
+              🛠️ SEGUIR EN FASE 3
+            </Link>
+          )}
         </div>
 
         {/* Center Content */}
         <div className="w-full lg:flex-1 min-w-0 flex flex-col gap-8">
 
-          {/* ═══ VIEW TOGGLE: Enlaces | Espía ═══ */}
+          {/* ═══ VIEW TOGGLE: Enlaces | Espía (oculto en modo solo-Espía) ═══ */}
+          {!spyOnly && (
           <div className="flex gap-2 bg-slate-900/60 border border-slate-700 rounded-2xl p-1.5">
             <button
               onClick={() => { playClick(); setDetectiveView("links"); }}
@@ -620,8 +645,20 @@ export default function DetectiveDeEnlaces() {
               🕵️ Espía Competencia
             </button>
           </div>
+          )}
 
-          {detectiveView === "links" && (
+          {/* En modo solo-Espía, invitar a desbloquear el resto del Detective */}
+          {spyOnly && (
+            <div className="w-full rounded-2xl border border-purple-500/30 bg-purple-950/20 p-4 text-center">
+              <p className="text-sm font-bold text-slate-300">
+                🔓 La auditoría de enlaces internos se desbloquea al llegar a la{" "}
+                <Link href="/optimizacion" onClick={playClick} className="text-purple-300 underline">Fase 4</Link>.
+                El Espía lo tenés disponible siempre.
+              </p>
+            </div>
+          )}
+
+          {effectiveView === "links" && (
           <>
           {/* ═══ STATE: PRESTIGE COMPLETE ═══ */}
           {prog?.cycleCompleted ? (
@@ -1029,7 +1066,7 @@ export default function DetectiveDeEnlaces() {
           )}
 
           {/* ═══ VIEW: ESPÍA DE LA COMPETENCIA ═══ */}
-          {detectiveView === "spy" && (
+          {effectiveView === "spy" && (
             <div className="w-full space-y-6">
               {/* Intro + input */}
               <div className="w-full bg-slate-900 rounded-3xl border-2 border-slate-700 shadow-2xl overflow-hidden relative p-8 md:p-10 space-y-6">
@@ -1040,7 +1077,7 @@ export default function DetectiveDeEnlaces() {
                     Espiá a tu competencia
                   </h2>
                   <p className="text-base font-bold text-slate-400 max-w-lg mx-auto leading-relaxed">
-                    Pegá la web de un competidor y la IA la compara con la tuya: te dice qué está haciendo mejor y qué cambiar para superarlo.
+                    Pegá la web de un competidor y la IA la compara con la tuya: título, H1, temas… y también qué preguntas responde (AEO) y si tiene Schema para Google e IA.
                   </p>
 
                   {/* Explicación del Búho — qué es y cómo funciona */}
@@ -1080,12 +1117,12 @@ export default function DetectiveDeEnlaces() {
                               <strong className="text-duo-yellow">Cómo funciona:</strong>
                             </p>
                             <ol className="list-decimal list-inside space-y-1 text-slate-300 mb-2">
-                              <li>Pegás la URL del rival (ej: <span className="text-slate-400">otrotaller.com</span>).</li>
-                              <li>Leo el título, el H1 y los temas de las dos webs.</li>
-                              <li>Te doy hasta 3 cosas concretas para copiar o mejorar en tu sitio.</li>
+                              <li>Pegás la URL del rival (ej: <span className="text-slate-400">competencia.com/servicio</span>).</li>
+                              <li>Leo el título, el H1, los temas… y también <strong className="text-cyan-300">qué preguntas responde</strong> y si tiene Schema para IA.</li>
+                              <li>Te doy hasta 4 cosas concretas para copiar o mejorar en tu sitio (SEO + AEO).</li>
                             </ol>
                             <p className="text-slate-400 text-xs">
-                              Si volvés a espiar al mismo rival más adelante, te aviso si cambió el título o sumó contenido nuevo. Cada espionaje usa <strong className="text-slate-300">1 consulta IA</strong> (como Quick Wins o AEO).
+                              Si volvés a espiar al mismo rival más adelante, te aviso si cambió el título, sumó contenido o agregó preguntas nuevas. Cada espionaje usa <strong className="text-slate-300">1 consulta IA</strong> (como Quick Wins o AEO).
                             </p>
                             <div className="absolute top-0 -left-2 w-0 h-0 border-t-[10px] border-t-slate-800 border-l-[10px] border-l-transparent" />
                           </div>
@@ -1249,6 +1286,67 @@ export default function DetectiveDeEnlaces() {
                         <p className="text-xs font-black text-purple-400 uppercase">🕵️ Competidor</p>
                         <p className="text-xs text-slate-500 font-bold">Título: <span className="text-slate-300">{spyResult.competitor.title || "(vacío)"}</span></p>
                         <p className="text-xs text-slate-500 font-bold">H1: <span className="text-slate-300">{spyResult.competitor.h1 || "(vacío)"}</span></p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Comparación AEO: preguntas + Schema */}
+                  {(spyResult.you || spyResult.competitor) && (
+                    <div className="card-3d bg-slate-900/80 border-cyan-500/30 p-5 md:p-6 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <span className="text-2xl">🤖</span>
+                        <div>
+                          <h3 className="text-sm font-black text-cyan-300 uppercase">Respuestas a preguntas (AEO)</h3>
+                          <p className="text-xs text-slate-500 font-bold">Lo que Google, ChatGPT y Gemini pueden citar</p>
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-2">
+                          <p className="text-xs font-black text-emerald-400 uppercase">🟢 Vos</p>
+                          <p className="text-xs font-bold text-slate-400">
+                            Schema FAQ:{" "}
+                            <span className={spyResult.you?.hasFaqSchema ? "text-emerald-300" : "text-amber-300"}>
+                              {spyResult.you?.hasFaqSchema ? "✅ Sí" : "❌ No"}
+                            </span>
+                          </p>
+                          {(spyResult.you?.schemaTypes?.length > 0) && (
+                            <p className="text-[11px] text-slate-500 font-bold">
+                              Schema: {spyResult.you.schemaTypes.slice(0, 4).join(", ")}
+                            </p>
+                          )}
+                          {(spyResult.you?.faqQuestions?.length > 0) ? (
+                            <ul className="space-y-1.5 pt-1">
+                              {spyResult.you.faqQuestions.slice(0, 5).map((q, i) => (
+                                <li key={i} className="text-xs text-slate-300 font-bold leading-snug">❓ {q}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-xs text-slate-500 font-bold italic">Sin preguntas detectadas en la página</p>
+                          )}
+                        </div>
+                        <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-2">
+                          <p className="text-xs font-black text-purple-400 uppercase">🕵️ Competidor</p>
+                          <p className="text-xs font-bold text-slate-400">
+                            Schema FAQ:{" "}
+                            <span className={spyResult.competitor?.hasFaqSchema ? "text-emerald-300" : "text-amber-300"}>
+                              {spyResult.competitor?.hasFaqSchema ? "✅ Sí" : "❌ No"}
+                            </span>
+                          </p>
+                          {(spyResult.competitor?.schemaTypes?.length > 0) && (
+                            <p className="text-[11px] text-slate-500 font-bold">
+                              Schema: {spyResult.competitor.schemaTypes.slice(0, 4).join(", ")}
+                            </p>
+                          )}
+                          {(spyResult.competitor?.faqQuestions?.length > 0) ? (
+                            <ul className="space-y-1.5 pt-1">
+                              {spyResult.competitor.faqQuestions.slice(0, 5).map((q, i) => (
+                                <li key={i} className="text-xs text-slate-300 font-bold leading-snug">❓ {q}</li>
+                              ))}
+                            </ul>
+                          ) : (
+                            <p className="text-xs text-slate-500 font-bold italic">Sin preguntas detectadas en la página</p>
+                          )}
+                        </div>
                       </div>
                     </div>
                   )}
