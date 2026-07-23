@@ -3384,6 +3384,7 @@ Devolvé ESTRICTAMENTE un JSON (sin markdown) con esta forma:
 }
 
 Reglas:
+- COHERENCIA CON LOS DATOS (importante): el campo "faqQuestions" de cada web es la lista REAL de preguntas visibles detectada en su HTML. Si el USUARIO ya tiene "faqQuestions" (lista NO vacía), NUNCA digas que "no tiene preguntas frecuentes" ni le pidas "agregar una sección de FAQ": ya la tiene. En ese caso, solo generá un gap de "Preguntas/FAQ" si el COMPETIDOR responde preguntas puntuales que el usuario NO cubre (listá esas específicas); si no hay preguntas nuevas para sumar, no generes gap de "Preguntas/FAQ" y enfocá el AEO en el Schema FAQPage si al usuario le falta.
 - Máximo 4 gaps, priorizando impacto. Si el rival responde preguntas que el usuario no, ESO es un gap de alta prioridad (área "Preguntas/FAQ"): listá 1-3 preguntas concretas que debería agregar.
 - Si el rival tiene Schema FAQPage (o Product) y el usuario no, incluí un gap "Schema AEO" con acción clara (ej: "Agregá el bloque FAQPage con estas preguntas…").
 - Si el usuario ya está mejor, devolvé menos gaps y un verdict positivo.

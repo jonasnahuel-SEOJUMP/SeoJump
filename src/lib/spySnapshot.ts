@@ -254,8 +254,27 @@ export function enrichSpyGaps(
     if (isFaqGapArea(g.area)) {
       out.requiresLiveVerify = true;
       out.verifyKind = 'faq_visible';
+      const ownFaqCount = own?.faqQuestions?.length ?? 0;
+      // Corrección de contradicción: la IA a veces dice "no tenés preguntas"
+      // aunque el detector determinístico YA encontró FAQ visibles en tu HTML
+      // (lo mostramos en la comparación AEO). La señal determinística manda:
+      // no afirmamos lo contrario ni te pedimos "agregar FAQ" que ya tenés.
+      if (ownReadable && ownFaqCount > 0 && questionsToAdd.length === 0) {
+        out.alreadySatisfied = true;
+        out.requiresLiveVerify = false;
+        out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles en tu página. La comparación lo marcó como brecha, pero al leer tu HTML ya están.`;
+        out.suggestion = '';
+        out.schemaNote =
+          'Para que Google y las IA las puedan citar como respuesta, lo que falta es el bloque técnico Schema FAQPage (lo ves en el paso de Schema).';
+        return out;
+      }
       if (questionsToAdd.length) {
         out.questionsToAdd = questionsToAdd;
+        // Si ya tiene FAQ pero el rival cubre otras, reencuadramos el problema
+        // para no decir "no tenés preguntas".
+        if (ownReadable && ownFaqCount > 0) {
+          out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles, pero el competidor cubre otras que te conviene sumar.`;
+        }
       }
       return out;
     }
