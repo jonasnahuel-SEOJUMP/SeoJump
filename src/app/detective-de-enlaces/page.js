@@ -291,12 +291,14 @@ export default function DetectiveDeEnlaces() {
 
   // Clave única y estable por gap del Espía (evita colisiones del btoa recortado,
   // que hacía que completar un gap marcara todos en verde).
+  // v2: invalida marcas viejas guardadas cuando el botón daba XP sin verificar en
+  // vivo. Así los gaps de Schema vuelven a pedir generar/pegar el código de verdad.
   const spyFixId = (identifier) => {
     let h = 5381;
     for (let i = 0; i < identifier.length; i++) {
       h = ((h << 5) + h + identifier.charCodeAt(i)) | 0;
     }
-    return `fase4-spy-${(h >>> 0).toString(36)}`;
+    return `fase4-spy-v2-${(h >>> 0).toString(36)}`;
   };
 
   const isSpyFixCompleted = (identifier) => completedFixes.has(spyFixId(identifier));
@@ -380,6 +382,8 @@ export default function DetectiveDeEnlaces() {
       return next;
     });
 
+    const isSchema = !!gap.isSchemaGap;
+    const schemaKindLabel = gap.schemaKind === "product" ? "Product" : "FAQPage";
     const needsLive = !!gap.requiresLiveVerify && gap.verifyKind && gap.verifyKind !== "honor";
     if (!needsLive) {
       markSpyFixComplete(identifier);
@@ -413,11 +417,15 @@ export default function DetectiveDeEnlaces() {
           delete next[identifier];
           return next;
         });
-        setSpyVerifyInfo((prev) => {
-          const next = { ...prev };
-          delete next[identifier];
-          return next;
-        });
+        // Dejamos un mensaje claro del PORQUÉ quedó verificado (evita el
+        // "me dice que está bien y yo no hice nada"). Si tu plataforma ya
+        // genera el Schema, lo explicamos en vez de dar un OK mudo.
+        const successMsg =
+          res.detail ||
+          (isSchema
+            ? `✅ Verificamos tu página en vivo y ya tenés el Schema ${schemaKindLabel}. Muchas tiendas (WooCommerce/Shopify) o plugins SEO lo generan solos, por eso no hizo falta pegar código.`
+            : "✅ Verificado en tu página en vivo. ¡Listo!");
+        setSpyVerifyInfo((prev) => ({ ...prev, [identifier]: successMsg }));
         markSpyFixComplete(identifier);
       } else if (res.schemaReady && res.schemaCode && !alreadyGenerated) {
         // Primer click: contenido OK → código generado. Es progreso, no un error.
@@ -1549,13 +1557,23 @@ export default function DetectiveDeEnlaces() {
                             <span className="text-3xl">{completed ? '✅' : '🎯'}</span>
                             <h3 className="text-lg font-black text-white">{gap.area}</h3>
                           </div>
-                          <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
-                            <p className="text-slate-300 font-bold text-sm leading-relaxed">{gap.problem}</p>
-                          </div>
-                          {gap.suggestion && (
+                          {!completed && (
+                            <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
+                              <p className="text-slate-300 font-bold text-sm leading-relaxed">{gap.problem}</p>
+                            </div>
+                          )}
+                          {gap.suggestion && !completed && (
                             <div className="bg-purple-950/30 border border-purple-800/50 rounded-xl p-3">
                               <p className="text-xs font-black text-purple-300 uppercase mb-1">Qué hacer:</p>
                               <p className="text-base font-black text-white">{gap.suggestion}</p>
+                            </div>
+                          )}
+                          {completed && isSchema && !spyVerifyInfo[identifier] && (
+                            <div className="bg-emerald-950/30 border border-emerald-700/40 rounded-xl p-3">
+                              <p className="text-xs font-bold text-emerald-200 leading-relaxed">
+                                Ya lo tenías marcado como aplicado. Si querés volver a chequearlo en vivo, tocá
+                                {" "}<span className="text-emerald-100">“Espiar otro competidor”</span> y volvé a espiar esta misma URL.
+                              </p>
                             </div>
                           )}
 
