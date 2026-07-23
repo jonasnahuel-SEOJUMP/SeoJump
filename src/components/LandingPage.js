@@ -3,14 +3,17 @@
 import React from "react";
 import Link from "next/link";
 import PublicComprehension from "./PublicComprehension";
-import { startSpyAction, startAppAction } from "../lib/authActions";
+
+/** Rutas de entrada (Route Handler /comenzar): links normales, funcionan sin JS. */
+const SPY_ENTRY_HREF = "/comenzar?spy=1";
+const APP_ENTRY_HREF = "/comenzar";
 
 /**
  * Landing principal (AEO + misiones diarias). variant="spy" solo para /espia-competencia (ads).
  *
- * Los CTA de entrada (Espiar / Empezar gratis) son <form> con Server Actions:
- * el servidor decide login-o-directo. Así no dependen de que el JS hidrate
- * (era la causa del botón "que no hacía nada").
+ * Los CTA de entrada (Espiar / Empezar gratis) son <a href="/comenzar…">: el
+ * servidor (Route Handler) decide login-o-directo y redirige. Así no dependen
+ * de que hidrate el JS del cliente (era la causa del botón "que no hacía nada").
  */
 export default function LandingPage({ onRegister, playClick, variant = "default" }) {
   const scrollToHow = (e) => {
@@ -25,30 +28,18 @@ export default function LandingPage({ onRegister, playClick, variant = "default"
     document.getElementById("mapa-ia")?.scrollIntoView({ behavior: "smooth" });
   };
 
-  /** CTA de entrada al Espía — form con Server Action (confiable sin JS). */
+  /** CTA de entrada al Espía — link normal (confiable sin JS). */
   const SpyCta = ({ className, children }) => (
-    <form action={startSpyAction} className="contents">
-      <button
-        type="submit"
-        onClick={() => playClick && playClick()}
-        className={className}
-      >
-        {children}
-      </button>
-    </form>
+    <a href={SPY_ENTRY_HREF} onClick={() => playClick && playClick()} className={className} role="button">
+      {children}
+    </a>
   );
 
   /** CTA de registro/login genérico → dashboard. */
   const StartCta = ({ className, children }) => (
-    <form action={startAppAction} className="contents">
-      <button
-        type="submit"
-        onClick={() => playClick && playClick()}
-        className={className}
-      >
-        {children}
-      </button>
-    </form>
+    <a href={APP_ENTRY_HREF} onClick={() => playClick && playClick()} className={className} role="button">
+      {children}
+    </a>
   );
 
   if (variant === "spy") {
