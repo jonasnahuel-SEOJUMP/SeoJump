@@ -19,6 +19,44 @@ const SPY_LOADING_MESSAGES = [
   "Buscando brechas que podés cerrar hoy...",
 ];
 
+/**
+ * Cartel explicativo para el flujo de FAQ del Espía.
+ * Aclara CÓMO tienen que estar las preguntas para que las detectemos y para
+ * que Google/IA las citen — sirve en cualquier plataforma (WordPress, Tienda
+ * Nube, Shopify, Wix, etc.) porque depende de cómo se escribe el texto, no del
+ * CMS. La guía específica por editor (dónde pegar el Schema) va en
+ * SchemaPasteGuideBox, que aparece junto al código generado.
+ */
+function FaqHowToBox() {
+  return (
+    <div className="rounded-xl border-2 border-cyan-500/30 bg-slate-950/50 p-4 space-y-2">
+      <p className="text-sm font-black text-white">📝 Cómo cargar tus preguntas para que las detectemos</p>
+      <ul className="space-y-1.5 text-xs font-bold text-slate-300 leading-relaxed list-disc list-inside">
+        <li>
+          Escribí cada pregunta como <span className="text-cyan-300">texto visible</span>: un
+          encabezado (H2 a H6) <span className="text-slate-400">o</span> en <strong className="text-white">negrita</strong>,
+          con su <span className="text-cyan-300">respuesta justo debajo</span>.
+        </li>
+        <li>
+          Funciona en <span className="text-white">cualquier plataforma</span> (WordPress, Tienda Nube,
+          Shopify, Wix…): importa cómo escribís el texto, no el sistema que uses.
+        </li>
+        <li>
+          Evitá poner las preguntas dentro de una <span className="text-amber-300">imagen</span> o en
+          pestañas que cargan con JavaScript: eso no lo podemos leer.
+        </li>
+        <li>
+          Ojo con la URL: revisá la <span className="text-cyan-300">página exacta</span> que estás
+          comparando (la de tu producto, no tu home). Pegala en <em>“Tu página equivalente”</em>.
+        </li>
+      </ul>
+      <p className="text-[11px] font-bold text-slate-500 leading-snug">
+        Después, cuando generes el código Schema, te mostramos <span className="text-slate-300">dónde pegarlo según tu editor</span>.
+      </p>
+    </div>
+  );
+}
+
 export default function DetectiveDeEnlaces() {
   const { data: session, status } = useSession();
   const { isMuted, toggleMute, playClick, playThemeToggle, playSuccess } = useAudio();
@@ -1636,6 +1674,10 @@ export default function DetectiveDeEnlaces() {
                                 {" "}<span className="text-emerald-100">“Espiar otro competidor”</span> y volvé a espiar esta misma URL.
                               </p>
                             </div>
+                          )}
+
+                          {(gap.verifyKind === 'faq_visible' || (isSchema && gap.schemaKind === 'faq')) && !resolved && (
+                            <FaqHowToBox />
                           )}
 
                           {gap.questionsToAdd?.length > 0 && !resolved && (
