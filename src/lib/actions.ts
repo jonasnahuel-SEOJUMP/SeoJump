@@ -3596,8 +3596,11 @@ export async function verifySpyGap(
       }
       return {
         success: false,
+        checkedUrl: target,
         error:
-          'Todavía no encontramos preguntas ni Schema en tu página en vivo. Verificá que la URL sea la correcta (la de la página donde pegaste las FAQ) y que hayas guardado/publicado los cambios; después borrá la caché del sitio y reintentá.',
+          `Todavía no encontramos preguntas ni Schema en la página analizada (${target}). ` +
+          'Si tus FAQ están en otra página (por ejemplo la ficha del producto y no tu home), pegá esa URL en "Tu página equivalente" y volvé a espiar. ' +
+          'Si es la correcta, verificá que hayas guardado/publicado los cambios y borrá la caché del sitio; después reintentá.',
       };
     }
 
@@ -3643,8 +3646,11 @@ export async function verifySpyGap(
       if (pairs.length === 0) {
         return {
           success: false,
+          checkedUrl: target,
           error:
-            'No detectamos preguntas con respuesta visibles en tu página. Agregá las FAQ en texto (H2/acordeón) y reintentá.',
+            `No detectamos preguntas con respuesta visibles en la página analizada (${target}). ` +
+            'Si tu FAQ está en OTRA página —por ejemplo la ficha del producto y no tu home— pegá esa URL exacta en "Tu página equivalente" y volvé a espiar. ' +
+            'Si esa ya es la página correcta, revisá que las preguntas estén en texto (no en imagen) y reintentá.',
         };
       }
       if (expected.length > 0) {

@@ -49,6 +49,25 @@ describe('extractFaqPairs', () => {
     expect(pairs.some((p) => /dual action/i.test(p.question))).toBe(true);
   });
 
+  it('detecta FAQs con preguntas en <h4>/<h5> (no solo h2/h3)', () => {
+    // Formato típico de descripción larga de WooCommerce: sección FAQ con las
+    // preguntas como encabezados h4 y la respuesta en el párrafo siguiente.
+    const html = `
+      <h2>Preguntas frecuentes sobre la Cera en Pasta Carnauba Pure Wax Toxic Shine</h2>
+      <h4>¿Qué es la Cera en Pasta Carnauba Pure Wax Toxic Shine?</h4>
+      <p>La Cera en Pasta Carnauba Pure Wax Toxic Shine es una cera no abrasiva formulada con cera de carnauba y cera de abeja.</p>
+      <h4>¿Para qué sirve la Cera en Pasta Carnauba Pure Wax?</h4>
+      <p>Sirve para proteger la pintura, aumentar el brillo y mejorar la profundidad del color del vehículo.</p>
+      <h5>¿Qué beneficios tiene la cera de carnauba?</h5>
+      <p>La cera de carnauba aporta un brillo intenso, realza el color y crea una capa protectora.</p>`;
+    const pairs = extractFaqPairs(html);
+    expect(pairs.length).toBeGreaterThanOrEqual(3);
+    expect(pairs.some((p) => /qué es la cera/i.test(p.question))).toBe(true);
+    expect(pairs.some((p) => /beneficios tiene la cera/i.test(p.question))).toBe(true);
+    // El título de la sección (no es pregunta) no debe contarse.
+    expect(pairs.some((p) => /^preguntas frecuentes sobre/i.test(p.question))).toBe(false);
+  });
+
   it('detecta acordeones details/summary', () => {
     const html = `
       <details><summary>¿Cuánto dura el tratamiento cerámico?</summary>
