@@ -237,7 +237,7 @@ describe('enrichSpyGaps', () => {
     expect(enriched[0].schemaNote).toMatch(/no pudimos leer tu página/i);
   });
 
-  it('no contradice: si el usuario YA tiene FAQ visibles y el rival no aporta nuevas, marca alreadySatisfied', () => {
+  it('no contradice: si el usuario YA tiene FAQ visibles + Schema y el rival no aporta nuevas, marca alreadySatisfied', () => {
     const own = {
       title: 'Cera',
       h1: 'Cera carnauba',
@@ -248,9 +248,13 @@ describe('enrichSpyGaps', () => {
         '¿Para qué sirve?',
         '¿Qué beneficios tiene?',
       ],
-      faqPairs: [],
-      hasFaqSchema: false,
-      schemaTypes: ['WebPage'],
+      faqPairs: [
+        { question: '¿Qué es la cera de carnauba?', answer: 'Una cera natural.' },
+        { question: '¿Para qué sirve?', answer: 'Da brillo y protección.' },
+        { question: '¿Qué beneficios tiene?', answer: 'Brillo duradero.' },
+      ],
+      hasFaqSchema: true,
+      schemaTypes: ['WebPage', 'FAQPage'],
     };
     const rival = {
       title: 'Rival',
@@ -270,6 +274,44 @@ describe('enrichSpyGaps', () => {
     expect(enriched[0].requiresLiveVerify).toBe(false);
     expect(enriched[0].problem).toMatch(/ya tenés 3 pregunta/i);
     expect(enriched[0].suggestion).toBe('');
+  });
+
+  it('preguntas visibles sin Schema FAQPage → gap accionable con código y guía de pegado', () => {
+    const own = {
+      title: 'Cera carnauba',
+      h1: 'Cera en pasta carnauba',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: ['¿Qué es la cera de carnauba?', '¿Para qué sirve?'],
+      faqPairs: [
+        { question: '¿Qué es la cera de carnauba?', answer: 'Es una cera natural de alto brillo para pintura.' },
+        { question: '¿Para qué sirve?', answer: 'Protege y realza el brillo de la pintura del auto.' },
+      ],
+      hasFaqSchema: false, // tiene preguntas visibles pero NO el Schema FAQPage
+      schemaTypes: ['WebPage'],
+    };
+    const rival = {
+      title: 'Rival',
+      h1: 'Rival',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: [], // el rival no aporta preguntas nuevas
+      hasFaqSchema: false,
+      schemaTypes: ['Organization'],
+    };
+    const enriched = enrichSpyGaps(
+      [{ area: 'Preguntas/FAQ', problem: 'Ni tu web ni la del competidor responden preguntas', suggestion: 'Agregá FAQ' }],
+      own,
+      rival
+    );
+    // Se vuelve accionable como Schema FAQPage (no queda como cartel muerto).
+    expect(enriched[0].isSchemaGap).toBe(true);
+    expect(enriched[0].schemaKind).toBe('faq');
+    expect(enriched[0].verifyKind).toBe('schema_faq');
+    expect(enriched[0].alreadySatisfied).toBeUndefined();
+    // Código listo para pegar → la UI muestra la caja de "cómo pegar".
+    expect(enriched[0].schemaCode).toContain('FAQPage');
+    expect(enriched[0].schemaCode).toContain('application/ld+json');
   });
 
   it('si el usuario tiene FAQ pero el rival aporta preguntas nuevas, reencuadra sin decir "no tenés"', () => {
