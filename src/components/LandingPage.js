@@ -3,28 +3,16 @@
 import React from "react";
 import Link from "next/link";
 import PublicComprehension from "./PublicComprehension";
+import { startSpyAction, startAppAction } from "../lib/authActions";
 
-/** Landing principal (AEO + misiones diarias). variant="spy" solo para /espia-competencia (ads). */
-export default function LandingPage({
-  onStart,
-  onStartSpy,
-  spyHref,
-  playClick,
-  variant = "default",
-}) {
-  const handleStart = (e) => {
-    e?.preventDefault?.();
-    if (playClick) playClick();
-    onStart();
-  };
-
-  const handleStartSpy = (e) => {
-    // Si hay JS, usamos el handler (signIn / redirect). Si no hidrató, el <a href> nativo sigue.
-    e?.preventDefault?.();
-    if (playClick) playClick();
-    (onStartSpy || onStart)();
-  };
-
+/**
+ * Landing principal (AEO + misiones diarias). variant="spy" solo para /espia-competencia (ads).
+ *
+ * Los CTA de entrada (Espiar / Empezar gratis) son <form> con Server Actions:
+ * el servidor decide login-o-directo. Así no dependen de que el JS hidrate
+ * (era la causa del botón "que no hacía nada").
+ */
+export default function LandingPage({ onRegister, playClick, variant = "default" }) {
   const scrollToHow = (e) => {
     e.preventDefault();
     if (playClick) playClick();
@@ -37,15 +25,30 @@ export default function LandingPage({
     document.getElementById("mapa-ia")?.scrollIntoView({ behavior: "smooth" });
   };
 
+  /** CTA de entrada al Espía — form con Server Action (confiable sin JS). */
   const SpyCta = ({ className, children }) => (
-    <a
-      href={spyHref || "#espiar"}
-      onClick={handleStartSpy}
-      className={className}
-      role="button"
-    >
-      {children}
-    </a>
+    <form action={startSpyAction} className="contents">
+      <button
+        type="submit"
+        onClick={() => playClick && playClick()}
+        className={className}
+      >
+        {children}
+      </button>
+    </form>
+  );
+
+  /** CTA de registro/login genérico → dashboard. */
+  const StartCta = ({ className, children }) => (
+    <form action={startAppAction} className="contents">
+      <button
+        type="submit"
+        onClick={() => playClick && playClick()}
+        className={className}
+      >
+        {children}
+      </button>
+    </form>
   );
 
   if (variant === "spy") {
@@ -130,7 +133,7 @@ export default function LandingPage({
       </section>
 
       {/* ESPÍA — Explicación del gancho (cómo funciona espiar) */}
-      <SpyHeroExplainer playClick={playClick} onStart={handleStartSpy} spyHref={spyHref} />
+      <SpyHeroExplainer playClick={playClick} SpyCta={SpyCta} />
 
       {/* GANCHO SECUNDARIO — ¿Las IA entienden tu página? (herramienta pública gratis, sin registro) */}
       <section id="mapa-ia" className="w-full px-4 pb-8 md:pb-16">
@@ -149,7 +152,7 @@ export default function LandingPage({
               <strong className="text-white">ChatGPT, Gemini y Google</strong> sobre tu negocio — sin crear cuenta.
             </p>
           </div>
-          <PublicComprehension onRegister={handleStart} playClick={playClick} />
+          <PublicComprehension onRegister={onRegister} playClick={playClick} />
         </div>
       </section>
 
@@ -437,12 +440,9 @@ export default function LandingPage({
             Empezá hoy con una misión. Mañana, otra. En un mes, una web que trabaja por vos en Google y en IA.
           </p>
           <div className="relative z-10 w-full max-w-md mx-auto">
-            <button
-              onClick={handleStart}
-              className="btn-3d btn-green text-xl md:text-2xl px-6 py-5 w-full transform hover:scale-105 transition-all"
-            >
+            <StartCta className="btn-3d btn-green text-xl md:text-2xl px-6 py-5 w-full transform hover:scale-105 transition-all">
               🚀 Empezar Gratis Ahora
-            </button>
+            </StartCta>
             <p className="text-slate-500 text-xs mt-6">
               Al registrarte aceptás nuestros{" "}
               <a href="/terminos" target="_blank" rel="noopener noreferrer" className="underline hover:text-slate-300">Términos</a>
@@ -568,7 +568,7 @@ function Faq({ q, a }) {
 }
 
 /** Explicación del gancho Espía — justo debajo del hero de la home. */
-function SpyHeroExplainer({ playClick, onStart, spyHref }) {
+function SpyHeroExplainer({ playClick, SpyCta }) {
   const steps = [
     {
       n: "1",
@@ -602,14 +602,9 @@ function SpyHeroExplainer({ playClick, onStart, spyHref }) {
           ))}
         </div>
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <a
-            href={spyHref || "#espiar"}
-            onClick={onStart}
-            className="btn-3d btn-yellow font-black px-6 py-4 text-sm md:text-base w-full sm:w-auto text-center"
-            role="button"
-          >
+          <SpyCta className="btn-3d btn-yellow font-black px-6 py-4 text-sm md:text-base w-full sm:w-auto text-center">
             🕵️ Empezar espiando gratis
-          </a>
+          </SpyCta>
           <Link
             href="/blog/como-espiar-competencia-google-sin-semrush"
             onClick={playClick}
