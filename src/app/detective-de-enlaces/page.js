@@ -411,6 +411,15 @@ export default function DetectiveDeEnlaces() {
         gap.questionsToAdd || [],
         alreadyGenerated
       );
+      // Tras un deploy, la pestaña vieja puede recibir undefined / acción inválida.
+      if (!res || typeof res !== "object") {
+        setSpyVerifyError((prev) => ({
+          ...prev,
+          [identifier]:
+            "Actualizamos SEO Jump. Recargá esta página (F5), volvé a espiar si hace falta y tocá verificar de nuevo.",
+        }));
+        return;
+      }
       if (res.success && res.verified) {
         setSpyVerifyError((prev) => {
           const next = { ...prev };
@@ -451,9 +460,16 @@ export default function DetectiveDeEnlaces() {
       }
     } catch (err) {
       console.error("[Espía] verifySpyGap falló:", err);
+      const raw = String(err?.message || err || "");
+      const staleAction =
+        /Failed to find Server Action|older or newer deployment|reading ['"]?\w+['"]? of undefined/i.test(
+          raw
+        );
       setSpyVerifyError((prev) => ({
         ...prev,
-        [identifier]: "Error de conexión al verificar. Intentá de nuevo.",
+        [identifier]: staleAction
+          ? "Actualizamos SEO Jump. Recargá esta página (F5), volvé a espiar si hace falta y tocá verificar de nuevo."
+          : "No pudimos verificar ahora. Recargá la página (F5) e intentá de nuevo.",
       }));
     } finally {
       setSpyVerifyLoading(null);
