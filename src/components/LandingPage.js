@@ -631,13 +631,14 @@ function SpyFeatureBlock({ playClick, compact = false }) {
               Por qué vendemos decisiones, no datos →
             </Link>
           </div>
-          <Link
-            href="/espia-competencia"
-            onClick={playClick}
+          <a
+            href={SPY_ENTRY_HREF}
+            onClick={() => playClick && playClick()}
+            role="button"
             className="btn-3d btn-yellow text-center font-black px-6 py-4 text-sm md:text-base whitespace-nowrap flex-shrink-0"
           >
-            Conocer el Espía →
-          </Link>
+            🕵️ Espiar gratis →
+          </a>
         </div>
       </div>
     </section>
