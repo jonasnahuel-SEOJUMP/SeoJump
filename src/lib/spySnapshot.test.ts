@@ -186,6 +186,57 @@ describe('enrichSpyGaps', () => {
     expect(enriched[0].schemaCode).toBeUndefined();
   });
 
+  it('marca ownUnreadable (y no afirma "no lo tenés") si no se pudo leer la página propia — Product', () => {
+    const emptyOwn = {
+      title: '',
+      h1: '',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: [],
+      faqPairs: [],
+      hasFaqSchema: false,
+      schemaTypes: [],
+    };
+    const rival = {
+      title: 'Rival',
+      h1: 'Rival',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: [],
+      hasFaqSchema: false,
+      schemaTypes: ['Product'],
+    };
+    const enriched = enrichSpyGaps(
+      [{ area: 'Schema AEO', problem: "tiene Schema 'Product'", suggestion: 'Agregá Product' }],
+      emptyOwn,
+      rival
+    );
+    expect(enriched[0].verifyKind).toBe('schema_product');
+    expect(enriched[0].ownUnreadable).toBe(true);
+    expect(enriched[0].alreadySatisfied).toBeUndefined();
+    expect(enriched[0].schemaNote).toMatch(/no pudimos leer tu página/i);
+  });
+
+  it('marca ownUnreadable si own es null — FAQ Schema', () => {
+    const rival = {
+      title: 'Rival',
+      h1: 'Rival',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: ['¿Cuánto cuesta?'],
+      hasFaqSchema: true,
+      schemaTypes: ['FAQPage'],
+    };
+    const enriched = enrichSpyGaps(
+      [{ area: 'Schema AEO', problem: 'Falta schema', suggestion: 'Agregalo' }],
+      null,
+      rival
+    );
+    expect(enriched[0].verifyKind).toBe('schema_faq');
+    expect(enriched[0].ownUnreadable).toBe(true);
+    expect(enriched[0].schemaNote).toMatch(/no pudimos leer tu página/i);
+  });
+
   it('no inventa schemaCode si el usuario no tiene FAQ visibles', () => {
     const own = {
       title: 'Home',

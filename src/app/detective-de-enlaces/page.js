@@ -59,6 +59,10 @@ export default function DetectiveDeEnlaces() {
   const [spyVerifyError, setSpyVerifyError] = useState({}); // { [identifier]: string }
   const [spyVerifyInfo, setSpyVerifyInfo] = useState({}); // { [identifier]: string } (neutral)
   const [spyVerifiedCode, setSpyVerifiedCode] = useState({}); // { [identifier]: schemaCode }
+  // Gaps de Schema que ya estaban presentes al verificar (los genera la
+  // plataforma/plugin del usuario). Se marcan como resueltos SIN XP: el usuario
+  // no pegó ningún código, así que dar puntos sería un falso positivo.
+  const [spyAlreadyHad, setSpyAlreadyHad] = useState(new Set()); // Set<identifier>
   const [spyCopiedGap, setSpyCopiedGap] = useState(null);
   const { refresh: refreshCredits } = useSubscription();
 
@@ -426,6 +430,20 @@ export default function DetectiveDeEnlaces() {
           delete next[identifier];
           return next;
         });
+        // Schema YA presente en el primer click, sin que el usuario haya
+        // generado/pegado nada (alreadyGenerated=false): lo genera su
+        // plataforma/plugin. No es trabajo del usuario → NO dar XP ni marcar
+        // "Aplicado". Lo mostramos como "ya lo tenías" (honesto).
+        if (isSchema && !alreadyGenerated) {
+          setSpyVerifyInfo((prev) => ({
+            ...prev,
+            [identifier]:
+              res.detail ||
+              `✅ Tu página YA tiene el Schema ${schemaKindLabel} (probablemente lo genera tu plataforma o un plugin SEO). No hay nada que pegar, así que no sumás XP acá.`,
+          }));
+          setSpyAlreadyHad((prev) => new Set([...prev, identifier]));
+          return;
+        }
         // Dejamos un mensaje claro del PORQUÉ quedó verificado (evita el
         // "me dice que está bien y yo no hice nada"). Si tu plataforma ya
         // genera el Schema, lo explicamos en vez de dar un OK mudo.
@@ -502,6 +520,7 @@ export default function DetectiveDeEnlaces() {
     setSpyVerifyError({});
     setSpyVerifyInfo({});
     setSpyVerifiedCode({});
+    setSpyAlreadyHad(new Set());
 
     try {
       const res = await spyCompetitor(competitorUrl.trim(), siteUrl || "", goldKeyword || undefined, ownComparisonUrl.trim() || undefined);
@@ -1556,6 +1575,10 @@ export default function DetectiveDeEnlaces() {
                     spyResult.gaps.map((gap, index) => {
                       const identifier = `${spyResult.competitorUrl}-${gap.area}-${index}`;
                       const completed = isSpyFixCompleted(identifier);
+                      // Schema detectado ya presente al verificar (lo genera la
+                      // plataforma del usuario): resuelto SIN XP.
+                      const alreadyHad = spyAlreadyHad.has(identifier);
+                      const resolved = completed || alreadyHad;
                       const verifying = spyVerifyLoading === identifier;
                       const verifyErr = spyVerifyError[identifier];
                       const needsLive = !!gap.requiresLiveVerify && gap.verifyKind !== "honor";
@@ -1590,17 +1613,17 @@ export default function DetectiveDeEnlaces() {
                         );
                       }
                       return (
-                        <div key={index} className={`card-3d p-5 md:p-6 space-y-4 ${completed ? 'bg-emerald-950/30 border-emerald-500/40' : 'bg-slate-800 border-slate-700/50'}`}>
+                        <div key={index} className={`card-3d p-5 md:p-6 space-y-4 ${resolved ? 'bg-emerald-950/30 border-emerald-500/40' : 'bg-slate-800 border-slate-700/50'}`}>
                           <div className="flex items-center gap-3">
-                            <span className="text-3xl">{completed ? '✅' : '🎯'}</span>
+                            <span className="text-3xl">{resolved ? '✅' : '🎯'}</span>
                             <h3 className="text-lg font-black text-white">{gap.area}</h3>
                           </div>
-                          {!completed && (
+                          {!resolved && (
                             <div className="bg-slate-900/50 border border-slate-700 rounded-xl p-4">
                               <p className="text-slate-300 font-bold text-sm leading-relaxed">{gap.problem}</p>
                             </div>
                           )}
-                          {gap.suggestion && !completed && (
+                          {gap.suggestion && !resolved && (
                             <div className="bg-purple-950/30 border border-purple-800/50 rounded-xl p-3">
                               <p className="text-xs font-black text-purple-300 uppercase mb-1">Qué hacer:</p>
                               <p className="text-base font-black text-white">{gap.suggestion}</p>
@@ -1615,7 +1638,7 @@ export default function DetectiveDeEnlaces() {
                             </div>
                           )}
 
-                          {gap.questionsToAdd?.length > 0 && (
+                          {gap.questionsToAdd?.length > 0 && !resolved && (
                             <div className="bg-cyan-950/20 border border-cyan-700/40 rounded-xl p-3 space-y-2">
                               <p className="text-xs font-black text-cyan-300 uppercase">Preguntas a sumar</p>
                               <ul className="space-y-1.5">
@@ -1626,7 +1649,7 @@ export default function DetectiveDeEnlaces() {
                             </div>
                           )}
 
-                          {isSchema && !completed && (
+                          {isSchema && !resolved && (
                             <div className="bg-slate-900/40 border border-slate-700 rounded-xl p-3">
                               <p className="text-xs font-black text-slate-300 uppercase mb-2">Cómo se hace (por pasos)</p>
                               <ol className="list-decimal list-inside space-y-1 text-xs font-bold text-slate-400">
@@ -1646,11 +1669,11 @@ export default function DetectiveDeEnlaces() {
                             </div>
                           )}
 
-                          {gap.schemaNote && !completed && (
+                          {gap.schemaNote && !resolved && (
                             <p className="text-xs font-bold text-slate-400 leading-relaxed">{gap.schemaNote}</p>
                           )}
 
-                          {effectiveSchemaCode && (
+                          {effectiveSchemaCode && !alreadyHad && (
                             <div className="space-y-3">
                               <div className="space-y-2">
                                 <div className="flex items-center justify-between gap-2">
@@ -1693,6 +1716,10 @@ export default function DetectiveDeEnlaces() {
                           {completed ? (
                             <button disabled className="w-full py-3 rounded-xl border border-green-500/35 bg-green-950/20 text-green-400 font-black cursor-not-allowed text-base">
                               ✅ Aplicado (+15 XP)
+                            </button>
+                          ) : alreadyHad ? (
+                            <button disabled className="w-full py-3 rounded-xl border border-cyan-500/35 bg-cyan-950/20 text-cyan-300 font-black cursor-not-allowed text-base">
+                              ✅ Ya lo tenías — lo genera tu plataforma (sin XP)
                             </button>
                           ) : (
                             <button
