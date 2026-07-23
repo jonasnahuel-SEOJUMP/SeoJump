@@ -226,13 +226,16 @@ export function extractFaqPairs(html: string, maxPairs = 12): FaqPair[] {
     pairs.push({ question: question.slice(0, 180), answer: answer.slice(0, 500) });
   };
 
-  // 1) H2/H3 con interrogación + contenido hasta el próximo heading
-  const headingRe = /<h([23])[^>]*>([\s\S]*?)<\/h\1>/gi;
+  // 1) H2–H6 con interrogación + contenido hasta el próximo heading.
+  // Muchas FAQ de WooCommerce/temas ponen las preguntas como <h4>/<h5>, no
+  // solo <h2>/<h3>: si nos limitábamos a h2/h3 no las detectábamos.
+  const headingRe = /<h([2-6])[^>]*>([\s\S]*?)<\/h\1>/gi;
   let m;
   while ((m = headingRe.exec(html)) !== null && pairs.length < maxPairs) {
     const after = html.slice(m.index + m[0].length);
     const nextHeading = after.search(/<h[1-6][\s>]/i);
     const slice = nextHeading === -1 ? after.slice(0, 2500) : after.slice(0, nextHeading);
+    // Respuesta: primer párrafo si existe; si no, el bloque de texto siguiente.
     const pMatch = slice.match(/<p[^>]*>([\s\S]*?)<\/p>/i);
     const answer = pMatch ? pMatch[1] : slice;
     pushPair(m[2], answer);
