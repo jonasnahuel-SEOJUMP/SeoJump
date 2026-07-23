@@ -43,6 +43,12 @@ export type SpyGapEnriched = {
    * por error: no hay que "implementar" nada, solo avisarlo.
    */
   alreadySatisfied?: boolean;
+  /**
+   * No pudimos leer la página propia al espiar (fetch fallido/vacío), así que
+   * NO sabemos con certeza si ya tenés este Schema. No afirmamos "no lo tenés":
+   * lo confirmamos en vivo al generar/verificar.
+   */
+  ownUnreadable?: boolean;
 };
 
 /** Extrae señales AEO (FAQ + Schema) desde HTML ya descargado. Pura / testeable. */
@@ -112,7 +118,13 @@ export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSn
     targetUrl = 'https://' + targetUrl;
   }
 
-  const page = await fetchPage(targetUrl);
+  // Reintento con más tiempo: WooCommerce/Elementor y sitios lentos suelen
+  // fallar el primer fetch. Cuando eso pasaba con la página PROPIA, no
+  // detectábamos su Schema y el Espía ofrecía "implementar" algo que ya estaba.
+  let page = await fetchPage(targetUrl, { timeoutMs: 6000 });
+  if (!page.ok || !page.html) {
+    page = await fetchPage(targetUrl, { timeoutMs: 10000 });
+  }
   if (!page.ok || !page.html) return empty;
 
   const aeo = extractSpyAeoSignals(page.html);
@@ -163,6 +175,21 @@ export function enrichSpyGaps(
   const rivalQs = rival.faqQuestions || [];
   const questionsToAdd = rivalQs.filter((q) => !ownQs.has(normQ(q))).slice(0, 5);
 
+  // ¿Pudimos leer la página propia? Si el snapshot vino vacío (fetch fallido),
+  // no sabemos si ya tiene el Schema: no debemos afirmar "no lo tenés".
+  const ownReadable = !!(
+    own &&
+    (own.title ||
+      own.h1 ||
+      (own.headings?.length ?? 0) > 0 ||
+      (own.faqQuestions?.length ?? 0) > 0 ||
+      (own.schemaTypes?.length ?? 0) > 0)
+  );
+  const OWN_UNREADABLE_NOTE =
+    'Ojo: no pudimos leer tu página al espiar, así que no confirmamos si ya tenés este Schema. ' +
+    'Cuando toques generar/verificar lo chequeamos en vivo; si tu plataforma o plugin ya lo genera, ' +
+    'te lo marcamos como "ya lo tenías" sin pedirte pegar nada.';
+
   const enriched = gaps.map((g) => {
     const out: SpyGapEnriched = {
       area: g.area,
@@ -190,6 +217,9 @@ export function enrichSpyGaps(
           out.suggestion = '';
           out.schemaNote =
             'No hace falta hacer nada: tu plataforma o plugin SEO ya lo genera automáticamente.';
+        } else if (!ownReadable) {
+          out.ownUnreadable = true;
+          out.schemaNote = OWN_UNREADABLE_NOTE;
         } else {
           out.schemaNote =
             'Último paso: generamos el código con los datos de tu página (sin precio, para que no quede desactualizado). Si tu tienda ya lo pone, lo confirmamos y listo.';
@@ -207,8 +237,13 @@ export function enrichSpyGaps(
         return out;
       }
       out.questionsToAdd = questionsToAdd.length ? questionsToAdd : undefined;
-      out.schemaNote =
-        'Este es el ÚLTIMO paso. Primero asegurate de tener las preguntas visibles en tu página; después generamos el código Schema para pegar.';
+      if (!ownReadable) {
+        out.ownUnreadable = true;
+        out.schemaNote = OWN_UNREADABLE_NOTE;
+      } else {
+        out.schemaNote =
+          'Este es el ÚLTIMO paso. Primero asegurate de tener las preguntas visibles en tu página; después generamos el código Schema para pegar.';
+      }
       // Si ya tiene FAQ visibles, adelantamos el código.
       if (ownPairs.length >= 1) {
         out.schemaCode = buildFaqJsonLd(ownPairs);
