@@ -1551,6 +1551,28 @@ export default function DetectiveDeEnlaces() {
                       else if (isSchema && !effectiveSchemaCode) spyBtnLabel = "🔎 GENERAR MI CÓDIGO SCHEMA";
                       else if (isSchema && effectiveSchemaCode) spyBtnLabel = "✅ YA LO PEGUÉ — VERIFICAR";
                       else if (needsLive) spyBtnLabel = "🔎 VERIFICAR EN MI WEB";
+
+                      // La comparación de la IA se equivocó: tu página YA tiene este
+                      // Schema (lo detectamos al leer tu HTML al espiar). No hay nada
+                      // para implementar ni código para pegar — solo avisarlo.
+                      if (gap.alreadySatisfied) {
+                        return (
+                          <div key={index} className="card-3d p-5 md:p-6 space-y-3 bg-emerald-950/20 border-emerald-600/30">
+                            <div className="flex items-center gap-3">
+                              <span className="text-3xl">✅</span>
+                              <h3 className="text-lg font-black text-white">{gap.area}</h3>
+                            </div>
+                            <div className="bg-slate-900/40 border border-emerald-700/30 rounded-xl p-4">
+                              <p className="text-slate-300 font-bold text-sm leading-relaxed">{gap.problem}</p>
+                            </div>
+                            {gap.schemaNote && (
+                              <p className="text-xs font-bold text-emerald-200/90 leading-relaxed">
+                                {gap.schemaNote}
+                              </p>
+                            )}
+                          </div>
+                        );
+                      }
                       return (
                         <div key={index} className={`card-3d p-5 md:p-6 space-y-4 ${completed ? 'bg-emerald-950/30 border-emerald-500/40' : 'bg-slate-800 border-slate-700/50'}`}>
                           <div className="flex items-center gap-3">
