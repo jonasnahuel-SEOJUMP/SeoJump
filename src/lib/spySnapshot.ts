@@ -37,6 +37,12 @@ export type SpyGapEnriched = {
   /** Gap de Schema (código): va último y usa flujo por pasos en la UI. */
   isSchemaGap?: boolean;
   schemaKind?: 'faq' | 'product';
+  /**
+   * El propio snapshot ya tiene este Schema (normalmente lo puso la
+   * plataforma/plugin, no el usuario). La IA comparó igual y sugirió el gap
+   * por error: no hay que "implementar" nada, solo avisarlo.
+   */
+  alreadySatisfied?: boolean;
 };
 
 /** Extrae señales AEO (FAQ + Schema) desde HTML ya descargado. Pura / testeable. */
@@ -174,18 +180,37 @@ export function enrichSpyGaps(
       if (isProductSchemaGap(g.area, g.problem, g.suggestion)) {
         out.verifyKind = 'schema_product';
         out.schemaKind = 'product';
-        out.schemaNote =
-          'Último paso: generamos el código con los datos de tu página (sin precio, para que no quede desactualizado). Si tu tienda ya lo pone, lo confirmamos y listo.';
+        const ownTypes = (own?.schemaTypes || []).map((t) => t.toLowerCase());
+        // La IA comparó snapshots y a veces sugiere este gap por error cuando
+        // el propio sitio YA tiene Product (WooCommerce/Shopify/plugin SEO lo
+        // ponen solos). No pedirle "implementar" algo que ya está: avisarlo.
+        if (ownTypes.includes('product')) {
+          out.alreadySatisfied = true;
+          out.problem = 'Ya tenés el Schema Product en tu página. La comparación lo marcó como brecha, pero al chequear tu HTML en vivo, ya está.';
+          out.suggestion = '';
+          out.schemaNote =
+            'No hace falta hacer nada: tu plataforma o plugin SEO ya lo genera automáticamente.';
+        } else {
+          out.schemaNote =
+            'Último paso: generamos el código con los datos de tu página (sin precio, para que no quede desactualizado). Si tu tienda ya lo pone, lo confirmamos y listo.';
+        }
         return out;
       }
 
       out.verifyKind = 'schema_faq';
       out.schemaKind = 'faq';
+      if (own?.hasFaqSchema) {
+        out.alreadySatisfied = true;
+        out.problem = 'Ya tenés el Schema FAQPage en tu página. La comparación lo marcó como brecha, pero al chequear tu HTML en vivo, ya está.';
+        out.suggestion = '';
+        out.schemaNote = 'No hace falta hacer nada más acá.';
+        return out;
+      }
       out.questionsToAdd = questionsToAdd.length ? questionsToAdd : undefined;
       out.schemaNote =
         'Este es el ÚLTIMO paso. Primero asegurate de tener las preguntas visibles en tu página; después generamos el código Schema para pegar.';
       // Si ya tiene FAQ visibles, adelantamos el código.
-      if (!own?.hasFaqSchema && ownPairs.length >= 1) {
+      if (ownPairs.length >= 1) {
         out.schemaCode = buildFaqJsonLd(ownPairs);
       }
       return out;

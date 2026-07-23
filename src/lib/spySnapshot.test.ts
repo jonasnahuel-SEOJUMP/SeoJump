@@ -127,6 +127,65 @@ describe('enrichSpyGaps', () => {
     expect(enriched[0].schemaNote || '').not.toMatch(/preguntas visibles/i);
   });
 
+  it('marca alreadySatisfied si el propio sitio ya tiene Schema Product (la IA se equivocó)', () => {
+    const own = {
+      title: 'Cera',
+      h1: 'Cera',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: [],
+      faqPairs: [],
+      hasFaqSchema: false,
+      schemaTypes: ['Product', 'Offer', 'WebPage'],
+    };
+    const rival = {
+      title: 'Rival',
+      h1: 'Rival',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: [],
+      hasFaqSchema: false,
+      schemaTypes: ['Product'],
+    };
+    const enriched = enrichSpyGaps(
+      [{ area: 'Schema AEO', problem: "tiene Schema 'Product'. Vos no lo tenés implementado.", suggestion: 'Implementá Product' }],
+      own,
+      rival
+    );
+    expect(enriched[0].alreadySatisfied).toBe(true);
+    expect(enriched[0].suggestion).toBe('');
+    expect(enriched[0].problem).toMatch(/ya tenés/i);
+  });
+
+  it('marca alreadySatisfied si el propio sitio ya tiene Schema FAQPage', () => {
+    const own = {
+      title: 'Cera',
+      h1: 'Cera',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: ['¿Qué es?'],
+      faqPairs: [{ question: '¿Qué es?', answer: 'Una cera de mantenimiento en spray.' }],
+      hasFaqSchema: true,
+      schemaTypes: ['FAQPage'],
+    };
+    const rival = {
+      title: 'Rival',
+      h1: 'Rival',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: ['¿Qué es?', '¿Cuánto dura?'],
+      hasFaqSchema: true,
+      schemaTypes: ['FAQPage'],
+    };
+    const enriched = enrichSpyGaps(
+      [{ area: 'Preguntas/FAQ Schema', problem: 'Vos no tenés Schema FAQPage', suggestion: 'Agregá FAQPage' }],
+      own,
+      rival
+    );
+    expect(enriched[0].alreadySatisfied).toBe(true);
+    expect(enriched[0].schemaCode).toBeUndefined();
+  });
+
   it('no inventa schemaCode si el usuario no tiene FAQ visibles', () => {
     const own = {
       title: 'Home',

@@ -128,7 +128,25 @@ export function resolvePageType(html: string, pageUrl: string): ComprehensionPag
   return pageTypeFromUrl(pageUrl);
 }
 
-/** Extrae tipos presentes en scripts application/ld+json. */
+/** Normaliza @type: "https://schema.org/FAQPage" → "FAQPage". */
+export function normalizeSchemaType(raw: string): string {
+  const t = String(raw || '').trim();
+  if (!t) return '';
+  const cleaned = t
+    .replace(/^https?:\/\/schema\.org\//i, '')
+    .replace(/^schema:/i, '')
+    .trim();
+  // Conservar el nombre legible (última parte si viniera con path raro).
+  const slash = cleaned.lastIndexOf('/');
+  return (slash >= 0 ? cleaned.slice(slash + 1) : cleaned).trim();
+}
+
+function pushSchemaType(raw: string, out: string[]): void {
+  const name = normalizeSchemaType(raw);
+  if (name) out.push(name);
+}
+
+/** Extrae tipos presentes en scripts application/ld+json (+ microdata FAQ/Product). */
 export function extractExistingStructuredData(html: string): ExistingStructuredData {
   const typesFound: string[] = [];
   const scriptRe = /<script[^>]*type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
@@ -144,18 +162,27 @@ export function extractExistingStructuredData(html: string): ExistingStructuredD
       const loose = raw.match(/"@type"\s*:\s*"([^"]+)"/gi) || [];
       for (const t of loose) {
         const name = t.replace(/.*"@type"\s*:\s*"/i, '').replace(/".*/, '');
-        if (name) typesFound.push(name);
+        if (name) pushSchemaType(name, typesFound);
       }
     }
   }
-  const lower = typesFound.map((t) => t.toLowerCase());
+
+  // Microdata / RDFa (algunos plugins Woo no usan ld+json).
+  const microRe =
+    /itemtype=["'][^"']*(?:schema\.org\/)?(FAQPage|Product|Article|Organization|LocalBusiness)["']/gi;
+  let micro;
+  while ((micro = microRe.exec(html)) !== null) {
+    pushSchemaType(micro[1], typesFound);
+  }
+
+  const lower = typesFound.map((t) => normalizeSchemaType(t).toLowerCase());
   return {
     hasFaqPage: lower.some((t) => t === 'faqpage'),
     hasProduct: lower.some((t) => t === 'product'),
     hasArticle: lower.some((t) => t === 'article' || t === 'blogposting'),
     hasOrganization: lower.some((t) => t === 'organization'),
     hasLocalBusiness: lower.some((t) => t.includes('localbusiness') || t === 'store'),
-    typesFound: [...new Set(typesFound)],
+    typesFound: [...new Set(typesFound.map(normalizeSchemaType).filter(Boolean))],
   };
 }
 
@@ -166,9 +193,9 @@ function collectTypes(node: unknown, out: string[]): void {
     return;
   }
   const obj = node as Record<string, unknown>;
-  if (typeof obj['@type'] === 'string') out.push(obj['@type']);
+  if (typeof obj['@type'] === 'string') pushSchemaType(obj['@type'], out);
   if (Array.isArray(obj['@type'])) {
-    for (const t of obj['@type']) if (typeof t === 'string') out.push(t);
+    for (const t of obj['@type']) if (typeof t === 'string') pushSchemaType(t, out);
   }
   if (obj['@graph']) collectTypes(obj['@graph'], out);
   for (const v of Object.values(obj)) {
