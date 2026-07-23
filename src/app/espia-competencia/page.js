@@ -2,6 +2,7 @@
 
 import { useSession, signIn } from "next-auth/react";
 import LandingPage from "../../components/LandingPage";
+import { SPY_CALLBACK_PATH, spyGoogleSignInHref } from "../../lib/spyCta";
 import { useAudio } from "../../hooks/useAudio";
 
 /**
@@ -9,21 +10,31 @@ import { useAudio } from "../../hooks/useAudio";
  * Misma UI que la home; CTA de usuarios logueados va directo al Detective.
  */
 export default function EspiaCompetenciaPage() {
-  const { data: session } = useSession();
+  const { data: session, status } = useSession();
   const { playClick } = useAudio();
 
   const handleStart = () => {
-    playClick();
-    if (!session) {
-      signIn("google", { callbackUrl: "/detective-de-enlaces?view=spy" });
+    try {
+      playClick();
+    } catch {
+      /* ignore */
+    }
+    if (status === "authenticated" && session?.user) {
+      window.location.href = SPY_CALLBACK_PATH;
       return;
     }
-    window.location.href = "/detective-de-enlaces?view=spy";
+    signIn("google", { callbackUrl: SPY_CALLBACK_PATH });
   };
 
   return (
     <div className="min-h-screen bg-[#07070d] w-full font-fredoka">
-      <LandingPage onStart={handleStart} playClick={playClick} variant="spy" />
+      <LandingPage
+        onStart={handleStart}
+        onStartSpy={handleStart}
+        spyHref={spyGoogleSignInHref()}
+        playClick={playClick}
+        variant="spy"
+      />
     </div>
   );
 }

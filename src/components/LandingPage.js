@@ -1,15 +1,26 @@
+"use client";
+
 import React from "react";
 import Link from "next/link";
 import PublicComprehension from "./PublicComprehension";
 
 /** Landing principal (AEO + misiones diarias). variant="spy" solo para /espia-competencia (ads). */
-export default function LandingPage({ onStart, onStartSpy, playClick, variant = "default" }) {
-  const handleStart = () => {
+export default function LandingPage({
+  onStart,
+  onStartSpy,
+  spyHref,
+  playClick,
+  variant = "default",
+}) {
+  const handleStart = (e) => {
+    e?.preventDefault?.();
     if (playClick) playClick();
     onStart();
   };
 
-  const handleStartSpy = () => {
+  const handleStartSpy = (e) => {
+    // Si hay JS, usamos el handler (signIn / redirect). Si no hidrató, el <a href> nativo sigue.
+    e?.preventDefault?.();
     if (playClick) playClick();
     (onStartSpy || onStart)();
   };
@@ -25,6 +36,17 @@ export default function LandingPage({ onStart, onStartSpy, playClick, variant = 
     if (playClick) playClick();
     document.getElementById("mapa-ia")?.scrollIntoView({ behavior: "smooth" });
   };
+
+  const SpyCta = ({ className, children }) => (
+    <a
+      href={spyHref || "#espiar"}
+      onClick={handleStartSpy}
+      className={className}
+      role="button"
+    >
+      {children}
+    </a>
+  );
 
   if (variant === "spy") {
     return (
@@ -42,12 +64,9 @@ export default function LandingPage({ onStart, onStartSpy, playClick, variant = 
           <p className="relative text-slate-300 font-semibold text-lg md:text-xl leading-relaxed max-w-2xl mb-8">
             Sin Semrush. Sin informes de 50 páginas. Comparación en castellano y misiones para ejecutar en minutos.
           </p>
-          <button
-            onClick={handleStartSpy}
-            className="btn-3d btn-green text-lg md:text-xl px-8 py-5 w-full sm:w-auto max-w-md transform hover:scale-105 transition-all"
-          >
+          <SpyCta className="btn-3d btn-green text-lg md:text-xl px-8 py-5 w-full sm:w-auto max-w-md transform hover:scale-105 transition-all">
             🕵️ Espiar a mi competidor gratis
-          </button>
+          </SpyCta>
           <p className="relative text-slate-500 text-sm font-bold mt-6">
             Parte de <Link href="/" onClick={playClick} className="text-duo-green hover:underline">SEO Jump</Link> — mejorá tu web cada día con misiones y AEO.
           </p>
@@ -82,12 +101,9 @@ export default function LandingPage({ onStart, onStartSpy, playClick, variant = 
         </p>
 
         <div className="relative flex flex-col sm:flex-row items-center gap-4 w-full justify-center">
-          <button
-            onClick={handleStartSpy}
-            className="btn-3d btn-green text-xl md:text-2xl px-8 py-5 w-full sm:w-auto transform hover:scale-105 transition-all"
-          >
+          <SpyCta className="btn-3d btn-green text-xl md:text-2xl px-8 py-5 w-full sm:w-auto transform hover:scale-105 transition-all">
             🕵️ Espiar a mi competencia gratis
-          </button>
+          </SpyCta>
           <a
             href="#mapa-ia"
             onClick={scrollToMapa}
@@ -114,7 +130,7 @@ export default function LandingPage({ onStart, onStartSpy, playClick, variant = 
       </section>
 
       {/* ESPÍA — Explicación del gancho (cómo funciona espiar) */}
-      <SpyHeroExplainer playClick={playClick} onStart={handleStartSpy} />
+      <SpyHeroExplainer playClick={playClick} onStart={handleStartSpy} spyHref={spyHref} />
 
       {/* GANCHO SECUNDARIO — ¿Las IA entienden tu página? (herramienta pública gratis, sin registro) */}
       <section id="mapa-ia" className="w-full px-4 pb-8 md:pb-16">
@@ -552,7 +568,7 @@ function Faq({ q, a }) {
 }
 
 /** Explicación del gancho Espía — justo debajo del hero de la home. */
-function SpyHeroExplainer({ playClick, onStart }) {
+function SpyHeroExplainer({ playClick, onStart, spyHref }) {
   const steps = [
     {
       n: "1",
@@ -586,12 +602,14 @@ function SpyHeroExplainer({ playClick, onStart }) {
           ))}
         </div>
         <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4">
-          <button
+          <a
+            href={spyHref || "#espiar"}
             onClick={onStart}
-            className="btn-3d btn-yellow font-black px-6 py-4 text-sm md:text-base w-full sm:w-auto"
+            className="btn-3d btn-yellow font-black px-6 py-4 text-sm md:text-base w-full sm:w-auto text-center"
+            role="button"
           >
             🕵️ Empezar espiando gratis
-          </button>
+          </a>
           <Link
             href="/blog/como-espiar-competencia-google-sin-semrush"
             onClick={playClick}
