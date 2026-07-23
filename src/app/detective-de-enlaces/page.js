@@ -19,6 +19,18 @@ const SPY_LOADING_MESSAGES = [
   "Buscando brechas que podés cerrar hoy...",
 ];
 
+/** ¿La URL parece una página específica (producto/categoría) y no la home? */
+function isSpecificUrlClient(raw) {
+  const u = (raw || "").trim();
+  if (!u) return false;
+  try {
+    const parsed = new URL(u.startsWith("http") ? u : `https://${u}`);
+    return parsed.pathname.replace(/\/+$/, "").split("/").filter(Boolean).length >= 1;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * Cartel explicativo para el flujo de FAQ del Espía.
  * Aclara CÓMO tienen que estar las preguntas para que las detectemos y para
@@ -1398,6 +1410,17 @@ export default function DetectiveDeEnlaces() {
                         Si comparás un <strong className="text-slate-400">producto puntual</strong>, pegá tu página equivalente para una comparación justa (producto vs producto). Si lo dejás vacío, comparamos contra tu home.
                       </p>
                     </div>
+
+                    {!ownComparisonUrl.trim() && isSpecificUrlClient(competitorUrl) && !spyLoading && (
+                      <div className="rounded-xl border-2 border-amber-500/50 bg-amber-950/30 p-3 text-left">
+                        <p className="text-xs font-black text-amber-200 leading-relaxed">
+                          ⚠️ Vas a comparar una ficha de producto del competidor, pero dejaste vacío “Tu página equivalente”.
+                        </p>
+                        <p className="text-[11px] font-bold text-amber-100/80 leading-snug mt-1">
+                          Así compararíamos contra tu <strong>home</strong>{siteUrl ? ` (${siteUrl})` : ""}, que probablemente no tiene ese mismo producto ni tus preguntas frecuentes. Para comparar <strong>producto vs producto</strong> —y para que detectemos tus FAQ— pegá arriba la URL de <strong>tu ficha del mismo producto</strong>.
+                        </p>
+                      </div>
+                    )}
 
                     <button
                       onClick={handleSpy}
