@@ -83,7 +83,7 @@ export default function LandingPage({ onRegister, playClick, variant = "default"
         <img src="/images/logo-full.png" alt="SEO Jump" className="relative w-48 md:w-64 h-auto object-contain mb-6 drop-shadow-2xl" />
         <h1 className="relative text-4xl md:text-6xl font-black text-white tracking-tight leading-[1.1] max-w-4xl mb-6">
           Espiá a tu competencia.{" "}
-          <span className="text-duo-green">Después ganásle</span> con una misión por día.
+          <span className="text-duo-green">Después superala</span> con una misión por día.
         </h1>
         <p className="relative text-slate-300 font-semibold text-lg md:text-2xl leading-relaxed max-w-3xl mb-10">
           Pegá la URL de un rival —su home, una categoría, una ficha, la página que quieras— y la IA te muestra{" "}
