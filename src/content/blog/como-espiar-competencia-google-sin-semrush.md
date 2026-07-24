@@ -1,8 +1,8 @@
 ---
-title: "Cómo descubrir qué ve Google (y la IA) en tu rival para citarlo más (sin pagar $140/mes en Semrush)"
-description: "Si quieres saber por qué la competencia aparece antes que tú en Google y en las respuestas de IA, no necesitas dashboards de $140/mes. Audita la brecha táctica y ejecuta el cambio hoy."
+title: "Cómo espiar a la competencia en Google gratis (sin Semrush ni Ahrefs)"
+description: "Espiá a la competencia gratis: qué ve Google (y la IA) en tu rival, qué cambiar hoy y por qué no necesitás pagar $140/mes en Semrush o Ahrefs."
 date: "2026-06-18"
-dateModified: "2026-07-22"
+dateModified: "2026-07-24"
 readTime: "8 min"
 author: "SeoJump"
 ---
