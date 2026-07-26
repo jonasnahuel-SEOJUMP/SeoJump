@@ -10,7 +10,7 @@ import {
 
 /**
  * Panel de conexión WordPress (Perfil).
- * Flujo: generar token → descargar plugin → pegar token → verificar.
+ * Flujo: generar token → instalar plugin → pegar token → verificar.
  */
 export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
   const [loading, setLoading] = useState(true);
@@ -21,12 +21,16 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
   const [msg, setMsg] = useState(null);
   const [copied, setCopied] = useState(false);
 
+  useEffect(() => {
+    if (defaultSiteUrl && !siteUrl) setSiteUrl(defaultSiteUrl);
+  }, [defaultSiteUrl, siteUrl]);
+
   const refresh = async () => {
     setLoading(true);
     try {
       const res = await getWpConnectionStatus();
       setStatus(res);
-      if (res.siteUrl && !siteUrl) setSiteUrl(res.siteUrl);
+      if (res.siteUrl) setSiteUrl((prev) => prev || res.siteUrl);
     } catch {
       setStatus({ success: false, connected: false });
     } finally {
@@ -36,11 +40,10 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
 
   useEffect(() => {
     refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const onCreate = async () => {
-    if (playClick) playClick();
+    playClick?.();
     setBusy(true);
     setMsg(null);
     setFreshToken(null);
@@ -62,7 +65,7 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
   };
 
   const onVerify = async () => {
-    if (playClick) playClick();
+    playClick?.();
     setBusy(true);
     setMsg(null);
     try {
@@ -71,9 +74,15 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
         setMsg({ ok: false, text: res.error });
         return;
       }
+      const seo =
+        res.seoPlugin === "yoast"
+          ? " (Yoast)"
+          : res.seoPlugin === "rankmath"
+            ? " (Rank Math)"
+            : "";
       setMsg({
         ok: true,
-        text: `¡Conectado${res.siteName ? ` a «${res.siteName}»` : ""}! Ya podés usar «Aplicar en mi web» en misiones H1/Meta.`,
+        text: `¡Conectado${res.siteName ? ` a «${res.siteName}»` : ""}${seo}! Ya podés usar «Aplicar en mi web» en misiones de título y meta.`,
       });
       setFreshToken(null);
       await refresh();
@@ -83,7 +92,7 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
   };
 
   const onDisconnect = async () => {
-    if (playClick) playClick();
+    playClick?.();
     if (!confirm("¿Desconectar WordPress? Vas a tener que pegar un token nuevo.")) return;
     setBusy(true);
     try {
@@ -112,7 +121,8 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
   };
 
   const downloadUrl = status?.pluginDownloadUrl || "/downloads/seo-jump-connector.zip";
-  const connected = status?.connected;
+  const connected = Boolean(status?.connected);
+  const hasConnection = Boolean(status?.status);
 
   return (
     <div className="bg-sky-950/30 rounded-2xl border-2 border-sky-700/40 p-6 space-y-4">
@@ -120,9 +130,9 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
         🔌 Conectar WordPress
       </h3>
       <p className="text-sm font-bold text-slate-400 leading-relaxed">
-        Instalá un plugin chiquito en tu web. Después, en las misiones de título y meta,
-        vas a ver el botón <span className="text-white">«Aplicar en mi web»</span> —
-        SEO Jump escribe el cambio por vos (solo título y meta, nada más).
+        Instalá un plugin chiquito. Después, en misiones de título y meta, usá{" "}
+        <span className="text-white">«Aplicar en mi web»</span>. Solo escribe título SEO y meta
+        (Yoast o Rank Math). No toca el nombre del producto ni el diseño.
       </p>
 
       {loading ? (
@@ -156,7 +166,7 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
           <ol className="space-y-2 text-sm font-bold text-slate-300 list-decimal pl-5">
             <li>Ingresá la URL de tu tienda y generá el token.</li>
             <li>
-              Descargá el plugin e instalalo:{" "}
+              Descargá e instalá el plugin:{" "}
               <a
                 href={downloadUrl}
                 className="text-sky-300 underline hover:text-sky-200"
@@ -164,11 +174,15 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
               >
                 seo-jump-connector.zip
               </a>{" "}
-              → wp-admin → Plugins → Subir.
+              → wp-admin → Plugins → Subir → Activar.
             </li>
-            <li>Activá el plugin → Ajustes → SEO Jump → pegá el token → Guardar.</li>
+            <li>Ajustes → SEO Jump → pegá el token → Guardar.</li>
             <li>Volvé acá y tocá «Verificar conexión».</li>
           </ol>
+
+          <p className="text-xs font-bold text-slate-500">
+            Necesitás Yoast SEO o Rank Math en la tienda (casi todas ya lo tienen).
+          </p>
 
           <input
             type="url"
@@ -186,17 +200,17 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
               onClick={onCreate}
               className="btn-3d btn-blue !py-2.5 !px-5 !text-sm !normal-case disabled:opacity-50"
             >
-              {busy ? "…" : connected || status?.status ? "Regenerar token" : "Generar token"}
+              {busy ? "…" : hasConnection ? "Regenerar token" : "Generar token"}
             </button>
             <button
               type="button"
-              disabled={busy || (!status?.status && !freshToken)}
+              disabled={busy || (!hasConnection && !freshToken)}
               onClick={onVerify}
               className="btn-3d btn-green !py-2.5 !px-5 !text-sm !normal-case disabled:opacity-50"
             >
               Verificar conexión
             </button>
-            {(connected || status?.status) && (
+            {hasConnection && (
               <button
                 type="button"
                 disabled={busy}

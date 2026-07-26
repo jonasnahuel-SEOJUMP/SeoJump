@@ -11,10 +11,7 @@ import {
 } from "../lib/cmsGuide";
 import { isMissionChangeFullyApplied, getMissionSuggestionAddon } from "../lib/textUtils";
 import { getSmartMissionSuggestion } from "../lib/actions";
-import {
-  applyMissionToWordpress,
-  getWpConnectionStatus,
-} from "../lib/wpActions";
+import WpApplyButton from "./WpApplyButton";
 
 function CopyButton({ text, label, playClick, variant = "green", className = "" }) {
   const [copied, setCopied] = useState(false);
@@ -65,11 +62,6 @@ export default function MissionEditorGuide({
   const [aiReason, setAiReason] = useState('');
   const [aiLoading, setAiLoading] = useState(false);
 
-  // Conector WordPress — «Aplicar en mi web»
-  const [wpConnected, setWpConnected] = useState(false);
-  const [wpApplyLoading, setWpApplyLoading] = useState(false);
-  const [wpApplyMsg, setWpApplyMsg] = useState(null);
-
   const missionId = mission?.id;
   const missionType = mission?.type;
   const missionPage = mission?.page;
@@ -78,25 +70,10 @@ export default function MissionEditorGuide({
 
   useEffect(() => {
     let cancelled = false;
-    getWpConnectionStatus()
-      .then((res) => {
-        if (!cancelled) setWpConnected(Boolean(res?.connected));
-      })
-      .catch(() => {
-        if (!cancelled) setWpConnected(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
     let loadingTimeoutId = null;
 
     setAiSuggestion(null);
     setAiReason('');
-    setWpApplyMsg(null);
 
     if (!missionPage) {
       setAiLoading(false);
@@ -283,61 +260,17 @@ export default function MissionEditorGuide({
                       Sugerencia automática — si la IA de Google está conectada verás el sello «Generada con IA» arriba.
                     </p>
                   )}
-                  <div className="flex flex-col sm:flex-row flex-wrap gap-2">
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-start">
                     <CopyButton text={suggested} label="📋 Copiar sugerencia" playClick={playClick} variant="green" />
-                    {!isAeo && (missionType === "H1" || missionType === "META") && (
-                      wpConnected ? (
-                        <button
-                          type="button"
-                          disabled={wpApplyLoading || !suggested?.trim()}
-                          onClick={async (e) => {
-                            e?.stopPropagation?.();
-                            if (playClick) playClick();
-                            setWpApplyLoading(true);
-                            setWpApplyMsg(null);
-                            try {
-                              const res = await applyMissionToWordpress({
-                                pageUrl: missionPage,
-                                missionType,
-                                value: suggested,
-                              });
-                              if (!res.success) {
-                                setWpApplyMsg({ ok: false, text: res.error });
-                                return;
-                              }
-                              setWpApplyMsg({
-                                ok: true,
-                                text: res.message || "Aplicado. Vaciá la caché y verificá.",
-                              });
-                            } catch {
-                              setWpApplyMsg({
-                                ok: false,
-                                text: "No se pudo aplicar. Probá de nuevo o usá Copiar.",
-                              });
-                            } finally {
-                              setWpApplyLoading(false);
-                            }
-                          }}
-                          className="btn-3d btn-blue !py-2.5 !px-5 !text-sm !normal-case !tracking-normal w-full sm:w-auto disabled:opacity-50"
-                        >
-                          {wpApplyLoading ? "Aplicando…" : "🚀 Aplicar en mi web"}
-                        </button>
-                      ) : (
-                        <a
-                          href="/perfil#wp-connect"
-                          onClick={() => playClick?.()}
-                          className="btn-3d !py-2.5 !px-5 !text-sm !normal-case !tracking-normal w-full sm:w-auto bg-slate-700 text-sky-200 text-center"
-                        >
-                          🔌 Conectar WordPress
-                        </a>
-                      )
+                    {!isAeo && (
+                      <WpApplyButton
+                        missionType={missionType}
+                        pageUrl={missionPage}
+                        value={suggested}
+                        playClick={playClick}
+                      />
                     )}
                   </div>
-                  {wpApplyMsg && (
-                    <p className={`text-xs font-bold ${wpApplyMsg.ok ? "text-duo-green" : "text-amber-300"}`}>
-                      {wpApplyMsg.text}
-                    </p>
-                  )}
                 </>
               )}
             </div>

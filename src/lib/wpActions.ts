@@ -2,6 +2,7 @@
 
 import { auth } from '../auth';
 import { requireSignedIn } from './actionGuard';
+import { getSiteUrl } from './siteUrl';
 import {
   getWpConnectionByEmail,
   upsertWpConnection,
@@ -11,6 +12,7 @@ import {
 import {
   generateWpToken,
   encryptWpToken,
+  decryptWpToken,
   hintWpToken,
   normalizeSiteUrl,
 } from './wpCrypto';
@@ -18,19 +20,15 @@ import {
   applyWpChange,
   mapMissionTypeToWpField,
   pingWpSite,
-  type WpApplyField,
 } from './wpConnector';
 
 function pluginDownloadUrl(): string {
-  const base =
-    process.env.NEXT_PUBLIC_APP_URL?.replace(/\/$/, '') ||
-    process.env.NEXTAUTH_URL?.replace(/\/$/, '') ||
-    'https://seo-jump.ai';
-  return `${base}/downloads/seo-jump-connector.zip`;
+  return `${getSiteUrl()}/downloads/seo-jump-connector.zip`;
 }
 
 /**
- * Crea (o regenera) una conexión WordPress y devuelve el token en claro UNA vez.
+ * Crea o regenera la conexión WordPress del usuario.
+ * Devuelve el token en claro una sola vez.
  */
 export async function createWpConnection(siteUrlInput: string) {
   const gate = await requireSignedIn('wp_connect', 20);
@@ -40,7 +38,10 @@ export async function createWpConnection(siteUrlInput: string) {
 
   const siteUrl = normalizeSiteUrl(siteUrlInput);
   if (!siteUrl) {
-    return { success: false as const, error: 'Ingresá la URL de tu tienda. Ej: https://tutienda.com' };
+    return {
+      success: false as const,
+      error: 'Ingresá la URL de tu tienda. Ej: https://tutienda.com',
+    };
   }
 
   let token: string;
@@ -48,8 +49,9 @@ export async function createWpConnection(siteUrlInput: string) {
   try {
     token = generateWpToken();
     tokenEncrypted = encryptWpToken(token);
-  } catch (err: any) {
-    return { success: false as const, error: err?.message || 'No se pudo generar el token.' };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'No se pudo generar el token.';
+    return { success: false as const, error: message };
   }
 
   const row = await upsertWpConnection({
@@ -106,7 +108,7 @@ export async function getWpConnectionStatus() {
   };
 }
 
-/** Verifica ping al plugin y marca la conexión como active/invalid. */
+/** Ping al plugin y marca la conexión active/invalid. */
 export async function verifyWpConnection() {
   const gate = await requireSignedIn('wp_verify', 30);
   if (gate.ok === false) {
@@ -118,7 +120,6 @@ export async function verifyWpConnection() {
     return { success: false as const, error: 'Todavía no generaste una conexión.' };
   }
 
-  const { decryptWpToken } = await import('./wpCrypto');
   let token: string;
   try {
     token = decryptWpToken(row.token_encrypted);
@@ -132,6 +133,19 @@ export async function verifyWpConnection() {
     return { success: false as const, error: ping.error, code: ping.code };
   }
 
+  if (ping.seoPlugin === 'none') {
+    await updateWpConnectionStatus(row.id, {
+      status: 'invalid',
+      plugin_version: ping.pluginVersion || null,
+    });
+    return {
+      success: false as const,
+      error:
+        'El plugin responde, pero falta Yoast SEO o Rank Math en tu WordPress. Instalá uno de los dos para poder aplicar título/meta.',
+      code: 'NO_SEO_PLUGIN',
+    };
+  }
+
   await updateWpConnectionStatus(row.id, {
     status: 'active',
     plugin_version: ping.pluginVersion || null,
@@ -142,6 +156,7 @@ export async function verifyWpConnection() {
     success: true as const,
     siteName: ping.siteName,
     pluginVersion: ping.pluginVersion,
+    seoPlugin: ping.seoPlugin,
     siteUrl: row.site_url,
   };
 }
@@ -159,8 +174,8 @@ export async function disconnectWpConnection() {
 }
 
 /**
- * Aplica título SEO / meta en WordPress vía el plugin.
- * missionType: H1 → title, META → meta.
+ * Aplica título SEO o meta en WordPress.
+ * Requiere conexión verificada (status active).
  */
 export async function applyMissionToWordpress(params: {
   pageUrl: string;
@@ -176,24 +191,24 @@ export async function applyMissionToWordpress(params: {
   if (!field) {
     return {
       success: false as const,
-      error: 'Por ahora solo se puede aplicar automático Título/H1 y Meta descripción.',
+      error: 'Por ahora solo se puede aplicar automático Título y Meta descripción.',
       code: 'UNSUPPORTED',
     };
   }
 
   const row = await getWpConnectionByEmail(gate.email);
-  if (!row) {
+  if (!row || row.status === 'revoked') {
     return {
       success: false as const,
       error: 'Conectá tu WordPress desde Perfil para usar «Aplicar en mi web».',
       code: 'NOT_CONNECTED',
     };
   }
-  if (row.status !== 'active' && row.status !== 'pending') {
+  if (row.status !== 'active') {
     return {
       success: false as const,
-      error: 'Tu conexión WordPress no está activa. Verificá el plugin desde Perfil.',
-      code: 'INACTIVE',
+      error: 'Primero verificá la conexión en Perfil → Conectar WordPress.',
+      code: 'NOT_VERIFIED',
     };
   }
 
@@ -201,7 +216,7 @@ export async function applyMissionToWordpress(params: {
     siteUrl: row.site_url,
     tokenEncrypted: row.token_encrypted,
     pageUrl: params.pageUrl,
-    field: field as WpApplyField,
+    field,
     value: params.value,
   });
 
@@ -212,21 +227,13 @@ export async function applyMissionToWordpress(params: {
     return { success: false as const, error: result.error, code: result.code };
   }
 
-  // Si estaba pending y aplicó bien, marcar active
-  if (row.status !== 'active') {
-    await updateWpConnectionStatus(row.id, {
-      status: 'active',
-      last_verified_at: new Date().toISOString(),
-    });
-  }
-
   return {
     success: true as const,
     postId: result.postId,
     updated: result.updated,
     message:
       field === 'meta'
-        ? 'Meta descripción aplicada en tu WordPress. Vaciá la caché y tocá Verificar.'
-        : 'Título aplicado en tu WordPress. Vaciá la caché y tocá Verificar.',
+        ? 'Meta descripción aplicada. Vaciá la caché del sitio y tocá Verificar.'
+        : 'Título SEO aplicado. Vaciá la caché del sitio y tocá Verificar.',
   };
 }

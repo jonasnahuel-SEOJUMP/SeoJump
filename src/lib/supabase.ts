@@ -596,9 +596,11 @@ export async function upsertWpConnection(params: {
         token_encrypted: params.tokenEncrypted,
         token_hint: params.tokenHint,
         status: params.status || 'pending',
+        plugin_version: null,
+        last_verified_at: null,
         updated_at: now,
       },
-      { onConflict: 'profile_id,site_url', ignoreDuplicates: false }
+      { onConflict: 'profile_id', ignoreDuplicates: false }
     )
     .select('*')
     .single();

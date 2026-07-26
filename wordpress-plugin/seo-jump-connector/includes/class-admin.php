@@ -19,13 +19,16 @@ class SEOJump_Connector_Admin {
             'type'              => 'string',
             'sanitize_callback' => array(__CLASS__, 'sanitize_token'),
             'default'           => '',
+            'show_in_rest'      => false,
         ));
     }
 
     public static function sanitize_token($value) {
         $value = is_string($value) ? trim($value) : '';
-        // Token SEO Jump: sj_ + base64url
-        if ($value !== '' && !preg_match('/^sj_[A-Za-z0-9_-]{16,128}$/', $value)) {
+        if ($value === '') {
+            return '';
+        }
+        if (!preg_match('/^sj_[A-Za-z0-9_-]{16,128}$/', $value)) {
             add_settings_error(
                 'seojump_connector',
                 'invalid_token',
@@ -41,12 +44,18 @@ class SEOJump_Connector_Admin {
         if (!current_user_can('manage_options')) {
             return;
         }
+
         $token = get_option(SEOJUMP_CONNECTOR_OPTION, '');
+        $has_yoast = defined('WPSEO_VERSION');
+        $has_rank  = defined('RANK_MATH_VERSION') || class_exists('RankMath');
         ?>
         <div class="wrap">
             <h1>SEO Jump Connector</h1>
-            <p>Pegá acá el token que te muestra SEO Jump en <strong>Perfil → Conectar WordPress</strong>.</p>
-            <p>Con esto, SEO Jump puede aplicar <strong>título SEO</strong> y <strong>meta descripción</strong> en tus páginas/productos cuando vos toques «Aplicar en mi web». No toca productos, precios ni diseño.</p>
+            <p>
+                Pegá el token de <strong>SEO Jump → Perfil → Conectar WordPress</strong>.
+                Con esto, desde SEO Jump podés aplicar <strong>título SEO</strong> y
+                <strong>meta descripción</strong> con un clic. No modifica precios, stock ni diseño.
+            </p>
 
             <form method="post" action="options.php">
                 <?php settings_fields('seojump_connector'); ?>
@@ -61,9 +70,10 @@ class SEOJump_Connector_Admin {
                                 class="regular-text code"
                                 value="<?php echo esc_attr($token); ?>"
                                 autocomplete="off"
+                                spellcheck="false"
                                 placeholder="sj_••••••••"
                             />
-                            <p class="description">Guardalo y después tocá «Verificar conexión» en SEO Jump.</p>
+                            <p class="description">Después de guardar, volvé a SEO Jump y tocá «Verificar conexión».</p>
                         </td>
                     </tr>
                 </table>
@@ -71,13 +81,26 @@ class SEOJump_Connector_Admin {
             </form>
 
             <hr />
-            <h2>Estado</h2>
-            <?php if ($token) : ?>
-                <p style="color:#0a7a2f;"><strong>✓ Token guardado.</strong> Volvé a SEO Jump y verificá la conexión.</p>
-            <?php else : ?>
-                <p style="color:#b32d2e;"><strong>Falta el token.</strong> Generarlo en SEO Jump → Perfil.</p>
-            <?php endif; ?>
-            <p>Endpoint REST: <code><?php echo esc_html(rest_url('seojump/v1/ping')); ?></code></p>
+            <h2>Requisitos</h2>
+            <ul>
+                <li>
+                    <?php if ($has_yoast) : ?>
+                        <span style="color:#0a7a2f;">✓ Yoast SEO detectado</span>
+                    <?php elseif ($has_rank) : ?>
+                        <span style="color:#0a7a2f;">✓ Rank Math detectado</span>
+                    <?php else : ?>
+                        <span style="color:#b32d2e;">✗ Hace falta Yoast SEO o Rank Math para aplicar título/meta automático</span>
+                    <?php endif; ?>
+                </li>
+                <li>
+                    <?php if ($token) : ?>
+                        <span style="color:#0a7a2f;">✓ Token guardado</span>
+                    <?php else : ?>
+                        <span style="color:#b32d2e;">✗ Falta pegar el token</span>
+                    <?php endif; ?>
+                </li>
+            </ul>
+            <p>Endpoint: <code><?php echo esc_html(rest_url('seojump/v1/ping')); ?></code></p>
         </div>
         <?php
     }
