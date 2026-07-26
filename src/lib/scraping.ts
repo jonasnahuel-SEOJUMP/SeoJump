@@ -5,6 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { decodeHtmlEntities } from './textUtils'
+import { isPublicUrlSafe } from './urlSafety.js'
 
 /**
  * Detecta el tipo real de página desde el HTML (huellas de WooCommerce/WordPress
@@ -50,13 +51,12 @@ export async function scrapeMetadata(siteUrl: string): Promise<{ title: string; 
   const result: { title: string; description: string; h1: string; pageType?: string } = { title: "", description: "", h1: "", pageType: "" };
   if (!siteUrl) return result;
 
-  let targetUrl = siteUrl.trim();
-  if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
-    targetUrl = "https://" + targetUrl;
-  }
-  const fetchUrl = targetUrl.includes('?')
-    ? `${targetUrl}&nocache=${Date.now()}`
-    : `${targetUrl}?nocache=${Date.now()}`;
+  const safe = isPublicUrlSafe(siteUrl);
+  if (!safe.safe) return result;
+
+  const fetchUrl = safe.url.includes('?')
+    ? `${safe.url}&nocache=${Date.now()}`
+    : `${safe.url}?nocache=${Date.now()}`;
 
   try {
     const res = await fetch(fetchUrl, {
@@ -76,6 +76,9 @@ export async function scrapeMetadata(siteUrl: string): Promise<{ title: string; 
     if (!res.ok) {
       return result;
     }
+
+    const finalCheck = isPublicUrlSafe(res.url || safe.url);
+    if (!finalCheck.safe) return result;
 
     const html = await res.text();
 
@@ -169,8 +172,10 @@ export async function fetchPage(
   opts: { timeoutMs?: number } = {}
 ): Promise<{ html: string; ok: boolean; status: number }> {
   const timeoutMs = opts.timeoutMs ?? 5000;
+  const safe = isPublicUrlSafe(url);
+  if (!safe.safe) return { html: '', ok: false, status: 0 };
   try {
-    const finalUrl = url.includes('?') ? `${url}&_t=${Date.now()}` : `${url}?_t=${Date.now()}`;
+    const finalUrl = safe.url.includes('?') ? `${safe.url}&_t=${Date.now()}` : `${safe.url}?_t=${Date.now()}`;
     const response = await fetch(finalUrl, {
       cache: 'no-store',
       headers: {
@@ -181,6 +186,8 @@ export async function fetchPage(
       signal: AbortSignal.timeout(timeoutMs),
     });
     if (!response.ok) return { html: '', ok: false, status: response.status };
+    const finalCheck = isPublicUrlSafe(response.url || safe.url);
+    if (!finalCheck.safe) return { html: '', ok: false, status: 0 };
     const html = await response.text();
     return { html, ok: true, status: response.status };
   } catch (e) {
@@ -189,13 +196,17 @@ export async function fetchPage(
 }
 
 export async function checkLinkStatus(url: string): Promise<number> {
+  const safe = isPublicUrlSafe(url);
+  if (!safe.safe) return 0;
   try {
-    const response = await fetch(url, {
+    const response = await fetch(safe.url, {
       method: 'HEAD',
       headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)' },
       signal: AbortSignal.timeout(2500),
       redirect: 'follow',
     });
+    const finalCheck = isPublicUrlSafe(response.url || safe.url);
+    if (!finalCheck.safe) return 0;
     return response.status;
   } catch (e) {
     return 0;
@@ -287,13 +298,11 @@ export function isUiNoiseText(text: string): boolean {
 export async function scrapeHeadingSections(pageUrl: string): Promise<HeadingSection[]> {
   if (!pageUrl) return [];
 
-  let targetUrl = pageUrl.trim();
-  if (!targetUrl.startsWith("http://") && !targetUrl.startsWith("https://")) {
-    targetUrl = "https://" + targetUrl;
-  }
+  const safe = isPublicUrlSafe(pageUrl);
+  if (!safe.safe) return [];
 
   try {
-    const res = await fetch(targetUrl, {
+    const res = await fetch(safe.url, {
       cache: 'no-store',
       // @ts-ignore
       next: { revalidate: 0 },
@@ -308,6 +317,8 @@ export async function scrapeHeadingSections(pageUrl: string): Promise<HeadingSec
     });
 
     if (!res.ok) return [];
+    const finalCheck = isPublicUrlSafe(res.url || safe.url);
+    if (!finalCheck.safe) return [];
 
     let html = await res.text();
 

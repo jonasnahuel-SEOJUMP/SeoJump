@@ -28,7 +28,6 @@ export async function GET(request) {
         code: result.code,
         upgrade: result.upgrade,
         credits: result.credits,
-        stack: result.stack 
       }, { 
         status: isCreditLimit ? 402 : 500,
         headers: {
@@ -54,7 +53,6 @@ export async function GET(request) {
     return NextResponse.json({ 
       error: true,
       message: error.message || 'Error interno del servidor.',
-      stack: error.stack
     }, { 
       status: 500,
       headers: {
