@@ -538,3 +538,109 @@ export async function deleteProfileByEmail(email: string): Promise<boolean> {
   console.log(`[Supabase] deleteProfileByEmail: perfil eliminado para ${email}`);
   return true;
 }
+
+// ─── Conector WordPress ──────────────────────────────────────────────────────
+
+export type WpConnectionRow = {
+  id: string;
+  profile_id: string;
+  site_url: string;
+  token_encrypted: string;
+  token_hint: string;
+  status: 'pending' | 'active' | 'invalid' | 'revoked';
+  plugin_version: string | null;
+  last_verified_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export async function getWpConnectionByEmail(email: string): Promise<WpConnectionRow | null> {
+  if (!supabaseAdmin) return null;
+  const profileId = await resolveProfileId(email);
+  if (!profileId) return null;
+
+  const { data, error } = await supabaseAdmin
+    .from('wp_connections')
+    .select('*')
+    .eq('profile_id', profileId)
+    .neq('status', 'revoked')
+    .order('updated_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[Supabase] getWpConnectionByEmail:', error.message);
+    return null;
+  }
+  return (data as WpConnectionRow) || null;
+}
+
+export async function upsertWpConnection(params: {
+  email: string;
+  siteUrl: string;
+  tokenEncrypted: string;
+  tokenHint: string;
+  status?: WpConnectionRow['status'];
+}): Promise<WpConnectionRow | null> {
+  if (!supabaseAdmin) return null;
+  const profileId = await resolveProfileId(params.email);
+  if (!profileId) return null;
+
+  const now = new Date().toISOString();
+  const { data, error } = await supabaseAdmin
+    .from('wp_connections')
+    .upsert(
+      {
+        profile_id: profileId,
+        site_url: params.siteUrl,
+        token_encrypted: params.tokenEncrypted,
+        token_hint: params.tokenHint,
+        status: params.status || 'pending',
+        updated_at: now,
+      },
+      { onConflict: 'profile_id,site_url', ignoreDuplicates: false }
+    )
+    .select('*')
+    .single();
+
+  if (error) {
+    console.error('[Supabase] upsertWpConnection:', error.message);
+    return null;
+  }
+  return data as WpConnectionRow;
+}
+
+export async function updateWpConnectionStatus(
+  connectionId: string,
+  patch: Partial<Pick<WpConnectionRow, 'status' | 'plugin_version' | 'last_verified_at'>>
+): Promise<boolean> {
+  if (!supabaseAdmin) return false;
+  const { error } = await supabaseAdmin
+    .from('wp_connections')
+    .update({ ...patch, updated_at: new Date().toISOString() })
+    .eq('id', connectionId);
+
+  if (error) {
+    console.error('[Supabase] updateWpConnectionStatus:', error.message);
+    return false;
+  }
+  return true;
+}
+
+export async function revokeWpConnection(email: string): Promise<boolean> {
+  if (!supabaseAdmin) return false;
+  const profileId = await resolveProfileId(email);
+  if (!profileId) return false;
+
+  const { error } = await supabaseAdmin
+    .from('wp_connections')
+    .update({ status: 'revoked', updated_at: new Date().toISOString() })
+    .eq('profile_id', profileId)
+    .neq('status', 'revoked');
+
+  if (error) {
+    console.error('[Supabase] revokeWpConnection:', error.message);
+    return false;
+  }
+  return true;
+}
