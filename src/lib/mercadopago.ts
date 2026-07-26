@@ -243,7 +243,9 @@ export function verifyMpWebhookSignature(params: {
   dataId: string | null;
 }): boolean {
   const secret = process.env.MP_WEBHOOK_SECRET?.trim();
-  if (!secret) return true; // sin secret configurado: aceptar (configurar en producción)
+  // Fail-closed en producción: sin secret no se aceptan webhooks.
+  // En desarrollo local sin secret, se permite para no bloquear pruebas.
+  if (!secret) return process.env.NODE_ENV !== 'production';
 
   const { xSignature, xRequestId, dataId } = params;
   if (!xSignature || !xRequestId || !dataId) return false;
@@ -397,7 +399,7 @@ export async function getMpAccountHealth(): Promise<{
     );
   }
   if (!process.env.MP_WEBHOOK_SECRET?.trim()) {
-    hints.push('Opcional: configurá MP_WEBHOOK_SECRET para validar webhooks en producción.');
+    hints.push('Obligatorio en producción: configurá MP_WEBHOOK_SECRET para validar webhooks.');
   }
 
   return {

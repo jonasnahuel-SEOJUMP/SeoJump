@@ -76,11 +76,8 @@ export async function POST(request: NextRequest) {
   const topic = body.type || body.topic || url.searchParams.get('topic') || '';
 
   if (eventId && !verifyMpWebhookSignature({ xSignature, xRequestId, dataId: eventId })) {
-    console.warn('[MP webhook] invalid signature for', eventId, '— procesando igual si no hay MP_WEBHOOK_SECRET');
-    const secret = process.env.MP_WEBHOOK_SECRET?.trim();
-    if (secret) {
-      return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
-    }
+    console.warn('[MP webhook] invalid or missing signature for', eventId);
+    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 });
   }
 
   let processingError = false;

@@ -1,7 +1,9 @@
 /**
  * fetchPage.js — Descarga el HTML en vivo de una página pública, con timeout,
- * user-agent propio y sin caché. Reutilizable desde rutas API (no es 'use server').
+ * user-agent propio, sin caché y protección anti-SSRF.
  */
+
+import { isPublicUrlSafe } from './urlSafety.js';
 
 /**
  * @param {string} pageUrl
@@ -10,10 +12,16 @@
  */
 export async function fetchPageHtml(pageUrl, opts = {}) {
   const timeoutMs = opts.timeoutMs ?? 9000;
+
+  const safe = isPublicUrlSafe(pageUrl);
+  if (!safe.safe) {
+    return { ok: false, message: safe.reason };
+  }
+
   try {
-    const finalUrl = pageUrl.includes('?')
-      ? `${pageUrl}&nocache=${Date.now()}`
-      : `${pageUrl}?nocache=${Date.now()}`;
+    const finalUrl = safe.url.includes('?')
+      ? `${safe.url}&nocache=${Date.now()}`
+      : `${safe.url}?nocache=${Date.now()}`;
 
     const response = await fetch(finalUrl, {
       cache: 'no-store',
@@ -34,6 +42,16 @@ export async function fetchPageHtml(pageUrl, opts = {}) {
         ok: false,
         message: `No pude acceder a la página (Error ${response.status}). Verificá que la URL sea pública.`,
       };
+    }
+
+    // Defensa extra: si el redirect final cayó en host privado, no devolver HTML.
+    try {
+      const finalHostCheck = isPublicUrlSafe(response.url || safe.url);
+      if (!finalHostCheck.safe) {
+        return { ok: false, message: 'No se pueden analizar direcciones internas o privadas.' };
+      }
+    } catch {
+      /* ignore */
     }
 
     const contentType = response.headers.get('content-type') || '';

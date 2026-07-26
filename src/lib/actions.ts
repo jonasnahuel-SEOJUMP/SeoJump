@@ -72,6 +72,8 @@ import {
 } from './pageContent'
 import { sanitizeInput, logErrorToFile } from './inputValidation'
 import { invokeGeminiWithCredits } from './aiInvoke'
+import { fetchPageHtml } from './fetchPage'
+import { requireSignedIn } from './actionGuard'
 
 export async function login() {
   await signIn("google")
@@ -85,7 +87,7 @@ export async function logout() {
  * Comprueba si el usuario logueado es administrador.
  * Lee ADMIN_EMAILS (o ALLOWED_EMAILS como fallback) en el servidor en tiempo de request,
  * sin depender de variables NEXT_PUBLIC_ que se embeben en build-time.
- * Si la lista está vacía → todos son admin (modo desarrollo abierto).
+ * Si la lista está vacía → nadie es admin (fail-closed).
  */
 export async function checkIsAdmin(): Promise<boolean> {
   try {
@@ -93,13 +95,9 @@ export async function checkIsAdmin(): Promise<boolean> {
     const userEmail = (session?.user?.email || '').toLowerCase().trim();
     if (!userEmail) return false;
 
-    // Primero buscar ADMIN_EMAILS, si no existe usar ALLOWED_EMAILS
-    const raw = process.env.ADMIN_EMAILS || process.env.ALLOWED_EMAILS || '';
-    if (!raw.trim()) return true; // sin lista configurada → todos son admin
-
-    const adminList = raw.split(',').map(e => e.trim().toLowerCase()).filter(Boolean);
-    const isAdmin = adminList.includes(userEmail);
-    console.log(`[checkIsAdmin] ${userEmail} → ${isAdmin} (list: ${adminList.join(', ')})`);
+    const { isAdminEmail } = await import('./adminEmails');
+    const isAdmin = isAdminEmail(userEmail);
+    console.log(`[checkIsAdmin] ${userEmail} → ${isAdmin}`);
     return isAdmin;
   } catch {
     return false;
@@ -788,6 +786,11 @@ export async function verifyMission(pageUrl: string, type: string, userInput: st
     return { success: false, message: 'Faltan datos para verificar.' }
   }
 
+  const gate = await requireSignedIn('verify_mission');
+  if (gate.ok === false) {
+    return { success: false, message: gate.error, code: gate.code };
+  }
+
   // Keyword gate: verificar que el INPUT del usuario incluya las palabras clave activas.
   // IMPORTANTE: usamos matching por palabras individuales (no cadena completa) para tolerar
   // títulos naturales como "Óxido de cerio puro - Pulidor" cuando la keyword es "oxido cerio".
@@ -815,38 +818,12 @@ export async function verifyMission(pageUrl: string, type: string, userInput: st
     }
   }
 
-  let html: string
-  try {
-    console.log(`[verifyMission] Fetching live page (no-cache): ${pageUrl}`)
-    const finalUrl = pageUrl.includes('?') ? `${pageUrl}&nocache=${Date.now()}` : `${pageUrl}?nocache=${Date.now()}`;
-    const response = await fetch(finalUrl, {
-      cache: 'no-store',
-      // @ts-ignore
-      next: { revalidate: 0 },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
-      signal: AbortSignal.timeout(8000),
-    })
-
-    if (!response.ok) {
-      return {
-        success: false,
-        message: `No pude acceder a la página (Error ${response.status}). Verificá que la URL sea pública.`,
-      }
-    }
-
-    html = await response.text()
-  } catch (err: any) {
-    if (err?.name === 'TimeoutError') {
-      return { success: false, message: 'La página tardó demasiado en responder (>8s). Intentá de nuevo.' }
-    }
-    return { success: false, message: `Error al acceder a la página: ${err?.message}` }
+  console.log(`[verifyMission] Fetching live page (no-cache): ${pageUrl}`)
+  const fetched = await fetchPageHtml(pageUrl, { timeoutMs: 8000 })
+  if (fetched.ok === false) {
+    return { success: false, message: fetched.message }
   }
+  const html = fetched.html
 
   // Extract the real current value from the live HTML
   const liveValue = extractFromHtml(html, type)
@@ -953,38 +930,17 @@ export async function verifyContentMission(pageUrl: string, searchPhrase: string
     return { success: false, message: 'Faltan datos para verificar.' }
   }
 
-  let html: string
-  try {
-    console.log(`[verifyContentMission] Fetching live page (no-cache): ${pageUrl}`)
-    const finalUrl = pageUrl.includes('?') ? `${pageUrl}&nocache=${Date.now()}` : `${pageUrl}?nocache=${Date.now()}`;
-    const response = await fetch(finalUrl, {
-      cache: 'no-store',
-      // @ts-ignore
-      next: { revalidate: 0 },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
-      signal: AbortSignal.timeout(8000),
-    })
-
-    if (!response.ok) {
-      return {
-        success: false,
-        message: `No pude acceder a la página (Error ${response.status}). Verificá que la URL sea pública.`,
-      }
-    }
-
-    html = await response.text()
-  } catch (err: any) {
-    if (err?.name === 'TimeoutError') {
-      return { success: false, message: 'La página tardó demasiado en responder (>8s). Intentá de nuevo.' }
-    }
-    return { success: false, message: `Error al acceder a la página: ${err?.message}` }
+  const gate = await requireSignedIn('verify_content');
+  if (gate.ok === false) {
+    return { success: false, message: gate.error, code: gate.code };
   }
+
+  console.log(`[verifyContentMission] Fetching live page (no-cache): ${pageUrl}`)
+  const fetchedContent = await fetchPageHtml(pageUrl, { timeoutMs: 8000 })
+  if (fetchedContent.ok === false) {
+    return { success: false, message: fetchedContent.message }
+  }
+  const html = fetchedContent.html
 
   // Very basic strip of script/style tags before checking content
   const bodyContent = html
@@ -1060,6 +1016,10 @@ export async function requestGoogleIndexing(urlToIndex: string) {
 
 /** Vista previa en vivo de título, meta y H1 para misiones (antes/después). */
 export async function getPageLivePreview(pageUrl: string) {
+  const gate = await requireSignedIn('live_preview', 180);
+  if (gate.ok === false) {
+    return { success: false, preview: { title: "", description: "", h1: "" }, error: gate.error, code: gate.code };
+  }
   try {
     const preview = await scrapeMetadata(pageUrl);
     return { success: true, preview };
@@ -2211,34 +2171,17 @@ export async function verifyQuickWin(pageUrl: string, suggestedTitle: string) {
     return { success: false, message: 'Faltan datos para verificar.' };
   }
 
-  let html: string;
-  try {
-    console.log(`[verifyQuickWin] Fetching page (no-cache): ${pageUrl}`);
-    const finalUrl = pageUrl.includes('?') ? `${pageUrl}&nocache=${Date.now()}` : `${pageUrl}?nocache=${Date.now()}`;
-    const response = await fetch(finalUrl, {
-      cache: 'no-store',
-      // @ts-ignore
-      next: { revalidate: 0 },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (!response.ok) {
-      return {
-        success: false,
-        message: `No pude acceder a la página (Error ${response.status}). Verificá que la URL sea pública.`,
-      };
-    }
-    html = await response.text();
-  } catch (err: any) {
-    return { success: false, message: `Error al acceder a la página: ${err?.message}` };
+  const gate = await requireSignedIn('verify_quickwin');
+  if (gate.ok === false) {
+    return { success: false, message: gate.error, code: gate.code };
   }
+
+  console.log(`[verifyQuickWin] Fetching page (no-cache): ${pageUrl}`);
+  const fetchedQw = await fetchPageHtml(pageUrl, { timeoutMs: 8000 });
+  if (fetchedQw.ok === false) {
+    return { success: false, message: fetchedQw.message };
+  }
+  const html = fetchedQw.html;
 
   const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   if (!titleMatch) {
@@ -2281,6 +2224,11 @@ export async function verifyQuickWin(pageUrl: string, suggestedTitle: string) {
 // ═══════════════════════════════════════════════════════════════════════════
 
 export async function auditSiteLinks(siteUrl: string, goldKeyword?: string) {
+  const gate = await requireSignedIn('audit_links', 30);
+  if (gate.ok === false) {
+    return { success: false, error: gate.error, code: gate.code };
+  }
+
   const urlSanit = sanitizeInput(siteUrl, 'url');
   if (!urlSanit.isValid) {
     return { success: false, error: urlSanit.error };
@@ -2288,7 +2236,7 @@ export async function auditSiteLinks(siteUrl: string, goldKeyword?: string) {
   const cleanSiteUrl = urlSanit.sanitized;
 
   try {
-    // 1. Crawl
+    // 1. Crawl (solo con sesión — no es un proxy abierto)
     const crawlData = await crawlSiteLinks(cleanSiteUrl);
 
     const stats = {
@@ -2410,16 +2358,12 @@ REGLAS DE TRASPASO DE FUERZA (internalLinking) Y TEXTO DE ANCLAJE (anchorText):
 - En "anchorText", solo sugerí cambios en páginas de contenido, nunca en home ni catálogo.
 `;
 
-    const session = await auth();
-    const userEmail = session?.user?.email || '';
+    const userEmail = gate.email;
     const isAdmin = await checkIsAdmin();
-    if (!userEmail && !isAdmin) {
-      return { success: false, error: 'Tenés que iniciar sesión para usar el Detective con IA.', code: 'NOT_AUTHENTICATED' };
-    }
 
     const cacheKey = buildGeminiCacheKey([
       'detective_enlaces_v2',
-      userEmail || 'dev@localhost',
+      userEmail,
       cleanSiteUrl,
       goldKeyword || '',
       String(stats.brokenCount),
@@ -2428,7 +2372,7 @@ REGLAS DE TRASPASO DE FUERZA (internalLinking) Y TEXTO DE ANCLAJE (anchorText):
     ]);
 
     const geminiResult = await invokeGeminiWithCredits({
-      email: userEmail || 'dev@localhost',
+      email: userEmail,
       isAdmin,
       feature: 'detective_enlaces',
       cacheKey,
@@ -3015,37 +2959,17 @@ export async function verifyAeoMission(pageUrl: string, headingText: string, opt
     return { success: false, message: 'Faltan datos para verificar.' };
   }
 
-  let html: string;
-  try {
-    console.log(`[verifyAeoMission] Fetching page (no-cache): ${pageUrl}`);
-    const finalUrl = pageUrl.includes('?') ? `${pageUrl}&nocache=${Date.now()}` : `${pageUrl}?nocache=${Date.now()}`;
-    const response = await fetch(finalUrl, {
-      cache: 'no-store',
-      // @ts-ignore
-      next: { revalidate: 0 },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (!response.ok) {
-      return {
-        success: false,
-        message: `No pude acceder a la página (Error ${response.status}). Verificá que la URL sea pública.`,
-      };
-    }
-    html = await response.text();
-  } catch (err: any) {
-    if (err?.name === 'TimeoutError') {
-      return { success: false, message: 'La página tardó demasiado en responder (>8s). Intentá de nuevo.' };
-    }
-    return { success: false, message: `Error al acceder a la página: ${err?.message}` };
+  const gate = await requireSignedIn('verify_aeo');
+  if (gate.ok === false) {
+    return { success: false, message: gate.error, code: gate.code };
   }
+
+  console.log(`[verifyAeoMission] Fetching page (no-cache): ${pageUrl}`);
+  const fetchedAeo = await fetchPageHtml(pageUrl, { timeoutMs: 8000 });
+  if (fetchedAeo.ok === false) {
+    return { success: false, message: fetchedAeo.message };
+  }
+  const html = fetchedAeo.html;
 
   // Strip script and style tags (same pattern as verifyContentMission)
   let cleanHtml = html
@@ -3533,6 +3457,11 @@ export async function verifySpyGap(
   alreadyGenerated = false
 ) {
   try {
+    const gate = await requireSignedIn('verify_spy');
+    if (gate.ok === false) {
+      return { success: false, error: gate.error, code: gate.code };
+    }
+
     if (!pageUrl?.trim()) {
       return {
         success: false,
@@ -3695,32 +3624,9 @@ export async function verifySpyGap(
 // ═══════════════════════════════════════════════════════════════════════════
 
 /** Descarga el HTML en vivo de una página (sin caché) para análisis de contenido. */
+/** Descarga HTML en vivo con anti-SSRF (delegado a fetchPageHtml). */
 async function fetchLiveHtml(pageUrl: string): Promise<{ ok: true; html: string } | { ok: false; message: string }> {
-  try {
-    const finalUrl = pageUrl.includes('?') ? `${pageUrl}&nocache=${Date.now()}` : `${pageUrl}?nocache=${Date.now()}`;
-    const response = await fetch(finalUrl, {
-      cache: 'no-store',
-      // @ts-ignore
-      next: { revalidate: 0 },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
-      signal: AbortSignal.timeout(9000),
-    });
-    if (!response.ok) {
-      return { ok: false, message: `No pude acceder a la página (Error ${response.status}). Verificá que la URL sea pública.` };
-    }
-    return { ok: true, html: await response.text() };
-  } catch (err: any) {
-    if (err?.name === 'TimeoutError') {
-      return { ok: false, message: 'La página tardó demasiado en responder (>9s). Intentá de nuevo.' };
-    }
-    return { ok: false, message: `Error al acceder a la página: ${err?.message || err}` };
-  }
+  return fetchPageHtml(pageUrl, { timeoutMs: 9000 });
 }
 
 /** Texto plano recortado para pasarle contexto real a la IA (sin tags). */
@@ -3744,6 +3650,11 @@ export async function getHumanScore(
   goldKeyword?: string,
   businessFocus?: string
 ) {
+  const gate = await requireSignedIn('human_score', 60);
+  if (gate.ok === false) {
+    return { success: false, error: gate.error, code: gate.code };
+  }
+
   const urlSanit = sanitizeInput(pageUrl, 'url');
   if (!urlSanit.isValid) {
     return { success: false, error: urlSanit.error };
@@ -3891,6 +3802,11 @@ export async function verifyHumanMission(pageUrl: string, dimension: HumanDimens
     return { success: false, message: 'Faltan datos para verificar.' };
   }
 
+  const gate = await requireSignedIn('verify_human');
+  if (gate.ok === false) {
+    return { success: false, message: gate.error, code: gate.code };
+  }
+
   const urlSanit = sanitizeInput(pageUrl, 'url');
   if (!urlSanit.isValid) {
     return { success: false, message: urlSanit.error };
@@ -3926,6 +3842,11 @@ export async function verifyHumanMission(pageUrl: string, dimension: HumanDimens
  * Sin créditos de IA: es 100% determinístico.
  */
 export async function getComprehensionMap(pageUrl: string, platformId?: string) {
+  const gate = await requireSignedIn('comprehension_map', 60);
+  if (gate.ok === false) {
+    return { success: false, error: gate.error, code: gate.code };
+  }
+
   const urlSanit = sanitizeInput(pageUrl, 'url');
   if (!urlSanit.isValid) {
     return { success: false, error: urlSanit.error };
@@ -4008,6 +3929,11 @@ function isStructureTypePresent(
 export async function verifyComprehensionFaqStructure(pageUrl: string, offerType: string = 'faq') {
   if (!pageUrl?.trim()) {
     return { success: false, message: 'Falta la URL para verificar.' };
+  }
+
+  const gate = await requireSignedIn('verify_comprehension');
+  if (gate.ok === false) {
+    return { success: false, message: gate.error, code: gate.code };
   }
 
   const urlSanit = sanitizeInput(pageUrl, 'url');
