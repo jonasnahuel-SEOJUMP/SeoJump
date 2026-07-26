@@ -11,6 +11,7 @@ import {
 } from "../lib/cmsGuide";
 import { isMissionChangeFullyApplied, getMissionSuggestionAddon } from "../lib/textUtils";
 import { getSmartMissionSuggestion } from "../lib/actions";
+import WpApplyButton from "./WpApplyButton";
 
 function CopyButton({ text, label, playClick, variant = "green", className = "" }) {
   const [copied, setCopied] = useState(false);
@@ -259,7 +260,17 @@ export default function MissionEditorGuide({
                       Sugerencia automática — si la IA de Google está conectada verás el sello «Generada con IA» arriba.
                     </p>
                   )}
-                  <CopyButton text={suggested} label="📋 Copiar sugerencia" playClick={playClick} variant="green" />
+                  <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-start">
+                    <CopyButton text={suggested} label="📋 Copiar sugerencia" playClick={playClick} variant="green" />
+                    {!isAeo && (
+                      <WpApplyButton
+                        missionType={missionType}
+                        pageUrl={missionPage}
+                        value={suggested}
+                        playClick={playClick}
+                      />
+                    )}
+                  </div>
                 </>
               )}
             </div>

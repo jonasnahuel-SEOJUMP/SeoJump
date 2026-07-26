@@ -9,6 +9,7 @@ import { deleteUserAccount, activateUserPlan } from "../../lib/actions";
 import { clearLocalUserData } from "../../lib/clearUserData";
 import { useSubscription } from "../../hooks/useSubscription";
 import { formatPlanExpiry } from "../../lib/subscription";
+import WpConnectPanel from "../../components/WpConnectPanel";
 import Link from "next/link";
 
 export default function Perfil() {
@@ -228,6 +229,10 @@ export default function Perfil() {
               </p>
             </div>
           )}
+        </div>
+
+        <div id="wp-connect">
+          <WpConnectPanel defaultSiteUrl={siteUrl} playClick={playClick} />
         </div>
 
         {/* Panel admin: activar planes manualmente (backup si falla webhook) */}
