@@ -14,7 +14,7 @@ export type ActionGuardOk = {
 };
 
 /**
- * Exige sesión de Google y aplica rate-limit por usuario/feature.
+ * Exige sesión de Google y aplica rate-limit persistente por usuario/feature.
  * Usar al inicio de server actions que scrapean o gastan recursos.
  */
 export async function requireSignedIn(
@@ -31,7 +31,7 @@ export async function requireSignedIn(
     };
   }
 
-  const rl = checkRateLimit(`action:${feature}:${email}`, maxPerHour, 60 * 60 * 1000);
+  const rl = await checkRateLimit(`action:${feature}:${email}`, maxPerHour, 60 * 60 * 1000);
   if (rl.allowed === false) {
     return {
       ok: false,

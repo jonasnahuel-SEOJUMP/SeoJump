@@ -103,45 +103,43 @@ async function getMonthlyCount(email: string): Promise<number> {
   return data?.count ?? 0;
 }
 
-async function incrementUsage(email: string): Promise<void> {
-  if (!supabaseAdmin) return;
-  const norm = normalizeEmail(email);
-  const date = todayUtc();
-  const ym = currentYearMonth();
+type ConsumeRpcResult = {
+  allowed: boolean;
+  code?: 'AI_CREDIT_DAILY' | 'AI_CREDIT_MONTHLY' | 'NOT_AUTHENTICATED';
+  usedToday: number;
+  usedMonth: number;
+};
 
-  const { data: daily } = await supabaseAdmin
-    .from('ai_usage_daily')
-    .select('count')
-    .eq('email', norm)
-    .eq('usage_date', date)
-    .maybeSingle();
+/**
+ * Consume 1 crédito de forma atómica en Postgres (advisory lock + FOR UPDATE).
+ * Evita races read-modify-write entre instancias serverless.
+ */
+async function consumeUsageAtomic(
+  email: string,
+  limitDay: number,
+  limitMonth: number
+): Promise<ConsumeRpcResult | null> {
+  if (!supabaseAdmin) return null;
 
-  if (daily) {
-    await supabaseAdmin
-      .from('ai_usage_daily')
-      .update({ count: daily.count + 1 })
-      .eq('email', norm)
-      .eq('usage_date', date);
-  } else {
-    await supabaseAdmin.from('ai_usage_daily').insert({ email: norm, usage_date: date, count: 1 });
+  const { data, error } = await supabaseAdmin.rpc('consume_ai_credit', {
+    p_email: normalizeEmail(email),
+    p_limit_day: limitDay,
+    p_limit_month: limitMonth,
+  });
+
+  if (error) {
+    console.error('[aiCredits] consume_ai_credit RPC:', error.message);
+    return null;
   }
 
-  const { data: monthly } = await supabaseAdmin
-    .from('ai_usage_monthly')
-    .select('count')
-    .eq('email', norm)
-    .eq('year_month', ym)
-    .maybeSingle();
-
-  if (monthly) {
-    await supabaseAdmin
-      .from('ai_usage_monthly')
-      .update({ count: monthly.count + 1 })
-      .eq('email', norm)
-      .eq('year_month', ym);
-  } else {
-    await supabaseAdmin.from('ai_usage_monthly').insert({ email: norm, year_month: ym, count: 1 });
-  }
+  const row = (typeof data === 'string' ? JSON.parse(data) : data) as ConsumeRpcResult | null;
+  if (!row || typeof row.allowed !== 'boolean') return null;
+  return {
+    allowed: row.allowed,
+    code: row.code,
+    usedToday: Number(row.usedToday) || 0,
+    usedMonth: Number(row.usedMonth) || 0,
+  };
 }
 
 function buildStatus(
@@ -261,45 +259,71 @@ export async function checkAndConsumeAiCredit(
   const limits = getPlanLimits(plan);
 
   if (!supabaseAdmin) {
-    console.warn('[aiCredits] Supabase no configurado — permitiendo consulta IA sin contador.');
-    return {
-      allowed: true,
-      status: buildStatus(plan, 0, 0, false),
-    };
-  }
-
-  const [usedToday, usedMonth] = await Promise.all([
-    getDailyCount(norm),
-    getMonthlyCount(norm),
-  ]);
-
-  const status = buildStatus(plan, usedToday, usedMonth, false);
-
-  if (usedMonth >= limits.aiPerMonth) {
-    return {
-      allowed: false,
-      code: 'AI_CREDIT_MONTHLY',
-      error: limitErrorMessage('AI_CREDIT_MONTHLY', status),
-      status,
-    };
-  }
-
-  if (usedToday >= limits.aiPerDay) {
+    // Fail-closed: sin DB persistente el conteo gratis/PRO no es confiable.
+    console.error('[aiCredits] Supabase no configurado — bloqueando consulta IA (fail-closed).');
+    const status = buildStatus(plan, 0, 0, false);
     return {
       allowed: false,
       code: 'AI_CREDIT_DAILY',
-      error: limitErrorMessage('AI_CREDIT_DAILY', status),
+      error: 'No pudimos verificar tu cupo de consultas IA. Intentá de nuevo en unos segundos.',
       status,
     };
   }
 
-  if (!options?.skipConsume) {
-    await incrementUsage(norm);
-    const newStatus = buildStatus(plan, usedToday + 1, usedMonth + 1, false);
-    console.log(`[aiCredits] ${norm} consumió 1 IA (${AI_FEATURE_LABELS[feature]}) — ${newStatus.usedToday}/${newStatus.limitDay} hoy`);
-    return { allowed: true, status: newStatus };
+  // Solo lectura (UI / preflight): no incrementa.
+  if (options?.skipConsume) {
+    const [usedToday, usedMonth] = await Promise.all([
+      getDailyCount(norm),
+      getMonthlyCount(norm),
+    ]);
+    const status = buildStatus(plan, usedToday, usedMonth, false);
+
+    if (usedMonth >= limits.aiPerMonth) {
+      return {
+        allowed: false,
+        code: 'AI_CREDIT_MONTHLY',
+        error: limitErrorMessage('AI_CREDIT_MONTHLY', status),
+        status,
+      };
+    }
+    if (usedToday >= limits.aiPerDay) {
+      return {
+        allowed: false,
+        code: 'AI_CREDIT_DAILY',
+        error: limitErrorMessage('AI_CREDIT_DAILY', status),
+        status,
+      };
+    }
+    return { allowed: true, status };
   }
 
+  const consumed = await consumeUsageAtomic(norm, limits.aiPerDay, limits.aiPerMonth);
+  if (!consumed) {
+    const status = buildStatus(plan, 0, 0, false);
+    return {
+      allowed: false,
+      code: 'AI_CREDIT_DAILY',
+      error: 'No pudimos verificar tu cupo de consultas IA. Intentá de nuevo en unos segundos.',
+      status,
+    };
+  }
+
+  const status = buildStatus(plan, consumed.usedToday, consumed.usedMonth, false);
+
+  if (consumed.allowed === false) {
+    const code =
+      consumed.code === 'AI_CREDIT_MONTHLY' ? 'AI_CREDIT_MONTHLY' : 'AI_CREDIT_DAILY';
+    return {
+      allowed: false,
+      code,
+      error: limitErrorMessage(code, status),
+      status,
+    };
+  }
+
+  console.log(
+    `[aiCredits] ${norm} consumió 1 IA (${AI_FEATURE_LABELS[feature]}) — ${status.usedToday}/${status.limitDay} hoy`
+  );
   return { allowed: true, status };
 }
 
