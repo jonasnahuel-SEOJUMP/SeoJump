@@ -1,4 +1,5 @@
-import { isPublicUrlSafe } from './urlSafety.js';
+import { assertSafePublicUrl } from './urlSafety.js';
+import { fetchWithSsrfGuard } from './safeHttp.js';
 import { decryptWpToken, normalizeSiteUrl } from './wpCrypto';
 
 /** Campos que entiende el plugin WordPress. */
@@ -51,40 +52,42 @@ async function wpFetch(
   path: string,
   init: RequestInit = {}
 ): Promise<{ status: number; data: Record<string, unknown> | null }> {
-  const safe = isPublicUrlSafe(siteUrl);
-  if (safe.safe === false) {
-    return { status: 0, data: { error: safe.reason } };
-  }
-
-  const origin = normalizeSiteUrl(safe.url);
-  if (!origin) {
+  const originNorm = normalizeSiteUrl(siteUrl);
+  if (!originNorm) {
     return { status: 0, data: { error: 'URL del sitio inválida.' } };
   }
 
-  const url = `${restBase(origin)}${path}`;
-  try {
-    const res = await fetch(url, {
-      ...init,
-      headers: {
-        Authorization: `Bearer ${token}`,
-        Accept: 'application/json',
-        ...(init.body ? { 'Content-Type': 'application/json' } : {}),
-        ...(init.headers as Record<string, string> | undefined),
-      },
-      signal: AbortSignal.timeout(12000),
-      cache: 'no-store',
-    });
-    let data: Record<string, unknown> | null = null;
-    try {
-      data = (await res.json()) as Record<string, unknown>;
-    } catch {
-      data = null;
-    }
-    return { status: res.status, data };
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'No se pudo contactar el sitio WordPress.';
-    return { status: 0, data: { error: message } };
+  // DNS + sintaxis antes de armar el endpoint REST
+  const safeOrigin = await assertSafePublicUrl(originNorm);
+  if (safeOrigin.safe === false) {
+    return { status: 0, data: { error: safeOrigin.reason } };
   }
+
+  const url = `${restBase(normalizeSiteUrl(safeOrigin.url) || originNorm)}${path}`;
+  const result = await fetchWithSsrfGuard(url, {
+    method: (init.method as string) || 'GET',
+    body: typeof init.body === 'string' ? init.body : undefined,
+    timeoutMs: 12000,
+    cacheBuster: false,
+    headers: {
+      Authorization: `Bearer ${token}`,
+      Accept: 'application/json',
+      ...(init.body ? { 'Content-Type': 'application/json' } : {}),
+      ...(init.headers as Record<string, string> | undefined),
+    },
+  });
+
+  if (result.ok === false) {
+    return { status: 0, data: { error: result.message } };
+  }
+
+  let data: Record<string, unknown> | null = null;
+  try {
+    data = (await result.response.json()) as Record<string, unknown>;
+  } catch {
+    data = null;
+  }
+  return { status: result.response.status, data };
 }
 
 export async function pingWpSite(siteUrl: string, token: string): Promise<WpPingResult> {
@@ -136,7 +139,7 @@ export async function applyWpChange(params: {
     };
   }
 
-  const pageSafe = isPublicUrlSafe(params.pageUrl);
+  const pageSafe = await assertSafePublicUrl(params.pageUrl);
   if (pageSafe.safe === false) {
     return { ok: false, error: pageSafe.reason, code: 'BAD_URL' };
   }
