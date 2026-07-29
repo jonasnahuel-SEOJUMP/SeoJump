@@ -5,7 +5,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 
 import { decodeHtmlEntities } from './textUtils'
-import { isPublicUrlSafe } from './urlSafety.js'
+import { fetchHtmlSafe, fetchWithSsrfGuard } from './safeHttp.js'
 
 /**
  * Detecta el tipo real de página desde el HTML (huellas de WooCommerce/WordPress
@@ -51,36 +51,11 @@ export async function scrapeMetadata(siteUrl: string): Promise<{ title: string; 
   const result: { title: string; description: string; h1: string; pageType?: string } = { title: "", description: "", h1: "", pageType: "" };
   if (!siteUrl) return result;
 
-  const safe = isPublicUrlSafe(siteUrl);
-  if (!safe.safe) return result;
-
-  const fetchUrl = safe.url.includes('?')
-    ? `${safe.url}&nocache=${Date.now()}`
-    : `${safe.url}?nocache=${Date.now()}`;
-
   try {
-    const res = await fetch(fetchUrl, {
-      cache: 'no-store',
-      // @ts-ignore
-      next: { revalidate: 0 },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
-      signal: AbortSignal.timeout(4000),
-    });
+    const fetched = await fetchHtmlSafe(siteUrl, { timeoutMs: 4000 });
+    if (fetched.ok === false) return result;
 
-    if (!res.ok) {
-      return result;
-    }
-
-    const finalCheck = isPublicUrlSafe(res.url || safe.url);
-    if (!finalCheck.safe) return result;
-
-    const html = await res.text();
+    const html = fetched.html;
 
     // Extract Title
     const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
@@ -172,43 +147,33 @@ export async function fetchPage(
   opts: { timeoutMs?: number } = {}
 ): Promise<{ html: string; ok: boolean; status: number }> {
   const timeoutMs = opts.timeoutMs ?? 5000;
-  const safe = isPublicUrlSafe(url);
-  if (!safe.safe) return { html: '', ok: false, status: 0 };
+  const result = await fetchWithSsrfGuard(url, {
+    timeoutMs,
+    method: 'GET',
+    cacheBuster: true,
+  });
+  if (result.ok === false) return { html: '', ok: false, status: 0 };
   try {
-    const finalUrl = safe.url.includes('?') ? `${safe.url}&_t=${Date.now()}` : `${safe.url}?_t=${Date.now()}`;
-    const response = await fetch(finalUrl, {
-      cache: 'no-store',
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
-        'Accept': 'text/html,application/xhtml+xml',
-        'Cache-Control': 'no-cache',
-      },
-      signal: AbortSignal.timeout(timeoutMs),
-    });
-    if (!response.ok) return { html: '', ok: false, status: response.status };
-    const finalCheck = isPublicUrlSafe(response.url || safe.url);
-    if (!finalCheck.safe) return { html: '', ok: false, status: 0 };
-    const html = await response.text();
-    return { html, ok: true, status: response.status };
-  } catch (e) {
+    if (!result.response.ok) {
+      return { html: '', ok: false, status: result.response.status };
+    }
+    const html = await result.response.text();
+    return { html, ok: true, status: result.response.status };
+  } catch {
     return { html: '', ok: false, status: 0 };
   }
 }
 
 export async function checkLinkStatus(url: string): Promise<number> {
-  const safe = isPublicUrlSafe(url);
-  if (!safe.safe) return 0;
+  const result = await fetchWithSsrfGuard(url, {
+    method: 'HEAD',
+    timeoutMs: 2500,
+    cacheBuster: false,
+  });
+  if (result.ok === false) return 0;
   try {
-    const response = await fetch(safe.url, {
-      method: 'HEAD',
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)' },
-      signal: AbortSignal.timeout(2500),
-      redirect: 'follow',
-    });
-    const finalCheck = isPublicUrlSafe(response.url || safe.url);
-    if (!finalCheck.safe) return 0;
-    return response.status;
-  } catch (e) {
+    return result.response.status;
+  } catch {
     return 0;
   }
 }
@@ -298,29 +263,11 @@ export function isUiNoiseText(text: string): boolean {
 export async function scrapeHeadingSections(pageUrl: string): Promise<HeadingSection[]> {
   if (!pageUrl) return [];
 
-  const safe = isPublicUrlSafe(pageUrl);
-  if (!safe.safe) return [];
-
   try {
-    const res = await fetch(safe.url, {
-      cache: 'no-store',
-      // @ts-ignore
-      next: { revalidate: 0 },
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; SEOJUMP-Bot/1.0)',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9',
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-        'Expires': '0',
-      },
-      signal: AbortSignal.timeout(6000),
-    });
+    const fetched = await fetchHtmlSafe(pageUrl, { timeoutMs: 6000 });
+    if (fetched.ok === false) return [];
 
-    if (!res.ok) return [];
-    const finalCheck = isPublicUrlSafe(res.url || safe.url);
-    if (!finalCheck.safe) return [];
-
-    let html = await res.text();
+    let html = fetched.html;
 
     // Strip script and style tags (same pattern as verifyContentMission)
     html = html
