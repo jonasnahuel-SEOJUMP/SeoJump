@@ -40,7 +40,7 @@ function toPublicMap(map) {
 export async function POST(req) {
   try {
     const ip = getClientIp(req);
-    const rl = checkRateLimit(`pubcomp:${ip}`, MAX_PER_HOUR, 60 * 60 * 1000);
+    const rl = await checkRateLimit(`pubcomp:${ip}`, MAX_PER_HOUR, 60 * 60 * 1000);
     if (!rl.allowed) {
       return NextResponse.json(
         {
