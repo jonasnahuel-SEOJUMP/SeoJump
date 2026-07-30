@@ -98,7 +98,9 @@ export default function HumanScorePanel({
     setMissionMsg((prev) => ({ ...prev, [dimension]: null }));
 
     try {
-      const res = await verifyHumanMission(analyzedUrl, dimension);
+      const prevDim = result?.dimensions?.find((d) => d.id === dimension);
+      const previousScore = typeof prevDim?.score === "number" ? prevDim.score : null;
+      const res = await verifyHumanMission(analyzedUrl, dimension, previousScore);
       if (res.success) {
         const id = missionId(dimension);
         const mission = result.missions.find((m) => m.id === dimension);
@@ -236,7 +238,7 @@ export default function HumanScorePanel({
                   👤 Misiones Human
                 </h4>
                 <p className="text-sm font-bold text-slate-400">
-                  Estas las tenés que hacer vos: la IA no puede inventar tu experiencia. Cuando publiques el cambio, tocá <strong className="text-white">Verificar</strong>.
+                  Estas las tenés que hacer vos: la IA no puede inventar tu experiencia. Publicá el cambio en la web (no en borrador) y tocá <strong className="text-white">Verificar</strong>.
                 </p>
               </div>
 

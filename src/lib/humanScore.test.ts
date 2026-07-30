@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { computeHumanScore, humanDimensionPasses } from './humanScore';
+import {
+  computeHumanScore,
+  humanDimensionPasses,
+  hasMissionEvidence,
+  humanMissionVerified,
+} from './humanScore';
 import type { HumanSignals } from './scraping';
 
 function emptySignals(overrides: Partial<HumanSignals> = {}): HumanSignals {
@@ -66,5 +71,39 @@ describe('humanDimensionPasses', () => {
   it('detecta evidencia ausente sin imagenes propias', () => {
     const signals = emptySignals({ wordCount: 300, imageCount: 2, ownImageCount: 0 });
     expect(humanDimensionPasses('evidencia', signals)).toBe(false);
+  });
+});
+
+describe('hasMissionEvidence / humanMissionVerified', () => {
+  it('una sola frase de experiencia no alcanza el umbral 50, pero sí evidencia de misión', () => {
+    const before = emptySignals({ wordCount: 200, experienceHits: 0 });
+    const after = emptySignals({ wordCount: 220, experienceHits: 2 });
+    expect(humanDimensionPasses('experiencia', after)).toBe(false); // 44 < 50
+    expect(hasMissionEvidence('experiencia', after)).toBe(true);
+
+    const prevScore = 0;
+    const verdict = humanMissionVerified('experiencia', after, prevScore);
+    expect(verdict.passed).toBe(true);
+    expect(verdict.reason).toBe('improved');
+  });
+
+  it('no marca misión si el texto no cambio respecto al analisis', () => {
+    const signals = emptySignals({ wordCount: 200, experienceHits: 2 });
+    // score = 44
+    const verdict = humanMissionVerified('experiencia', signals, 44);
+    expect(verdict.passed).toBe(false);
+    expect(verdict.reason).toBe('no_change');
+  });
+
+  it('pasa por umbral si ya supera 50', () => {
+    const signals = emptySignals({ wordCount: 300, experienceHits: 3 });
+    const verdict = humanMissionVerified('experiencia', signals, 20);
+    expect(verdict.passed).toBe(true);
+    expect(verdict.reason).toBe('threshold');
+  });
+
+  it('exige evidencia concreta de casos reales', () => {
+    expect(hasMissionEvidence('casosReales', emptySignals({ caseResultHits: 1 }))).toBe(true);
+    expect(hasMissionEvidence('casosReales', emptySignals({}))).toBe(false);
   });
 });

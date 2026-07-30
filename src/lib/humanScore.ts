@@ -178,6 +178,90 @@ export function humanDimensionPasses(id: HumanDimensionId, s: HumanSignals): boo
 }
 
 /**
+ * Señales mínimas para considerar que el usuario agregó el aporte de una misión Human.
+ * Más permisivo que el umbral de 50 del score: una frase concreta debe alcanzar.
+ * "nosotros" solo en el footer no alcanza para experiencia.
+ */
+export function hasMissionEvidence(id: HumanDimensionId, s: HumanSignals): boolean {
+  switch (id) {
+    case 'experiencia':
+      // 1 hit fuerte + contexto temporal, o 2+ frases de experiencia
+      return s.experienceHits >= 2 || (s.experienceHits >= 1 && (s.durationHits >= 1 || s.yearHits >= 1));
+    case 'evidencia':
+      return s.ownImageCount >= 1 || s.videoCount >= 1 || s.tableCount >= 1;
+    case 'casosReales':
+      return s.caseResultHits >= 1 || s.testimonialHits >= 1;
+    case 'opinion':
+      return s.opinionHits >= 1 || s.limitationHits >= 1;
+    case 'datosPropios':
+      return s.percentHits + s.priceHits + s.durationHits >= 1 || s.yearHits >= 1 || s.numberHits >= 4;
+    case 'originalidad': {
+      const per100 = s.wordCount > 0 ? s.wordCount / 100 : 1;
+      const fluffDensity = s.fluffHits / per100;
+      return fluffDensity < 1.2 && s.wordCount >= 80;
+    }
+    default:
+      return false;
+  }
+}
+
+/** Puntaje 0-100 de una dimensión (expuesto para verificación con baseline). */
+export function scoreHumanDimension(id: HumanDimensionId, s: HumanSignals): number {
+  return scoreDimensions(s)[id];
+}
+
+/**
+ * ¿La misión Human se puede marcar como hecha?
+ * - Si ya cruza el umbral de score (≥50), sí.
+ * - Si no, exige evidencia mínima de la dimensión Y mejora respecto al análisis previo
+ *   (así un solo párrafo nuevo alcanza, sin premiar páginas que no cambiaron).
+ */
+export function humanMissionVerified(
+  id: HumanDimensionId,
+  s: HumanSignals,
+  previousScore?: number | null
+): { passed: boolean; score: number; reason: 'threshold' | 'improved' | 'missing' | 'no_change' } {
+  const score = scoreHumanDimension(id, s);
+
+  if (score >= PASS_THRESHOLD) {
+    return { passed: true, score, reason: 'threshold' };
+  }
+
+  if (!hasMissionEvidence(id, s)) {
+    return { passed: false, score, reason: 'missing' };
+  }
+
+  if (typeof previousScore === 'number' && Number.isFinite(previousScore)) {
+    if (score > previousScore) {
+      return { passed: true, score, reason: 'improved' };
+    }
+    return { passed: false, score, reason: 'no_change' };
+  }
+
+  // Sin baseline (clientes viejos): con evidencia mínima alcanza.
+  return { passed: true, score, reason: 'improved' };
+}
+
+const VERIFY_HINTS: Record<HumanDimensionId, string> = {
+  experiencia:
+    'Sumá una frase en primera persona con vivencia real (ej: "cuando arrancamos…", "aprendimos que…", "probamos…").',
+  evidencia:
+    'Publicá una foto o video propio en esa URL (subida a tu sitio, no de stock externo).',
+  casosReales:
+    'Incluí un resultado concreto (ej: "pasó de X a Y", "logramos…", "un cliente…").',
+  opinion:
+    'Tomá postura o marcá un límite (ej: "recomendamos…", "preferimos…", "no sirve si…").',
+  datosPropios:
+    'Agregá una cifra tuya: porcentaje, precio, año o tiempo ("70%", "desde $X", "hace 3 años").',
+  originalidad:
+    'Sacá frases genéricas ("es importante", "en la actualidad") y reemplazalas por un dato o ejemplo concreto.',
+};
+
+export function humanVerifyHint(id: HumanDimensionId): string {
+  return VERIFY_HINTS[id] || 'Publicá el cambio en la URL y volvé a verificar.';
+}
+
+/**
  * Calcula el Human Score completo a partir de las señales determinísticas.
  * No usa IA. Devuelve puntaje, dimensiones y misiones para las dimensiones débiles.
  */
