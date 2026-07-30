@@ -2,7 +2,7 @@
 title: "Cómo espiar a la competencia en Google gratis (sin Semrush ni Ahrefs)"
 description: "Espiá a la competencia gratis: qué ve Google (y la IA) en tu rival, qué cambiar hoy y por qué no necesitás pagar $140/mes en Semrush o Ahrefs."
 date: "2026-06-18"
-dateModified: "2026-07-24"
+dateModified: "2026-07-30"
 readTime: "8 min"
 author: "SeoJump"
 ---
