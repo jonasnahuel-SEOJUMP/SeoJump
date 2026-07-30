@@ -2,7 +2,7 @@
 title: "Cómo espiar a la competencia en Google gratis (sin Semrush ni Ahrefs)"
 description: "Espiá a la competencia gratis: qué ve Google (y la IA) en tu rival, qué cambiar hoy y por qué no necesitás pagar $140/mes en Semrush o Ahrefs."
 date: "2026-06-18"
-dateModified: "2026-07-24"
+dateModified: "2026-07-30"
 readTime: "8 min"
 author: "SeoJump"
 ---
@@ -71,6 +71,8 @@ Diseñamos la función **Espía de la Competencia** con una premisa clara: ingre
 ```
 URL del Competidor → Lectura en vivo (SEO + AEO) → Brecha detectada → "Aplica este cambio" → [Ya lo apliqué]
 ```
+
+**Qué no hace:** no analiza backlinks ni el perfil de enlaces del rival — eso es terreno de Semrush/Ahrefs. El Espía se enfoca en lo que podés cambiar *hoy mismo* sin depender de nadie: título, H1, FAQ y Schema — la parte que sí controlás vos directamente en tu web.
 
 ### ¿Qué analiza el Espía en tiempo real?
 
