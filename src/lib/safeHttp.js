@@ -114,15 +114,16 @@ export async function fetchWithSsrfGuard(pageUrl, opts = {}) {
 /**
  * Descarga HTML público con guarda SSRF (API compatible con fetchPageHtml).
  * @param {string} pageUrl
- * @param {{ timeoutMs?: number, dnsApi?: import('node:dns/promises') }} [opts]
+ * @param {{ timeoutMs?: number, headers?: Record<string, string>, dnsApi?: import('node:dns/promises'), cacheBuster?: boolean }} [opts]
  * @returns {Promise<{ ok: true, html: string, finalUrl?: string } | { ok: false, message: string }>}
  */
 export async function fetchHtmlSafe(pageUrl, opts = {}) {
   const result = await fetchWithSsrfGuard(pageUrl, {
     timeoutMs: opts.timeoutMs ?? 9000,
     dnsApi: opts.dnsApi,
+    headers: opts.headers,
     method: 'GET',
-    cacheBuster: true,
+    cacheBuster: opts.cacheBuster !== false,
   });
 
   if (result.ok === false) return result;

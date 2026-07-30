@@ -7,8 +7,8 @@ import { fetchHtmlSafe } from './safeHttp.js';
 
 /**
  * @param {string} pageUrl
- * @param {{ timeoutMs?: number }} [opts]
- * @returns {Promise<{ ok: true, html: string } | { ok: false, message: string }>}
+ * @param {{ timeoutMs?: number, headers?: Record<string, string>, dnsApi?: import('node:dns/promises') }} [opts]
+ * @returns {Promise<{ ok: true, html: string, finalUrl?: string } | { ok: false, message: string }>}
  */
 export async function fetchPageHtml(pageUrl, opts = {}) {
   return fetchHtmlSafe(pageUrl, opts);

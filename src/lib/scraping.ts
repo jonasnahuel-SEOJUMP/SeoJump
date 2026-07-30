@@ -356,13 +356,18 @@ const HS_EXPERIENCE = [
   'nos paso', 'fabricamos', 'desarrollamos', 'cometimos', 'nos equivocamos', 'venimos haciendo',
   'atendimos', 'instalamos', 'aplicamos', 'testeamos', 'comprobamos', 'nuestra experiencia',
   'llevamos', 'nos especializamos', 'empezamos en', 'al principio', 'el error que',
+  // Frases típicas de las misiones Human (primera persona / vivencia)
+  'cuando arrancamos', 'despues de probar', 'cometimos el error', 'arrancamos en',
+  'en la practica', 'nos paso que', 'lo vivimos', 'desde que empezamos', 'hace anos que',
+  'mi experiencia', 'nuestra trayectoria', 'lo aprendimos', 'lo comprobamos',
 ];
 
 const HS_OPINION = [
   'recomendamos', 'recomiendo', 'preferimos', 'prefiero', 'en mi opinion', 'creemos que',
   'lo mejor es', 'conviene', 'vale la pena', 'desde nuestro punto de vista', 'sinceramente',
   'honestamente', 'a nuestro criterio', 'elegiria', 'te conviene', 'nuestro consejo',
-  'a mi me gusta', 'nos gusta mas',
+  'a mi me gusta', 'nos gusta mas', 'preferimos x', 'tomamos postura', 'nuestra recomendacion',
+  'desde nuestra experiencia', 'nosotros elegimos', 'apostamos por',
 ];
 
 const HS_LIMITATION = [
@@ -376,6 +381,8 @@ const HS_CASE = [
   'paso de', 'pasamos de', 'pasaron de', 'aumento un', 'aumentaron', 'crecio un', 'logramos',
   'conseguimos', 'el resultado fue', 'los resultados', 'duplicamos', 'triplicamos', 'redujimos',
   'caso real', 'caso de exito', 'uno de nuestros clientes', 'un cliente', 'una clienta',
+  'antes y despues', 'visitas por mes', 'en 3 semanas', 'en dos semanas', 'le resolvimos',
+  'nuestro cliente', 'a un taller', 'resultado concreto',
 ];
 
 const HS_TESTIMONIAL = [

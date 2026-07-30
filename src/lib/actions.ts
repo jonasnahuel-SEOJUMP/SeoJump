@@ -29,7 +29,8 @@ import {
 import { buildCompetitorSnapshot, enrichSpyGaps, type SpyGapEnriched } from './spySnapshot'
 import {
   computeHumanScore,
-  humanDimensionPasses,
+  humanMissionVerified,
+  humanVerifyHint,
   type HumanDimensionId,
   type HumanMission,
 } from './humanScore'
@@ -3623,10 +3624,20 @@ export async function verifySpyGap(
 // misiones con ejemplos a medida del negocio; NUNCA escribe la experiencia.
 // ═══════════════════════════════════════════════════════════════════════════
 
-/** Descarga el HTML en vivo de una página (sin caché) para análisis de contenido. */
-/** Descarga HTML en vivo con anti-SSRF (delegado a fetchPageHtml). */
+/** Descarga HTML en vivo con anti-SSRF. UA de navegador para no recibir
+ *  la versión "bot"/caché distinta que algunos CDN/WordPress sirven al bot. */
 async function fetchLiveHtml(pageUrl: string): Promise<{ ok: true; html: string } | { ok: false; message: string }> {
-  return fetchPageHtml(pageUrl, { timeoutMs: 9000 });
+  return fetchPageHtml(pageUrl, {
+    timeoutMs: 9000,
+    headers: {
+      'User-Agent':
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+      Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+      'Accept-Language': 'es-AR,es;q=0.9,en;q=0.8',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
+      Pragma: 'no-cache',
+    },
+  });
 }
 
 /** Texto plano recortado para pasarle contexto real a la IA (sin tags). */
@@ -3793,10 +3804,14 @@ Incluí SOLO las claves de la lista de dimensiones débiles. Los "tip" en 1 orac
 
 /**
  * Verifica que el usuario haya agregado el valor humano de una dimensión puntual.
- * Re-scrapea la página y comprueba si esa dimensión ya está "presente".
- * No usa IA: es una comprobación determinística de las señales.
+ * Re-scrapea la página y comprueba señales. No usa IA.
+ * previousScore: puntaje de esa dimensión al momento del análisis (para exigir mejora).
  */
-export async function verifyHumanMission(pageUrl: string, dimension: HumanDimensionId) {
+export async function verifyHumanMission(
+  pageUrl: string,
+  dimension: HumanDimensionId,
+  previousScore?: number | null
+) {
   const validDimensions: HumanDimensionId[] = ['experiencia', 'evidencia', 'casosReales', 'opinion', 'datosPropios', 'originalidad'];
   if (!pageUrl || !validDimensions.includes(dimension)) {
     return { success: false, message: 'Faltan datos para verificar.' };
@@ -3816,20 +3831,44 @@ export async function verifyHumanMission(pageUrl: string, dimension: HumanDimens
     cleanUrl = 'https://' + cleanUrl;
   }
 
+  console.log(`[verifyHumanMission] Fetching live page: ${cleanUrl} | dim=${dimension} | prev=${previousScore}`);
   const fetched = await fetchLiveHtml(cleanUrl);
   if (fetched.ok === false) {
     return { success: false, message: fetched.message };
   }
 
   const signals = extractHumanSignals(fetched.html, cleanUrl);
-  const passed = humanDimensionPasses(dimension, signals);
+  const verdict = humanMissionVerified(dimension, signals, previousScore);
 
-  if (passed) {
-    return { success: true, message: '¡Detectamos el aporte humano en tu página! Misión completada.' };
+  console.log(
+    `[verifyHumanMission] wordCount=${signals.wordCount} score=${verdict.score} reason=${verdict.reason} ` +
+      `exp=${signals.experienceHits} opinion=${signals.opinionHits} case=${signals.caseResultHits} ` +
+      `ownImg=${signals.ownImageCount} fluff=${signals.fluffHits}`
+  );
+
+  if (verdict.passed) {
+    return {
+      success: true,
+      message: '¡Detectamos el aporte humano en tu página! Misión completada.',
+      score: verdict.score,
+    };
   }
+
+  if (verdict.reason === 'no_change') {
+    return {
+      success: false,
+      message:
+        'Leímos la página otra vez y el texto se ve igual que antes. ¿Ya publicaste el cambio (no borrador) y vaciaste la caché del sitio? ' +
+        humanVerifyHint(dimension),
+      score: verdict.score,
+    };
+  }
+
   return {
     success: false,
-    message: 'Todavía no lo detectamos en la página. ¿Ya publicaste el cambio y vaciaste la caché? Revisá y volvé a verificar.',
+    message:
+      'Todavía no detectamos ese aporte en la página publicada. ' + humanVerifyHint(dimension),
+    score: verdict.score,
   };
 }
 
