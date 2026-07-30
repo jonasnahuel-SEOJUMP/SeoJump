@@ -72,6 +72,8 @@ Diseñamos la función **Espía de la Competencia** con una premisa clara: ingre
 URL del Competidor → Lectura en vivo (SEO + AEO) → Brecha detectada → "Aplica este cambio" → [Ya lo apliqué]
 ```
 
+**Qué no hace:** no analiza backlinks ni el perfil de enlaces del rival — eso es terreno de Semrush/Ahrefs. El Espía se enfoca en lo que podés cambiar *hoy mismo* sin depender de nadie: título, H1, FAQ y Schema — la parte que sí controlás vos directamente en tu web.
+
 ### ¿Qué analiza el Espía en tiempo real?
 
 - **Optimización de Título y H1:** compara la claridad del mensaje entre ambas páginas.
