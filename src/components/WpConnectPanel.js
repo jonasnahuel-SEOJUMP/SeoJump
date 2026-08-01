@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   createWpConnection,
   getWpConnectionStatus,
   verifyWpConnection,
   disconnectWpConnection,
 } from "../lib/wpActions";
+
+const WP_GUIDE_HREF = "/blog/conectar-wordpress-aplicar-titulo-meta";
 
 /**
  * Panel de conexión WordPress (Perfil).
@@ -126,13 +129,22 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
 
   return (
     <div className="bg-sky-950/30 rounded-2xl border-2 border-sky-700/40 p-6 space-y-4">
-      <h3 className="text-lg font-black text-sky-200 flex items-center gap-2">
+      <h3 id="wp-connect" className="text-lg font-black text-sky-200 flex items-center gap-2 scroll-mt-24">
         🔌 Conectar WordPress
       </h3>
       <p className="text-sm font-bold text-slate-400 leading-relaxed">
-        Instalá un plugin chiquito. Después, en misiones de título y meta, usá{" "}
+        Instalá un plugin chiquito (<span className="text-white">se sube el ZIP</span>, no se pega).
+        El token (<span className="text-sky-300">sj_…</span>) es lo único que se copia y pega.
+        Después, en misiones de título y meta, usá{" "}
         <span className="text-white">«Aplicar en mi web»</span>. Solo escribe título SEO y meta
-        (Yoast o Rank Math). No toca el nombre del producto ni el diseño.
+        (Yoast o Rank Math). No toca el nombre del producto ni el diseño.{" "}
+        <Link
+          href={WP_GUIDE_HREF}
+          className="text-sky-300 underline hover:text-sky-200"
+          onClick={() => playClick?.()}
+        >
+          Guía paso a paso →
+        </Link>
       </p>
 
       {loading ? (
@@ -164,24 +176,34 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
           )}
 
           <ol className="space-y-2 text-sm font-bold text-slate-300 list-decimal pl-5">
-            <li>Ingresá la URL de tu tienda y generá el token.</li>
+            <li>Ingresá la URL de tu tienda y generá el token (copialo: empieza con sj_).</li>
             <li>
-              Descargá e instalá el plugin:{" "}
+              Descargá el ZIP:{" "}
               <a
                 href={downloadUrl}
                 className="text-sky-300 underline hover:text-sky-200"
                 onClick={() => playClick?.()}
               >
                 seo-jump-connector.zip
-              </a>{" "}
-              → wp-admin → Plugins → Subir → Activar.
+              </a>
+              . En WordPress: Plugins → Añadir nuevo →{" "}
+              <span className="text-white">Subir plugin</span> → elegí ese archivo → Activar.
             </li>
             <li>Ajustes → SEO Jump → pegá el token → Guardar.</li>
             <li>Volvé acá y tocá «Verificar conexión».</li>
           </ol>
 
           <p className="text-xs font-bold text-slate-500">
-            Necesitás Yoast SEO o Rank Math en la tienda (casi todas ya lo tienen).
+            Necesitás Yoast SEO o Rank Math (casi todas las tiendas ya lo tienen).{" "}
+            <Link
+              href={WP_GUIDE_HREF}
+              className="text-sky-400 underline hover:text-sky-300"
+              onClick={() => playClick?.()}
+            >
+              Ver guía completa
+            </Link>
+            {" · "}
+            Si perdiste el token, regeneralo: no se vuelve a mostrar completo, pero podés crear uno nuevo.
           </p>
 
           <input
