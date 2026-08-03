@@ -1,107 +1,61 @@
 ---
-title: "Cómo conectar WordPress a SEO Jump (plugin + Aplicar en mi web)"
-description: "Guía paso a paso: descargar el ZIP del plugin, subirlo en WordPress, pegar el token y usar «Aplicar en mi web» para título SEO y meta. Qué se copia, qué se sube y qué hacer si perdiste el token."
+title: "Cómo conectar SEO Jump a WordPress sin enredarte con el token y el plugin"
+description: "El error más común: confundir el ZIP del plugin con el token. Qué se sube, qué se pega, qué significa «una sola vez» y cómo usar Aplicar en mi web todas las veces que haga falta."
 date: "2026-08-01"
-dateModified: "2026-08-01"
-readTime: "6 min"
+dateModified: "2026-08-03"
+readTime: "5 min"
 author: "SeoJump"
 ---
 
-**Resumen:** SEO Jump puede escribir por vos el **título SEO** y la **meta descripción** en tu WordPress (vía Yoast o Rank Math). Para eso instalás un plugin chiquito y pegás un token. El plugin se **sube como archivo ZIP**; el token es lo único que se **copia y pega**.
+Una de las dudas más frecuentes al vincular SEO Jump con tu sitio de WordPress es entender **qué se sube**, **qué se pega** y qué significa eso de que el token se ve **"una sola vez"**. Vamos a aclararlo paso a paso para que lo dejes andando en dos minutos.
 
-## Qué hace (y qué no hace)
+## El error más común: ¿El token se pega en WordPress?
 
-Con la conexión activa, en las misiones de título y meta aparece el botón **«Aplicar en mi web»**. Un clic guarda el texto sugerido en Yoast SEO o Rank Math.
+**No.** El token (ese código largo que empieza con `sj_…`) **no se pega en el instalador de plugins**.
 
-| Sí hace | No hace |
-|---------|---------|
-| Título SEO (el de Google) | Cambiar el nombre del producto/página |
-| Meta descripción | Tocar precios, stock o el diseño |
-| Solo en la URL de la misión | Crear usuarios ni tocar otros plugins |
+- **El plugin (`seo-jump-connector.zip`) se sube:** es un archivo que descargás desde tu Perfil de SEO Jump y se instala en WordPress como cualquier otro plugin (`Plugins → Añadir nuevo → Subir plugin`).
+- **El token (`sj_…`) se pega después:** una vez que el plugin de SEO Jump ya está instalado y activo, vas a **Ajustes → SEO Jump** y es **ahí adentro** donde pegás el token para autorizar la conexión.
 
-Necesitás **Yoast SEO** o **Rank Math** instalado (casi todas las tiendas ya lo tienen).
+Si WordPress te pide “elegir un archivo”, es correcto: está pidiendo el **ZIP**, no el código.
 
-## Importante: no se “pega” el plugin
+## ¿Qué significa que el token se muestra “una sola vez”?
 
-En WordPress **no hay un campo para pegar el plugin**. Hay dos cosas distintas:
+Cuando hacés clic en **Generar token**, SEO Jump te muestra el código completo en pantalla por única vez. Si recargás la página, cerrás la pestaña o volvés otro día, por seguridad ya no se vuelve a mostrar entero (en la base queda cifrado y en tu perfil solo vas a ver algo abreviado como `sj_ab12…x9`).
 
-1. **El plugin** = archivo `seo-jump-connector.zip` → lo **descargás** y lo **subís** en Plugins → Subir plugin.
-2. **El token** = código que empieza con `sj_` → lo **copiás** en SEO Jump y lo **pegás** en Ajustes → SEO Jump.
+- **¿Qué pasa si cerraste la pantalla sin copiarlo?** No pasa absolutamente nada malo. Tocá **Regenerar token**, se crea uno nuevo, lo copiás y lo pegás en WordPress. El token anterior se desactiva.
+- **¿Se puede ver el panel del conector después?** Sí. Podés entrar cuantas veces quieras a **Perfil** (avatar → `/perfil` → Conectar WordPress) para chequear el estado o gestionar la conexión.
 
-Si intentás “pegar el plugin” y WordPress te pide un archivo: es correcto. Tenés que elegir el `.zip` de Descargas.
+## Resumen rápido del proceso
 
-## Paso a paso
+1. **En SEO Jump (Perfil):** generá el token (copialo) y descargá `seo-jump-connector.zip`.
+2. **En tu WordPress:** andá a *Plugins → Añadir nuevo → Subir plugin*, seleccioná el ZIP, instalalo y tocá **Activar**.
+3. **En los ajustes de WordPress:** *Ajustes → SEO Jump*, pegá tu token y guardá.
+4. **De vuelta en SEO Jump:** tocá **Verificar conexión**.
 
-### 1. En SEO Jump → Perfil
+Requisito: tené **Yoast SEO** o **Rank Math** en la tienda (casi todas ya lo tienen). El conector escribe título SEO y meta ahí; no cambia el nombre del producto ni el diseño.
 
-1. Tocá tu foto (arriba a la derecha) → **Perfil**.
-2. Buscá el bloque **Conectar WordPress**.
-3. Escribí la URL de tu tienda (ej. `https://tutienda.com`).
-4. Tocá **Generar token**.
-5. **Copiá el token ahora** (se muestra completo una sola vez en esa pantalla).
-6. Descargá el link **seo-jump-connector.zip**.
+## Una vez conectado: ¿qué pasa con «Aplicar en mi web»?
 
-¿Cerraste sin copiar el token? No pasa nada: tocá **Regenerar token** y usá el nuevo.
+Cuando el indicador de conexión está en verde, **«Aplicar en mi web»** (el botón de las misiones de título o meta) **no es de un solo uso**. Lo vas a poder usar todas las veces que haga falta cada vez que resuelvas una misión de optimización.
 
-### 2. En WordPress → instalar el plugin
-
-1. Entrá a **wp-admin**.
-2. Menú **Plugins → Añadir nuevo**.
-3. Arriba: **Subir plugin**.
-4. **Elegir archivo** → seleccioná `seo-jump-connector.zip` de tu carpeta Descargas.
-5. **Instalar ahora** → **Activar**.
-
-### 3. En WordPress → pegar el token
-
-1. Menú **Ajustes → SEO Jump**.
-2. Pegá el token (`sj_…`) en el campo.
-3. **Guardar token**.
-4. Revisá que diga que detectó Yoast o Rank Math.
-
-### 4. Volvé a SEO Jump → verificar
-
-1. Perfil → **Verificar conexión**.
-2. Tiene que aparecer **WordPress conectado** en verde.
-
-### 5. Usar «Aplicar en mi web»
-
-1. Abrí una misión de **título** o **meta** (con sugerencia lista).
-2. Tocá **Aplicar en mi web** (si no estás conectado, te manda a Perfil).
-3. Vaciá la caché del sitio si usás WP Rocket / LiteSpeed / similar.
-4. En SEO Jump tocá **Verificar** la misión para confirmar que Google (y el Búho) ya leen el cambio.
-
-Podés aplicar **muchas veces** en distintas páginas. No es de un solo uso.
-
-## El token “una sola vez”: qué significa
-
-- **Una sola vez** = esa pantalla te muestra el código completo; si recargás, ya no lo vuelve a mostrar entero (por seguridad).
-- **No** significa que perdiste el conector si no lo pegaste.
-- Solución: **Regenerar token** → pegar el nuevo en WordPress → Verificar de nuevo.
-- El botón **Aplicar en mi web** se puede usar todas las veces que quieras una vez conectado.
+Después de aplicar, si usás caché (WP Rocket, LiteSpeed, etc.), vaciala y tocá **Verificar** en la misión para confirmar que el cambio ya se ve en la web pública.
 
 ## Problemas frecuentes
 
-**«WordPress me pide subir un archivo»**  
-Es normal. Subí el `.zip`. No pegues el plugin en ningún lado.
+**«Me pide subir un archivo y yo solo tengo el token»**  
+Descargá el ZIP desde Perfil y subilo. El token va después, en Ajustes → SEO Jump.
 
 **«No encuentro Ajustes → SEO Jump»**  
 El plugin no está activado. Plugins → SEO Jump Connector → Activar.
 
-**«Falta Yoast o Rank Math»**  
-Instalá uno de los dos. Sin eso el plugin no puede guardar título/meta automático (igual podés copiar la sugerencia a mano).
-
 **«Verificar conexión falla»**  
-Revisá que el token esté guardado, que el sitio sea la misma URL, y que la web sea pública (no solo localhost).
+Revisá que el token esté guardado, que la URL sea la de tu tienda y que el sitio sea público.
 
-**«Apliqué pero Verificar la misión falla»**  
-Vacía caché del hosting/CDN y esperá unos segundos. El plugin ya guardó; la verificación lee la página pública.
-
-## ¿Es seguro?
-
-El plugin solo permite cambiar título SEO y meta con tu token. No crea administradores ni modifica el diseño. Si sospechás que alguien vio el token, regeneralo y desconectá desde Perfil.
+**«Apliqué pero la misión no verifica»**  
+Vacía la caché del sitio. El plugin ya guardó; la verificación lee la página pública.
 
 ---
 
-¿Listo para conectar? Andá a [Perfil → Conectar WordPress](/perfil#wp-connect) o arrancá por las [misiones](/).
+¿Listo? Andá a [Perfil → Conectar WordPress](/perfil#wp-connect) o seguí con las [misiones](/).
 
 También te puede servir: [la misión del H1](/blog/mision-del-h1) y [dónde pegar Schema en WordPress](/blog/donde-pegar-codigo-schema-wordpress-shopify).
