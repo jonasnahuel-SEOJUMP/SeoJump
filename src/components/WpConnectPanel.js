@@ -133,19 +133,44 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
         🔌 Conectar WordPress
       </h3>
       <p className="text-sm font-bold text-slate-400 leading-relaxed">
-        Instalá un plugin chiquito (<span className="text-white">se sube el ZIP</span>, no se pega).
-        El token (<span className="text-sky-300">sj_…</span>) es lo único que se copia y pega.
-        Después, en misiones de título y meta, usá{" "}
+        Con el plugin activo, en misiones de título y meta usá{" "}
         <span className="text-white">«Aplicar en mi web»</span>. Solo escribe título SEO y meta
-        (Yoast o Rank Math). No toca el nombre del producto ni el diseño.{" "}
+        (Yoast o Rank Math). No toca el nombre del producto ni el diseño.
+      </p>
+      <div className="rounded-xl bg-slate-900/60 border border-sky-700/40 px-4 py-3 space-y-2">
+        <p className="text-sm font-black text-sky-200">¿Cómo conectar tu sitio?</p>
+        <ol className="space-y-1.5 text-sm font-bold text-slate-300 list-decimal pl-5">
+          <li>
+            Descargá el{" "}
+            <a
+              href={downloadUrl}
+              className="text-sky-300 underline hover:text-sky-200"
+              onClick={() => playClick?.()}
+            >
+              plugin (.zip)
+            </a>{" "}
+            y subilo a WordPress (<span className="text-white">Plugins → Añadir nuevo → Subir</span>),
+            luego activalo.
+          </li>
+          <li>
+            Generá y copiá tu <span className="text-sky-300">token</span>, pegalo en WordPress en{" "}
+            <span className="text-white">Ajustes → SEO Jump</span> y guardá.{" "}
+            <span className="text-slate-500">
+              (El completo solo se muestra la primera vez; si lo perdés, regeneralo.)
+            </span>
+          </li>
+          <li>
+            Tocá <span className="text-white">Verificar conexión</span>.
+          </li>
+        </ol>
         <Link
           href={WP_GUIDE_HREF}
-          className="text-sky-300 underline hover:text-sky-200"
+          className="inline-flex text-sm font-black text-sky-300 underline hover:text-sky-200"
           onClick={() => playClick?.()}
         >
-          Guía paso a paso →
+          📖 Ver guía paso a paso completa
         </Link>
-      </p>
+      </div>
 
       {loading ? (
         <p className="text-sm font-bold text-slate-500 animate-pulse">Cargando…</p>
@@ -175,35 +200,8 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
             <p className="text-sm font-bold text-slate-500">Todavía no conectaste WordPress.</p>
           )}
 
-          <ol className="space-y-2 text-sm font-bold text-slate-300 list-decimal pl-5">
-            <li>Ingresá la URL de tu tienda y generá el token (copialo: empieza con sj_).</li>
-            <li>
-              Descargá el ZIP:{" "}
-              <a
-                href={downloadUrl}
-                className="text-sky-300 underline hover:text-sky-200"
-                onClick={() => playClick?.()}
-              >
-                seo-jump-connector.zip
-              </a>
-              . En WordPress: Plugins → Añadir nuevo →{" "}
-              <span className="text-white">Subir plugin</span> → elegí ese archivo → Activar.
-            </li>
-            <li>Ajustes → SEO Jump → pegá el token → Guardar.</li>
-            <li>Volvé acá y tocá «Verificar conexión».</li>
-          </ol>
-
           <p className="text-xs font-bold text-slate-500">
-            Necesitás Yoast SEO o Rank Math (casi todas las tiendas ya lo tienen).{" "}
-            <Link
-              href={WP_GUIDE_HREF}
-              className="text-sky-400 underline hover:text-sky-300"
-              onClick={() => playClick?.()}
-            >
-              Ver guía completa
-            </Link>
-            {" · "}
-            Si perdiste el token, regeneralo: no se vuelve a mostrar completo, pero podés crear uno nuevo.
+            Necesitás Yoast SEO o Rank Math (casi todas las tiendas ya lo tienen).
           </p>
 
           <input
