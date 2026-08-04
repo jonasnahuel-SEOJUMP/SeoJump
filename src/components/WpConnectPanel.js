@@ -85,7 +85,7 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
             : "";
       setMsg({
         ok: true,
-        text: `¡Conectado${res.siteName ? ` a «${res.siteName}»` : ""}${seo}! Ya podés usar «Aplicar en mi web» en misiones de título y meta.`,
+        text: `¡Conectado${res.siteName ? ` a «${res.siteName}»` : ""}${seo}! Ya podés usar «Aplicar en mi web» en misiones de título y meta (páginas, productos y categorías).`,
       });
       setFreshToken(null);
       await refresh();

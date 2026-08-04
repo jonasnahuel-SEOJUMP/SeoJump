@@ -18,7 +18,7 @@ export type WpPingResult =
   | { ok: false; error: string; code?: string };
 
 export type WpApplyResult =
-  | { ok: true; postId: number; updated: string[]; seoPlugin?: string }
+  | { ok: true; postId: number; termId?: number; updated: string[]; seoPlugin?: string }
   | { ok: false; error: string; code?: string };
 
 function restBase(siteUrl: string): string {
@@ -205,6 +205,7 @@ export async function applyWpChange(params: {
   return {
     ok: true,
     postId: Number(data.postId) || 0,
+    termId: Number(data.termId) || 0,
     updated: Array.isArray(data.updated) ? (data.updated as string[]) : [],
     seoPlugin: typeof data.seoPlugin === 'string' ? data.seoPlugin : undefined,
   };
