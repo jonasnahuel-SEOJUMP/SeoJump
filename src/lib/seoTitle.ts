@@ -67,3 +67,172 @@ export function extractBrandHints(...sources: Array<string | undefined | null>):
   }
   return [...hints];
 }
+
+function normalizeSeoText(s: string): string {
+  return (s || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+/**
+ * Rol del negocio (distribuidora / catálogo / tienda completa).
+ * NO incluye diferenciales sueltos como "importación directa": esos pueden
+ * aparecer en un título de producto y no salvan un eje en un solo SKU.
+ */
+const BUSINESS_ROLE_SIGNALS = [
+  'distribuidora',
+  'distribuidor',
+  'mayorista',
+  'mayoristas',
+  'productos de',
+  'tienda de',
+  'tienda online',
+  'catalogo',
+  'catálogo',
+  'multimarca',
+  'venta mayorista',
+  'venta minorista',
+];
+
+/** Diferenciales competitivos (pueden coexistir con un título de producto). */
+const DIFFERENTIAL_SIGNALS = [
+  'importacion directa',
+  'importación directa',
+];
+
+/** Productos concretos que NO deben ser el eje de una home/mayorista. */
+const SINGLE_PRODUCT_FOCUS = [
+  'shampoo',
+  'shampoos',
+  'cera',
+  'ceras',
+  'pulidora',
+  'pulidoras',
+  'pulimento',
+  'limpia llantas',
+  'foam lance',
+  'microfibra',
+  'microfibras',
+  'vinilo liquido',
+  'vinilo líquido',
+  'kit de',
+  'pasta abrasiva',
+];
+
+function textHasAnySignal(text: string, signals: string[]): boolean {
+  const norm = normalizeSeoText(text);
+  if (!norm) return false;
+  return signals.some((s) => norm.includes(normalizeSeoText(s)));
+}
+
+/** True si el copy describe el rol/catálogo del negocio (no una ficha de SKU). */
+export function hasBusinessRoleSignals(...sources: Array<string | undefined | null>): boolean {
+  return textHasAnySignal(sources.filter(Boolean).join(' '), BUSINESS_ROLE_SIGNALS);
+}
+
+/** Portada / mayorista / catálogo: rol de negocio o diferencial institucional. */
+export function isInstitutionalBusinessCopy(...sources: Array<string | undefined | null>): boolean {
+  const text = sources.filter(Boolean).join(' ');
+  return (
+    textHasAnySignal(text, BUSINESS_ROLE_SIGNALS) ||
+    textHasAnySignal(text, DIFFERENTIAL_SIGNALS)
+  );
+}
+
+/**
+ * True si el título parece enfocado en UN producto concreto (malo para home/mayorista).
+ * "Importación directa" sola NO lo salva: el eje sigue siendo el SKU.
+ */
+export function looksLikeSingleProductTitle(title: string): boolean {
+  const t = normalizeSeoText(title);
+  if (!t) return false;
+  const hasProduct = SINGLE_PRODUCT_FOCUS.some((p) => t.includes(normalizeSeoText(p)));
+  if (!hasProduct) return false;
+  // Solo deja de ser "producto suelto" si habla del rol/catálogo del negocio.
+  return !hasBusinessRoleSignals(title);
+}
+
+/**
+ * Título de respaldo para home / hub mayorista: preserva identidad del negocio
+ * (detailing + mayorista/importación) y no se achica a un solo producto.
+ */
+export function buildInstitutionalSeoTitle(params: {
+  currentTitle?: string;
+  pageH1?: string;
+  brandHint?: string;
+}): string {
+  const current = (params.currentTitle || '').trim();
+  const h1 = (params.pageH1 || '').trim();
+  const brand = (params.brandHint || '').trim();
+
+  const pool = `${current} ${h1}`.toLowerCase();
+  const hasMayorista = /mayorista/.test(pool);
+  const hasImport = /importaci[oó]n\s+directa/.test(pool);
+  const hasDetailing = /detailing|detail\s*shop|detalle\s+automotriz/.test(pool);
+
+  let core = 'Productos de Detailing';
+  if (hasDetailing && hasMayorista) {
+    core = 'Distribuidora Mayorista de Detailing';
+  } else if (hasMayorista) {
+    core = 'Venta Mayorista de Detailing';
+  } else if (hasDetailing) {
+    core = 'Tienda de Car Detailing';
+  }
+
+  const parts = [core];
+  if (hasImport) parts.push('Importación Directa');
+  if (brand && !core.toLowerCase().includes(brand.toLowerCase().slice(0, 12))) {
+    parts.push(brand);
+  }
+
+  return fitSeoTitle(parts.join(' | '), { brandHints: brand ? [brand] : [] });
+}
+
+/**
+ * Si la página es home/hub institucional y la IA achicó a un producto, corrige.
+ */
+export function sanitizeHubTitleSuggestion(params: {
+  suggested: string;
+  currentTitle?: string;
+  pageH1?: string;
+  pageDescription?: string;
+  brandHint?: string;
+  isHubPage: boolean;
+}): { title: string; corrected: boolean } {
+  const suggested = (params.suggested || '').trim();
+  if (!params.isHubPage || !suggested) {
+    return { title: suggested, corrected: false };
+  }
+
+  const roleContext = hasBusinessRoleSignals(
+    params.currentTitle,
+    params.pageH1,
+    params.pageDescription
+  );
+
+  // Solo forzar corrección cuando el negocio/página es claramente mayorista/catálogo.
+  // Home genérica sin señales de rol no se reescribe a "Productos de Detailing".
+  if (!roleContext) {
+    return { title: suggested, corrected: false };
+  }
+
+  const fallback = () =>
+    buildInstitutionalSeoTitle({
+      currentTitle: params.currentTitle,
+      pageH1: params.pageH1,
+      brandHint: params.brandHint,
+    });
+
+  // Nunca aceptar eje en un solo SKU (aunque diga "importación directa" o "por mayor").
+  if (looksLikeSingleProductTitle(suggested)) {
+    return { title: fallback(), corrected: true };
+  }
+
+  // El actual tenía rol (distribuidora/mayorista) y la sugerencia lo perdió.
+  if (hasBusinessRoleSignals(params.currentTitle) && !hasBusinessRoleSignals(suggested)) {
+    return { title: fallback(), corrected: true };
+  }
+
+  return { title: suggested, corrected: false };
+}

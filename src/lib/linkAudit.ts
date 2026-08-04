@@ -15,14 +15,20 @@ import {
 /** Returns true if the URL is the root / home page of the domain. */
 export function isHomePage(pageUrl: string, siteUrl: string): boolean {
   try {
-    const page = new URL(pageUrl);
-    const site = new URL(siteUrl);
-    // Same host and pathname is '/', '' or equals the site pathname root
-    return page.hostname === site.hostname &&
-      (page.pathname === '/' || page.pathname === '' || page.pathname === site.pathname);
+    const page = new URL(pageUrl.startsWith('http') ? pageUrl : `https://${pageUrl}`);
+    const site = new URL(siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`);
+    const normHost = (h: string) => h.replace(/^www\./i, '').toLowerCase();
+    if (normHost(page.hostname) !== normHost(site.hostname)) return false;
+    const pagePath = page.pathname.replace(/\/+$/, '') || '/';
+    const sitePath = site.pathname.replace(/\/+$/, '') || '/';
+    return pagePath === '/' || pagePath === sitePath;
   } catch {
-    // Fallback: string comparison
-    const norm = (u: string) => u.replace(/\/$/, '').toLowerCase();
+    const norm = (u: string) =>
+      u
+        .replace(/^https?:\/\//i, '')
+        .replace(/^www\./i, '')
+        .replace(/\/$/, '')
+        .toLowerCase();
     return norm(pageUrl) === norm(siteUrl);
   }
 }
