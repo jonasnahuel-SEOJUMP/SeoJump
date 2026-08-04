@@ -19,6 +19,11 @@ describe('isHomePage', () => {
     expect(isHomePage(SITE, `${SITE}/`)).toBe(true);
   });
 
+  it('tolera www vs sin www', () => {
+    expect(isHomePage('https://55detailshop.com.ar/', SITE)).toBe(true);
+    expect(isHomePage(SITE, 'https://55detailshop.com.ar')).toBe(true);
+  });
+
   it('no confunde una pagina interna con la home', () => {
     expect(isHomePage(`${SITE}/blog/detailing`, SITE)).toBe(false);
   });
