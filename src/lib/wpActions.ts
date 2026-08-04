@@ -230,10 +230,11 @@ export async function applyMissionToWordpress(params: {
   return {
     success: true as const,
     postId: result.postId,
+    termId: result.termId,
     updated: result.updated,
     message:
       field === 'meta'
-        ? 'Meta descripción aplicada. Vaciá la caché del sitio y tocá Verificar.'
-        : 'Título SEO aplicado. Vaciá la caché del sitio y tocá Verificar.',
+        ? 'Meta descripción aplicada (página, producto o categoría). Vaciá la caché y tocá Verificar.'
+        : 'Título SEO aplicado (página, producto o categoría). Vaciá la caché y tocá Verificar.',
   };
 }
