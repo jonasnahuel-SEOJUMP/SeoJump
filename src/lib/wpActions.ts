@@ -21,6 +21,11 @@ import {
   mapMissionTypeToWpField,
   pingWpSite,
 } from './wpConnector';
+import { isHomePage } from './linkAudit';
+import {
+  extractBrandHints,
+  sanitizeHubTitleSuggestion,
+} from './seoTitle';
 
 function pluginDownloadUrl(): string {
   return `${getSiteUrl()}/downloads/seo-jump-connector.zip`;
@@ -212,12 +217,36 @@ export async function applyMissionToWordpress(params: {
     };
   }
 
+  // Red de seguridad: nunca escribir un título de un solo producto en la HOME.
+  let valueToApply = (params.value || '').trim();
+  let hubCorrected = false;
+  if (field === 'seo_title' && valueToApply && isHomePage(params.pageUrl, row.site_url)) {
+    let siteBrand = '';
+    try {
+      siteBrand = new URL(row.site_url).hostname.replace(/^www\./i, '');
+    } catch { /* ignore */ }
+    const brandHints = extractBrandHints(valueToApply, siteBrand);
+    const hub = sanitizeHubTitleSuggestion({
+      suggested: valueToApply,
+      currentTitle: valueToApply,
+      brandHint: brandHints.find((b) => /detail/i.test(b)) || brandHints[0] || siteBrand,
+      isHubPage: true,
+    });
+    if (hub.corrected) {
+      valueToApply = hub.title;
+      hubCorrected = true;
+      console.warn(
+        `[applyMissionToWordpress] Bloqueó título de producto en home: "${params.value}" → "${valueToApply}"`
+      );
+    }
+  }
+
   const result = await applyWpChange({
     siteUrl: row.site_url,
     tokenEncrypted: row.token_encrypted,
     pageUrl: params.pageUrl,
     field,
-    value: params.value,
+    value: valueToApply,
   });
 
   if (result.ok === false) {
@@ -232,8 +261,11 @@ export async function applyMissionToWordpress(params: {
     postId: result.postId,
     termId: result.termId,
     updated: result.updated,
-    message:
-      field === 'meta'
+    appliedValue: valueToApply,
+    hubCorrected,
+    message: hubCorrected
+      ? 'La home no puede enfocarse en un solo producto. Aplicamos un título de catálogo/mayorista. Vaciá la caché y tocá Verificar.'
+      : field === 'meta'
         ? 'Meta descripción aplicada (página, producto o categoría). Vaciá la caché y tocá Verificar.'
         : 'Título SEO aplicado (página, producto o categoría). Vaciá la caché y tocá Verificar.',
   };

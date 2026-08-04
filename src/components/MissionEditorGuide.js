@@ -271,6 +271,11 @@ export default function MissionEditorGuide({
                       />
                     )}
                   </div>
+                  {pageType.id === 'home' && (
+                    <p className="text-[11px] text-emerald-200/80 leading-snug">
+                      Esta es la portada: el título debe hablar de todo el negocio (mayorista/catálogo), no de un solo producto.
+                    </p>
+                  )}
                 </>
               )}
             </div>

@@ -471,6 +471,28 @@ export function buildSuggestedText(missionType, keyword, pageUrl, siteUrl, previ
   const brand = brandFromSiteUrl(siteUrl);
   const slug = slugFromUrl(pageUrl);
   const cap = (s) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : '');
+  const page = detectPageType(pageUrl, preview?.pageType);
+
+  // Home / portada: NUNCA armar el título alrededor de una keyword de producto.
+  if (page.id === 'home' && (missionType === 'H1' || missionType === 'META')) {
+    const liveTitle = (preview && preview.title) || '';
+    const liveDesc = (preview && preview.description) || '';
+    const pool = `${liveTitle} ${liveDesc} ${brand}`.toLowerCase();
+    const hasMayorista = /mayorista|distribuidor/.test(pool);
+    const hasDetailing = /detailing|detail\s*shop|est[eé]tica\s+vehicular/.test(pool);
+    let core = hasDetailing && hasMayorista
+      ? 'Distribuidora Mayorista de Detailing'
+      : hasMayorista
+        ? 'Venta Mayorista'
+        : hasDetailing
+          ? 'Distribuidora de Detailing'
+          : `${brand} — catálogo online`;
+    if (missionType === 'H1') {
+      return composeWithBrand(core, brand, 60);
+    }
+    const meta = `Encontrá ${core.toLowerCase()} en ${brand}. Importación directa y asesoramiento.`;
+    return meta.length > 160 ? meta.slice(0, 157).trim() + '...' : meta;
+  }
 
   if (missionType === 'H1') {
     const core = deriveProductCore(preview, slug, kw, brand, cap);

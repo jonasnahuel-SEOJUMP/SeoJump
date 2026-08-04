@@ -105,6 +105,35 @@ describe('hub / mayorista title safety', () => {
     expect(result.title.length).toBeLessThanOrEqual(MAX_SEO_TITLE_LENGTH);
   });
 
+  it('corrige aunque el title vivo YA esté contaminado con shampoo (post-aplicar)', () => {
+    const contaminated =
+      'Shampoo para Autos por Mayor | Importación Directa y Calidad';
+    const result = sanitizeHubTitleSuggestion({
+      suggested: contaminated,
+      currentTitle: contaminated,
+      pageH1: '55 Detail Shop',
+      pageDescription:
+        'Distribuidora mayorista de productos de detailing. Importación directa.',
+      brandHint: '55 Detail Shop',
+      isHubPage: true,
+    });
+    expect(result.corrected).toBe(true);
+    expect(result.title.toLowerCase()).not.toContain('shampoo');
+    expect(result.title.toLowerCase()).toMatch(/detailing|mayorista|distribuidora/);
+  });
+
+  it('en home sin meta de rol igual rechaza SKU usando la marca Detail Shop', () => {
+    const contaminated = 'Shampoo para Autos por Mayor | Importación Directa';
+    const result = sanitizeHubTitleSuggestion({
+      suggested: contaminated,
+      currentTitle: contaminated,
+      brandHint: '55 Detail Shop',
+      isHubPage: true,
+    });
+    expect(result.corrected).toBe(true);
+    expect(result.title.toLowerCase()).not.toContain('shampoo');
+  });
+
   it('corrige si pierde mayorista/distribuidora aunque no diga un SKU', () => {
     const result = sanitizeHubTitleSuggestion({
       suggested: 'Detailing Automotriz | Importación Directa',
