@@ -118,7 +118,7 @@ class SEOJump_Connector_REST {
         if (!$target) {
             return new WP_Error(
                 'seojump_not_found',
-                'No encontramos esa URL en WordPress. ¿Es una página, producto o categoría publicada? Revisá que sea la misma URL que ves en el navegador (con o sin www).',
+                'No encontramos esa URL en WordPress. Si es una categoría con permalink custom (ej. /estetica-vehicular/shampoos/), actualizá el plugin SEO Jump Connector a la última versión (Perfil → descargar ZIP → Plugins → Subir). Revisá también www/http y que esté publicada.',
                 array('status' => 404)
             );
         }
@@ -263,21 +263,62 @@ class SEOJump_Connector_REST {
     }
 
     /**
+     * Path limpio: sin query, sin /page/2, sin feed/amp.
+     */
+    private static function normalize_request_path($page_url) {
+        $path = wp_parse_url($page_url, PHP_URL_PATH);
+        if ($path === null || $path === false) {
+            return '';
+        }
+        $path = rawurldecode((string) $path);
+        $trimmed = trim($path, '/');
+        $trimmed = preg_replace('#/page/\d+$#i', '', $trimmed);
+        $trimmed = preg_replace('#/(feed|amp)$#i', '', $trimmed);
+        return trim((string) $trimmed, '/');
+    }
+
+    /**
+     * Variantes de URL para url_to_postid (www / esquema / barra final).
+     *
+     * @return string[]
+     */
+    private static function url_variants($page_url) {
+        $variants = array($page_url);
+        $parts = wp_parse_url($page_url);
+        if (!is_array($parts) || empty($parts['host'])) {
+            return array_values(array_unique($variants));
+        }
+
+        $scheme = !empty($parts['scheme']) ? $parts['scheme'] : 'https';
+        $host = $parts['host'];
+        $path = isset($parts['path']) ? $parts['path'] : '/';
+        $host_bare = preg_replace('/^www\./i', '', $host);
+
+        foreach (array($scheme, $scheme === 'https' ? 'http' : 'https') as $sch) {
+            foreach (array($host_bare, 'www.' . $host_bare) as $h) {
+                $base = $sch . '://' . $h . $path;
+                $variants[] = $base;
+                $variants[] = untrailingslashit($base);
+                $variants[] = trailingslashit(untrailingslashit($base));
+            }
+        }
+
+        return array_values(array_unique(array_filter($variants)));
+    }
+
+    /**
      * @return array{type:string,id:int,taxonomy?:string}|null
      */
     private static function resolve_target($page_url) {
-        // 1) Post/página/producto por URL canónica
-        $post_id = url_to_postid($page_url);
-        if ($post_id > 0) {
-            return array('type' => 'post', 'id' => (int) $post_id);
+        // 1) Post/página/producto por URL canónica (+ variantes www/http)
+        foreach (self::url_variants($page_url) as $candidate) {
+            $post_id = url_to_postid($candidate);
+            if ($post_id > 0) {
+                return array('type' => 'post', 'id' => (int) $post_id);
+            }
         }
 
-        $path = wp_parse_url($page_url, PHP_URL_PATH);
-        if ($path === null || $path === false) {
-            return null;
-        }
-
-        $trimmed = trim($path, '/');
+        $trimmed = self::normalize_request_path($page_url);
 
         // 2) Home / portada
         if ($trimmed === '') {
@@ -296,7 +337,8 @@ class SEOJump_Connector_REST {
             }
         }
 
-        // 4) Categoría de producto (y otras taxonomías públicas)
+        // 4) Categoría de producto / taxonomías — match por get_term_link
+        //    (cubre bases custom tipo /estetica-vehicular/shampoos/ y Permalink Manager)
         $term = self::resolve_term_from_path($trimmed);
         if ($term) {
             return $term;
@@ -315,7 +357,7 @@ class SEOJump_Connector_REST {
 
         // 6) Último segmento del path (productos con /categoria/slug)
         $slug = basename($trimmed);
-        if ($slug === '') {
+        if ($slug === '' || is_numeric($slug)) {
             return null;
         }
 
@@ -330,19 +372,6 @@ class SEOJump_Connector_REST {
 
         if (!empty($matches[0])) {
             return array('type' => 'post', 'id' => (int) $matches[0]);
-        }
-
-        // 7) Categoría solo por slug final
-        $taxonomies = self::candidate_taxonomies();
-        foreach ($taxonomies as $tax) {
-            $t = get_term_by('slug', $slug, $tax);
-            if ($t && !is_wp_error($t)) {
-                return array(
-                    'type'     => 'term',
-                    'id'       => (int) $t->term_id,
-                    'taxonomy' => $tax,
-                );
-            }
         }
 
         return null;
@@ -360,8 +389,47 @@ class SEOJump_Connector_REST {
     }
 
     /**
-     * Intenta mapear el path a un término usando la estructura de permalinks.
-     * Ej: categoria-producto/shampoos-para-auto  o  product-category/shampoos
+     * Compara el path pedido con el permalink real del término (filtros de
+     * Permalink Manager / Rank Math / base WooCommerce custom incluidos).
+     */
+    private static function term_path_matches($term, $trimmed) {
+        $link = get_term_link($term);
+        if (is_wp_error($link)) {
+            return false;
+        }
+        $link_path = strtolower(trim((string) wp_parse_url($link, PHP_URL_PATH), '/'));
+        $needle = strtolower($trimmed);
+        if ($link_path === '' || $needle === '') {
+            return false;
+        }
+        if ($link_path === $needle) {
+            return true;
+        }
+        // Aceptar si el path pedido termina exactamente en el link del término
+        // (p.ej. idioma prefijo) o viceversa.
+        if (substr($needle, -strlen($link_path) - 1) === '/' . $link_path) {
+            return true;
+        }
+        if (substr($link_path, -strlen($needle) - 1) === '/' . $needle) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * @return array{type:string,id:int,taxonomy:string}|null
+     */
+    private static function term_payload($term, $tax) {
+        return array(
+            'type'     => 'term',
+            'id'       => (int) $term->term_id,
+            'taxonomy' => $tax,
+        );
+    }
+
+    /**
+     * Mapea path → término. Prioriza coincidencia con get_term_link (permalinks custom).
+     * Ej: estetica-vehicular/shampoos, categoria-producto/shampoos, product-category/x
      *
      * @return array{type:string,id:int,taxonomy:string}|null
      */
@@ -372,69 +440,81 @@ class SEOJump_Connector_REST {
             return null;
         }
 
+        $slug_candidate = end($parts);
+        $known_bases = array(
+            'categoria-producto',
+            'product-category',
+            'product_cat',
+            'product-tag',
+            'categoria',
+            'category',
+            'estetica-vehicular',
+            'tienda',
+            'shop',
+        );
+
         foreach ($taxonomies as $tax) {
-            $tax_obj = get_taxonomy($tax);
-            if (!$tax_obj) {
+            if (!taxonomy_exists($tax)) {
                 continue;
             }
 
-            // Base rewrite (ej. product_cat → "product-category" o personalizado)
-            $base = '';
-            if (!empty($tax_obj->rewrite['slug'])) {
-                $base = trim($tax_obj->rewrite['slug'], '/');
-            }
-
-            $slug_candidate = end($parts);
-
-            // Path tipo base/slug o base/parent/slug
-            if ($base !== '') {
-                $base_parts = explode('/', $base);
-                $base_len = count($base_parts);
-                if (count($parts) > $base_len) {
-                    $prefix = array_slice($parts, 0, $base_len);
-                    if (array_map('strtolower', $prefix) === array_map('strtolower', $base_parts)) {
-                        $slug_candidate = end($parts);
+            // A) Términos con el mismo slug final cuyo link coincide con el path.
+            $candidates = get_terms(array(
+                'taxonomy'   => $tax,
+                'slug'       => $slug_candidate,
+                'hide_empty' => false,
+                'number'     => 50,
+            ));
+            if (!is_wp_error($candidates) && !empty($candidates)) {
+                foreach ($candidates as $term) {
+                    if (self::term_path_matches($term, $trimmed)) {
+                        return self::term_payload($term, $tax);
                     }
                 }
             }
 
-            $term = get_term_by('slug', $slug_candidate, $tax);
-            if ($term && !is_wp_error($term)) {
-                // Si hay base, preferimos que el path la contenga (evita falsos positivos)
-                if ($base === '' || stripos($trimmed, $base) !== false || count($parts) === 1) {
-                    return array(
-                        'type'     => 'term',
-                        'id'       => (int) $term->term_id,
-                        'taxonomy' => $tax,
-                    );
+            // B) Base rewrite nativa o bases conocidas + slug
+            $tax_obj = get_taxonomy($tax);
+            $bases = $known_bases;
+            if ($tax_obj && !empty($tax_obj->rewrite['slug'])) {
+                array_unshift($bases, trim($tax_obj->rewrite['slug'], '/'));
+            }
+            $bases = array_values(array_unique(array_filter($bases)));
+
+            foreach ($bases as $base) {
+                $base_l = strtolower($base);
+                $needle_l = strtolower($trimmed);
+                if ($needle_l === $base_l . '/' . strtolower($slug_candidate)
+                    || strpos($needle_l, $base_l . '/') === 0
+                ) {
+                    $term = get_term_by('slug', $slug_candidate, $tax);
+                    if ($term && !is_wp_error($term)) {
+                        // Si el link real coincide, perfecto; si la base es la del path, aceptar.
+                        if (self::term_path_matches($term, $trimmed)
+                            || strpos($needle_l, $base_l . '/') === 0
+                        ) {
+                            return self::term_payload($term, $tax);
+                        }
+                    }
                 }
             }
         }
 
-        // WooCommerce a veces usa ?product_cat=slug — ya cubierto por slug final arriba.
-        // También probar path completo como slug jerárquico (parent/child).
-        foreach ($taxonomies as $tax) {
-            if (count($parts) < 2) {
-                break;
-            }
-            $hierarchical_slug = implode('/', $parts);
-            // get_term_by no acepta path jerárquico; probar solo el último + validar link
-            $slug = end($parts);
-            $term = get_term_by('slug', $slug, $tax);
-            if ($term && !is_wp_error($term)) {
-                $link = get_term_link($term);
-                if (!is_wp_error($link)) {
-                    $link_path = trim((string) wp_parse_url($link, PHP_URL_PATH), '/');
-                    if (strtolower($link_path) === strtolower($trimmed)) {
-                        return array(
-                            'type'     => 'term',
-                            'id'       => (int) $term->term_id,
-                            'taxonomy' => $tax,
-                        );
+        // C) Último recurso (solo product_cat): recorrer términos y matchear link.
+        //    Catálogos grandes: limitamos a 500; el caso típico ya resolvió en A/B.
+        if (taxonomy_exists('product_cat')) {
+            $all = get_terms(array(
+                'taxonomy'   => 'product_cat',
+                'hide_empty' => false,
+                'number'     => 500,
+            ));
+            if (!is_wp_error($all) && !empty($all)) {
+                foreach ($all as $term) {
+                    if (self::term_path_matches($term, $trimmed)) {
+                        return self::term_payload($term, 'product_cat');
                     }
                 }
             }
-            unset($hierarchical_slug);
         }
 
         return null;

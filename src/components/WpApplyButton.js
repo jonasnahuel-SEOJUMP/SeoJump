@@ -88,7 +88,11 @@ export default function WpApplyButton({
               value,
             });
             if (!res.success) {
-              setMessage({ ok: false, text: res.error });
+              const hint =
+                res.code === "NOT_FOUND"
+                  ? " Si es una categoría, descargá de nuevo el plugin desde Perfil (v1.2+) y reemplazalo en WordPress → Plugins → Subir."
+                  : "";
+              setMessage({ ok: false, text: (res.error || "No se pudo aplicar.") + hint });
               return;
             }
             setMessage({
