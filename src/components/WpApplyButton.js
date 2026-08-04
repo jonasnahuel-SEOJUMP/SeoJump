@@ -93,7 +93,9 @@ export default function WpApplyButton({
             }
             setMessage({
               ok: true,
-              text: res.message || "Aplicado. Vaciá la caché y verificá.",
+              text:
+                (res.message || "Aplicado.") +
+                (pageUrl ? ` Página: ${pageUrl}` : ""),
             });
           } catch {
             setMessage({

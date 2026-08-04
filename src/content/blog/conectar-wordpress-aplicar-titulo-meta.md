@@ -2,7 +2,7 @@
 title: "Cómo conectar SEO Jump a WordPress sin enredarte con el token y el plugin"
 description: "El error más común: confundir el ZIP del plugin con el token. Qué se sube, qué se pega, qué significa «una sola vez» y cómo usar Aplicar en mi web todas las veces que haga falta."
 date: "2026-08-01"
-dateModified: "2026-08-03"
+dateModified: "2026-08-04"
 readTime: "5 min"
 author: "SeoJump"
 ---
@@ -24,6 +24,12 @@ Cuando hacés clic en **Generar token**, SEO Jump te muestra el código completo
 
 - **¿Qué pasa si cerraste la pantalla sin copiarlo?** No pasa absolutamente nada malo. Tocá **Regenerar token**, se crea uno nuevo, lo copiás y lo pegás en WordPress. El token anterior se desactiva.
 - **¿Se puede ver el panel del conector después?** Sí. Podés entrar cuantas veces quieras a **Perfil** (avatar → `/perfil` → Conectar WordPress) para chequear el estado o gestionar la conexión.
+
+## ¿Por qué en Perfil aparece la home y no un producto?
+
+**Es correcto.** En Perfil conectás **el WordPress entero** con la URL de inicio (`https://tutienda.com`). No tenés que poner la URL de un shampoo o un producto.
+
+Cuando más adelante, en una misión, tocás **«Aplicar en mi web»**, SEO Jump manda la URL de **esa misión** (el producto o página concreta) al plugin. La home del Perfil solo sirve para saber a qué sitio hablarle.
 
 ## Resumen rápido del proceso
 

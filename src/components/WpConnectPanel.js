@@ -59,7 +59,7 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
       setFreshToken(res.token);
       setMsg({
         ok: true,
-        text: "Token generado. Descargá el plugin, pegá el token en WordPress y verificá.",
+        text: "Token listo. Abajo: 1) descargá el ZIP 2) copiá el token → pegalo en Ajustes → SEO Jump → Verificá acá.",
       });
       await refresh();
     } finally {
@@ -133,34 +133,37 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
         🔌 Conectar WordPress
       </h3>
       <p className="text-sm font-bold text-slate-400 leading-relaxed">
-        Con el plugin activo, en misiones de título y meta usá{" "}
-        <span className="text-white">«Aplicar en mi web»</span>. Solo escribe título SEO y meta
-        (Yoast o Rank Math). No toca el nombre del producto ni el diseño.
+        Acá conectás <span className="text-white">todo el WordPress una sola vez</span> (la URL de
+        inicio de tu tienda). Después, en cada misión de título o meta,{" "}
+        <span className="text-white">«Aplicar en mi web»</span> usa la URL de{" "}
+        <span className="text-white">ese producto/página</span> — no la home. Solo escribe título SEO
+        y meta (Yoast o Rank Math). No toca el nombre del producto ni el diseño.
       </p>
       <div className="rounded-xl bg-slate-900/60 border border-sky-700/40 px-4 py-3 space-y-2">
         <p className="text-sm font-black text-sky-200">¿Cómo conectar tu sitio?</p>
         <ol className="space-y-1.5 text-sm font-bold text-slate-300 list-decimal pl-5">
           <li>
-            Descargá el{" "}
+            Abajo poné la URL de <span className="text-white">inicio</span> de tu tienda (ej.{" "}
+            <span className="text-sky-300">https://tutienda.com</span>), no la de un producto.
+          </li>
+          <li>
+            Tocá <span className="text-white">Generar token</span>, copialo, y descargá el{" "}
             <a
               href={downloadUrl}
               className="text-sky-300 underline hover:text-sky-200"
               onClick={() => playClick?.()}
             >
               plugin (.zip)
-            </a>{" "}
-            y subilo a WordPress (<span className="text-white">Plugins → Añadir nuevo → Subir</span>),
-            luego activalo.
+            </a>
+            .
           </li>
           <li>
-            Generá y copiá tu <span className="text-sky-300">token</span>, pegalo en WordPress en{" "}
-            <span className="text-white">Ajustes → SEO Jump</span> y guardá.{" "}
-            <span className="text-slate-500">
-              (El completo solo se muestra la primera vez; si lo perdés, regeneralo.)
-            </span>
+            En WordPress: <span className="text-white">Plugins → Añadir nuevo → Subir</span> el ZIP →
+            Activar. Luego <span className="text-white">Ajustes → SEO Jump</span> → pegá el token →
+            Guardar.
           </li>
           <li>
-            Tocá <span className="text-white">Verificar conexión</span>.
+            Volvé acá y tocá <span className="text-white">Verificar conexión</span>.
           </li>
         </ol>
         <Link
@@ -204,14 +207,23 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
             Necesitás Yoast SEO o Rank Math (casi todas las tiendas ya lo tienen).
           </p>
 
-          <input
-            type="url"
-            placeholder="https://tutienda.com"
-            value={siteUrl}
-            onChange={(e) => setSiteUrl(e.target.value)}
-            className="w-full p-3 rounded-xl border-2 border-slate-600 bg-slate-800 text-white font-bold text-sm"
-            disabled={busy}
-          />
+          <label className="block space-y-1.5">
+            <span className="text-xs font-black uppercase tracking-wide text-sky-300">
+              URL de tu tienda (inicio del sitio)
+            </span>
+            <input
+              type="url"
+              placeholder="https://tutienda.com"
+              value={siteUrl}
+              onChange={(e) => setSiteUrl(e.target.value)}
+              className="w-full p-3 rounded-xl border-2 border-slate-600 bg-slate-800 text-white font-bold text-sm"
+              disabled={busy}
+            />
+            <span className="block text-xs font-bold text-slate-500 leading-snug">
+              Va la home (ej. https://tutienda.com), no un producto. Cada misión aplica el cambio a
+              su propia URL cuando tocás «Aplicar en mi web».
+            </span>
+          </label>
 
           <div className="flex flex-wrap gap-3">
             <button
@@ -243,20 +255,40 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
           </div>
 
           {freshToken && (
-            <div className="rounded-xl bg-slate-900 border-2 border-sky-500/50 p-4 space-y-2">
-              <p className="text-xs font-black text-sky-300 uppercase">
-                Tu token (copialo ahora — no se vuelve a mostrar completo)
-              </p>
-              <code className="block text-sm font-mono text-white break-all bg-black/40 rounded-lg p-3">
-                {freshToken}
-              </code>
-              <button
-                type="button"
-                onClick={copyToken}
-                className="btn-3d btn-green !py-2 !px-4 !text-xs !normal-case"
-              >
-                {copied ? "✓ Copiado" : "Copiar token"}
-              </button>
+            <div className="rounded-xl bg-slate-900 border-2 border-sky-500/50 p-4 space-y-3">
+              <div className="space-y-2">
+                <p className="text-xs font-black text-sky-300 uppercase">
+                  1) Descargá el plugin (archivo ZIP)
+                </p>
+                <a
+                  href={downloadUrl}
+                  className="btn-3d btn-blue !py-2 !px-4 !text-xs !normal-case inline-block"
+                  onClick={() => playClick?.()}
+                >
+                  Descargar seo-jump-connector.zip
+                </a>
+                <p className="text-[11px] font-bold text-slate-500">
+                  En WordPress: Plugins → Añadir nuevo → Subir plugin → elegí este archivo → Activar.
+                </p>
+              </div>
+              <div className="space-y-2 border-t border-slate-700 pt-3">
+                <p className="text-xs font-black text-sky-300 uppercase">
+                  2) Copiá el token (pegálo en Ajustes → SEO Jump)
+                </p>
+                <code className="block text-sm font-mono text-white break-all bg-black/40 rounded-lg p-3">
+                  {freshToken}
+                </code>
+                <button
+                  type="button"
+                  onClick={copyToken}
+                  className="btn-3d btn-green !py-2 !px-4 !text-xs !normal-case"
+                >
+                  {copied ? "✓ Copiado" : "Copiar token"}
+                </button>
+                <p className="text-[11px] font-bold text-slate-500">
+                  El token completo solo se muestra ahora. Si lo perdés, regeneralo.
+                </p>
+              </div>
             </div>
           )}
 
