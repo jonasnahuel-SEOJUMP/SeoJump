@@ -1070,7 +1070,7 @@ export async function getSmartMissionSuggestion(params: {
   const siteUrl = (params.siteUrl || '').trim();
   const pageTitle = (params.pageTitle || '').trim();
   const pageH1 = (params.pageH1 || '').trim();
-  const pageDescription = (params.pageDescription || '').trim();
+  let pageDescription = (params.pageDescription || '').trim();
   const position = typeof params.position === 'number' ? params.position : null;
   const impressions = typeof params.impressions === 'number' ? params.impressions : null;
   const clicks = typeof params.clicks === 'number' ? params.clicks : null;
@@ -1111,8 +1111,9 @@ export async function getSmartMissionSuggestion(params: {
     pageSlug = (p.split('/').pop() || '').replace(/[-_]+/g, ' ').trim();
   } catch { /* assume internal */ }
 
-  // Home real (tolera www) O copy de ROL del negocio sin eje en un solo SKU
-  // (distribuidora/mayorista/catálogo). Evita tratar fichas "shampoo mayorista" como hub.
+  // Home real (tolera www) O copy de ROL del negocio (distribuidora/mayorista/catálogo).
+  // Si el title vivo ya quedó contaminado con un SKU (aplicaron mal), la home
+  // sigue siendo hub: isHomepage gana. No exigir rol en el <title> actual.
   if (siteUrl) {
     isHomepage = isHomePage(pageUrl, siteUrl);
   } else {
@@ -1122,15 +1123,21 @@ export async function getSmartMissionSuggestion(params: {
       isHomepage = p === '' || p === '/';
     } catch { /* ignore */ }
   }
-  const institutionalHubCopy =
-    hasBusinessRoleSignals(currentValue, pageTitle, pageH1) &&
-    !looksLikeSingleProductTitle(currentValue || pageTitle || '');
+  const roleInCopy = hasBusinessRoleSignals(
+    currentValue,
+    pageTitle,
+    pageH1,
+    pageDescription
+  );
+  const titleLooksLikeSku = looksLikeSingleProductTitle(currentValue || pageTitle || '');
+  // Ficha de producto con "mayorista" en el título NO es hub; home sí lo es siempre.
+  const institutionalHubCopy = roleInCopy && !titleLooksLikeSku;
   const isHubPage = isHomepage || institutionalHubCopy;
 
   const isTitle = missionType === 'H1';
 
   const cacheKey = buildGeminiCacheKey([
-    'title_suggestion_v7_hub',
+    'title_suggestion_v8_hub',
     email || 'anon',
     pageUrl,
     missionType,
@@ -1180,11 +1187,15 @@ export async function getSmartMissionSuggestion(params: {
     }
   } catch { /* si el cache está corrupto, seguimos y regeneramos */ }
 
-  // Contexto del negocio: leemos la PORTADA solo si no tenemos ya contenido de la página
-  // (el cliente ya envía título/H1/descripción del scraper en vivo — evita +4s y timeouts en Vercel).
+  // Contexto del negocio: en hub, si el <title> vivo ya es un SKU (contaminado),
+  // leemos la portada/meta para recuperar rol (mayorista/distribuidora).
   let businessContext = '';
   const hasPageContent = !!(pageTitle || pageH1 || pageDescription);
-  if (!isHubPage && siteUrl && !hasPageContent) {
+  const needHubRescue =
+    isHubPage &&
+    looksLikeSingleProductTitle(currentValue || pageTitle || '') &&
+    !hasBusinessRoleSignals(currentValue, pageTitle, pageH1, pageDescription);
+  if (siteUrl && ((!isHubPage && !hasPageContent) || needHubRescue)) {
     try {
       const homeUrl = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
       const home = await scrapeMetadata(homeUrl);
@@ -1192,6 +1203,9 @@ export async function getSmartMissionSuggestion(params: {
         .filter(Boolean)
         .join(' — ')
         .slice(0, 500);
+      if (needHubRescue && home.description && !pageDescription) {
+        pageDescription = home.description;
+      }
     } catch { /* sin contexto de portada: la IA decide con el contenido de la página */ }
   }
 
@@ -1241,6 +1255,7 @@ NEGOCIO Y PÁGINA:
 - Tipo de página: ${isHubPage ? 'PÁGINA DE INICIO / PORTADA / HUB MAYORISTA (catálogo global del negocio)' : 'página interna (producto, servicio o categoría puntual)'}
 - Palabra clave objetivo: "${isHubPage ? '(IGNORAR keywords de producto suelto — esta página representa TODO el negocio)' : (keyword || '(no especificada — inferila del contenido de abajo)')}"
 ${isHubPage && keyword ? `- Keyword que el sistema tenía asociada (NO la uses como eje del título): "${keyword}" — suele ser un producto/GSC puntual y NO representa el negocio entero.` : ''}
+${isHubPage && looksLikeSingleProductTitle(currentValue || pageTitle || '') ? `- ⚠️ ALERTA: el título actual YA está contaminado con un producto suelto (alguien lo aplicó mal). NO lo uses de modelo. Reescribí para el ROL del negocio (distribuidora/mayorista/catálogo del rubro), recuperando señales de la meta/H1/marcas.` : ''}
 
 CONTEXTO DEL NEGOCIO (de la portada del sitio — sirve para entender el rubro y si es mono o multimarca):
 ${businessContext ? `  ${businessContext}` : '  (no disponible — deducí el perfil desde el contenido de la página)'}

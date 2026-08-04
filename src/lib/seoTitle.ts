@@ -156,33 +156,55 @@ export function looksLikeSingleProductTitle(title: string): boolean {
 /**
  * Título de respaldo para home / hub mayorista: preserva identidad del negocio
  * (detailing + mayorista/importación) y no se achica a un solo producto.
+ *
+ * Importante: si el título actual YA fue contaminado con un SKU (ej. shampoo),
+ * seguimos mirando meta/H1/marca para recuperar el rol del negocio.
  */
 export function buildInstitutionalSeoTitle(params: {
   currentTitle?: string;
   pageH1?: string;
+  pageDescription?: string;
   brandHint?: string;
+  /** Home / hub: si no hay señales, asumimos catálogo (no un SKU). */
+  preferCatalogFallback?: boolean;
 }): string {
   const current = (params.currentTitle || '').trim();
   const h1 = (params.pageH1 || '').trim();
+  const description = (params.pageDescription || '').trim();
   const brand = (params.brandHint || '').trim();
 
-  const pool = `${current} ${h1}`.toLowerCase();
-  const hasMayorista = /mayorista/.test(pool);
-  const hasImport = /importaci[oó]n\s+directa/.test(pool);
-  const hasDetailing = /detailing|detail\s*shop|detalle\s+automotriz/.test(pool);
+  const pool = normalizeSeoText(`${current} ${h1} ${description} ${brand}`);
+  const hasMayorista = /mayorista|distribuidor/.test(pool);
+  const hasImport = /importacion\s+directa/.test(pool);
+  const hasDetailing = /detailing|detail\s*shop|detalle\s+automotriz|estetica\s+vehicular/.test(
+    pool
+  );
 
-  let core = 'Productos de Detailing';
+  let core = params.preferCatalogFallback
+    ? 'Tienda Online de Productos'
+    : 'Productos de Detailing';
   if (hasDetailing && hasMayorista) {
     core = 'Distribuidora Mayorista de Detailing';
+  } else if (hasMayorista && hasDetailing === false && /detail/.test(pool) === false) {
+    core = 'Venta Mayorista';
   } else if (hasMayorista) {
     core = 'Venta Mayorista de Detailing';
   } else if (hasDetailing) {
-    core = 'Tienda de Car Detailing';
+    // Home de un detail shop: aunque el title actual diga solo "shampoo",
+    // el negocio es la tienda/distribuidora, no un SKU.
+    core = params.preferCatalogFallback
+      ? 'Distribuidora de Detailing'
+      : 'Tienda de Car Detailing';
+  } else if (params.preferCatalogFallback && brand) {
+    core = brand;
   }
 
-  const parts = [core];
+  const parts: string[] = [core];
   if (hasImport) parts.push('Importación Directa');
-  if (brand && !core.toLowerCase().includes(brand.toLowerCase().slice(0, 12))) {
+  if (
+    brand &&
+    !normalizeSeoText(parts.join(' ')).includes(normalizeSeoText(brand).slice(0, 12))
+  ) {
     parts.push(brand);
   }
 
@@ -190,7 +212,10 @@ export function buildInstitutionalSeoTitle(params: {
 }
 
 /**
- * Si la página es home/hub institucional y la IA achicó a un producto, corrige.
+ * Si la página es home/hub y la IA (o un título ya aplicado) achica a un producto, corrige.
+ *
+ * Caso crítico: el dueño ya aplicó un título malo ("Shampoo…"). El title en vivo
+ * pierde "distribuidora/mayorista", pero igual NO debemos reforzar el SKU.
  */
 export function sanitizeHubTitleSuggestion(params: {
   suggested: string;
@@ -210,27 +235,31 @@ export function sanitizeHubTitleSuggestion(params: {
     params.pageH1,
     params.pageDescription
   );
-
-  // Solo forzar corrección cuando el negocio/página es claramente mayorista/catálogo.
-  // Home genérica sin señales de rol no se reescribe a "Productos de Detailing".
-  if (!roleContext) {
-    return { title: suggested, corrected: false };
-  }
+  const currentIsSku = looksLikeSingleProductTitle(params.currentTitle || '');
+  const suggestedIsSku = looksLikeSingleProductTitle(suggested);
 
   const fallback = () =>
     buildInstitutionalSeoTitle({
       currentTitle: params.currentTitle,
       pageH1: params.pageH1,
+      pageDescription: params.pageDescription,
       brandHint: params.brandHint,
+      // En hub siempre preferimos catálogo aunque el title vivo ya esté contaminado.
+      preferCatalogFallback: true,
     });
 
-  // Nunca aceptar eje en un solo SKU (aunque diga "importación directa" o "por mayor").
-  if (looksLikeSingleProductTitle(suggested)) {
+  // Nunca aceptar eje en un solo SKU en home/hub (aunque diga "importación directa").
+  if (suggestedIsSku) {
     return { title: fallback(), corrected: true };
   }
 
-  // El actual tenía rol (distribuidora/mayorista) y la sugerencia lo perdió.
-  if (hasBusinessRoleSignals(params.currentTitle) && !hasBusinessRoleSignals(suggested)) {
+  // Title vivo ya era un SKU (aplicaron mal antes) y la sugerencia no recupera el rol.
+  if (currentIsSku && !hasBusinessRoleSignals(suggested)) {
+    return { title: fallback(), corrected: true };
+  }
+
+  // El actual/meta tenía rol (distribuidora/mayorista) y la sugerencia lo perdió.
+  if (roleContext && !hasBusinessRoleSignals(suggested)) {
     return { title: fallback(), corrected: true };
   }
 
