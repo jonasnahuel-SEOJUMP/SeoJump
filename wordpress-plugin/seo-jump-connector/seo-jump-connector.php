@@ -2,7 +2,7 @@
 /**
  * Plugin Name: SEO Jump Connector
  * Description: Permite que SEO Jump aplique títulos SEO y meta descripciones en tu WordPress con un clic (con tu aprobación).
- * Version: 1.1.0
+ * Version: 1.2.0
  * Author: SEO Jump
  * Author URI: https://seo-jump.ai
  * License: GPL-2.0-or-later
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('SEOJUMP_CONNECTOR_VERSION', '1.1.0');
+define('SEOJUMP_CONNECTOR_VERSION', '1.2.0');
 define('SEOJUMP_CONNECTOR_OPTION', 'seojump_connector_token');
 define('SEOJUMP_CONNECTOR_FILE', __FILE__);
 

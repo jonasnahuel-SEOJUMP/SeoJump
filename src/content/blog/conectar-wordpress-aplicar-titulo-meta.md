@@ -44,7 +44,7 @@ Requisito: tené **Yoast SEO** o **Rank Math** en la tienda (casi todas ya lo ti
 
 Cuando el indicador de conexión está en verde, **«Aplicar en mi web»** (el botón de las misiones de título o meta) **no es de un solo uso**. Lo vas a poder usar todas las veces que haga falta cada vez que resuelvas una misión de optimización.
 
-Sirve para **páginas, productos y categorías** de WooCommerce (por ejemplo `/categoria-producto/shampoos…`). Si tu misión es una categoría y ves “No encontramos esa URL”, actualizá el plugin a la **v1.1+** (Perfil → descargar ZIP de nuevo → Plugins → Subir / reemplazar).
+Sirve para **páginas, productos y categorías** de WooCommerce (por ejemplo `/estetica-vehicular/shampoos` o `/categoria-producto/…`). Si ves “No encontramos esa URL”, actualizá el plugin a la **v1.2+** (Perfil → descargar ZIP de nuevo → Plugins → Subir / reemplazar).
 
 Después de aplicar, si usás caché (WP Rocket, LiteSpeed, etc.), vaciala y tocá **Verificar** en la misión para confirmar que el cambio ya se ve en la web pública.
 

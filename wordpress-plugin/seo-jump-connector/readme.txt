@@ -3,7 +3,7 @@ Contributors: seojump
 Requires at least: 5.8
 Tested up to: 6.7
 Requires PHP: 7.4
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 
 Conectá tu WordPress con SEO Jump para aplicar título SEO y meta descripción con un clic.
@@ -26,6 +26,10 @@ No modifica precios, stock ni el diseño del tema.
 4. En SEO Jump tocá «Verificar conexión».
 
 == Changelog ==
+
+= 1.2.0 =
+* Resuelve categorías con permalinks custom (ej. /estetica-vehicular/shampoos/) matcheando el link real del término.
+* Tolera www/http, barra final y URLs con /page/2 al aplicar.
 
 = 1.1.0 =
 * Resuelve categorías de producto (WooCommerce) y página Tienda, además de páginas/productos.
