@@ -39,8 +39,10 @@ import {
   extractBrandHints,
   MAX_SEO_TITLE_LENGTH,
   sanitizeHubTitleSuggestion,
-  hasBusinessRoleSignals,
+  resolveIsHubPage,
   looksLikeSingleProductTitle,
+  hasBusinessRoleSignals,
+  isCategoryOrProductPath,
 } from './seoTitle'
 import {
   analyzeComprehension,
@@ -1055,6 +1057,8 @@ export async function getSmartMissionSuggestion(params: {
   pageTitle?: string;
   pageH1?: string;
   pageDescription?: string;
+  /** home | category | product | post | page — del scraper HTML */
+  pageType?: string;
   // Métricas de Search Console — cómo le va hoy a esa página.
   position?: number;
   impressions?: number;
@@ -1071,6 +1075,7 @@ export async function getSmartMissionSuggestion(params: {
   const pageTitle = (params.pageTitle || '').trim();
   const pageH1 = (params.pageH1 || '').trim();
   let pageDescription = (params.pageDescription || '').trim();
+  const pageType = (params.pageType || '').trim().toLowerCase();
   const position = typeof params.position === 'number' ? params.position : null;
   const impressions = typeof params.impressions === 'number' ? params.impressions : null;
   const clicks = typeof params.clicks === 'number' ? params.clicks : null;
@@ -1098,7 +1103,6 @@ export async function getSmartMissionSuggestion(params: {
   if (!email && !isAdmin) return { success: false, fallback: true as const };
 
   let brand = siteUrl;
-  let isHomepage = false;
   let pageSlug = '';
   try {
     const u = siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`;
@@ -1111,38 +1115,22 @@ export async function getSmartMissionSuggestion(params: {
     pageSlug = (p.split('/').pop() || '').replace(/[-_]+/g, ' ').trim();
   } catch { /* assume internal */ }
 
-  // Home real (tolera www) O copy de ROL del negocio (distribuidora/mayorista/catálogo).
-  // Si el title vivo ya quedó contaminado con un SKU (aplicaron mal), la home
-  // sigue siendo hub: isHomepage gana. No exigir rol en el <title> actual.
-  if (siteUrl) {
-    isHomepage = isHomePage(pageUrl, siteUrl);
-  } else {
-    try {
-      const pu = pageUrl.startsWith('http') ? pageUrl : `https://${pageUrl}`;
-      const p = new URL(pu).pathname.replace(/\/+$/, '');
-      isHomepage = p === '' || p === '/';
-    } catch { /* ignore */ }
-  }
-  const roleInCopy = hasBusinessRoleSignals(
-    currentValue,
-    pageTitle,
-    pageH1,
-    pageDescription
-  );
-  const titleLooksLikeSku = looksLikeSingleProductTitle(currentValue || pageTitle || '');
-  // Ficha de producto con "mayorista" en el título NO es hub; home sí lo es siempre.
-  const institutionalHubCopy = roleInCopy && !titleLooksLikeSku;
-  const isHubPage = isHomepage || institutionalHubCopy;
+  // Hub = SOLO portada. Una categoría de shampoos con "mayorista" en el título
+  // NO es hub: debe optimizarse para shampoo, no para el negocio entero.
+  const isHubPage = resolveIsHubPage({ pageUrl, siteUrl, pageType });
+  const isCategoryPage =
+    pageType === 'category' ||
+    (!isHubPage && isCategoryOrProductPath(pageUrl) && !/\/producto\/|\/product\//i.test(pageUrl));
 
   const isTitle = missionType === 'H1';
 
   const cacheKey = buildGeminiCacheKey([
-    'title_suggestion_v8_hub',
+    'title_suggestion_v9_cat',
     email || 'anon',
     pageUrl,
     missionType,
-    isHubPage ? 'hub' : 'page',
-    isHubPage ? '' : keyword, // en hub no cachear por keyword de producto
+    isHubPage ? 'hub' : isCategoryPage ? 'cat' : 'page',
+    isHubPage ? '' : keyword,
     currentValue.slice(0, 120),
     pageH1.slice(0, 60),
     position != null ? String(Math.round(position)) : '',
@@ -1252,10 +1240,11 @@ Actuás como un consultor SEO experto que optimiza una página para un dueño de
 NEGOCIO Y PÁGINA:
 - Sitio/marca: ${brand}
 - URL de esta página: ${pageUrl}
-- Tipo de página: ${isHubPage ? 'PÁGINA DE INICIO / PORTADA / HUB MAYORISTA (catálogo global del negocio)' : 'página interna (producto, servicio o categoría puntual)'}
+- Tipo de página: ${isHubPage ? 'PÁGINA DE INICIO / PORTADA / HUB MAYORISTA (catálogo global del negocio)' : isCategoryPage ? 'CATEGORÍA DE TIENDA (sección del catálogo: ej. shampoos, ceras — NO es la home ni un SKU único)' : 'página interna (producto, servicio o contenido puntual)'}
 - Palabra clave objetivo: "${isHubPage ? '(IGNORAR keywords de producto suelto — esta página representa TODO el negocio)' : (keyword || '(no especificada — inferila del contenido de abajo)')}"
 ${isHubPage && keyword ? `- Keyword que el sistema tenía asociada (NO la uses como eje del título): "${keyword}" — suele ser un producto/GSC puntual y NO representa el negocio entero.` : ''}
 ${isHubPage && looksLikeSingleProductTitle(currentValue || pageTitle || '') ? `- ⚠️ ALERTA: el título actual YA está contaminado con un producto suelto (alguien lo aplicó mal). NO lo uses de modelo. Reescribí para el ROL del negocio (distribuidora/mayorista/catálogo del rubro), recuperando señales de la meta/H1/marcas.` : ''}
+${isCategoryPage ? `- ⚠️ ES CATEGORÍA: el título DEBE conservar la categoría que vende esta URL (ej. "shampoo", "ceras"). PROHIBIDO reemplazarla por el rubro genérico del negocio ("Estética Vehicular", "Tienda Detailing") aunque el negocio sea mayorista. Podés sumar "mayorista" como diferencial, pero el eje es la categoría.` : ''}
 
 CONTEXTO DEL NEGOCIO (de la portada del sitio — sirve para entender el rubro y si es mono o multimarca):
 ${businessContext ? `  ${businessContext}` : '  (no disponible — deducí el perfil desde el contenido de la página)'}
@@ -1286,7 +1275,7 @@ REGLAS ABSOLUTAS (un experto nunca las rompe):
    - Si una marca o frase YA está cubierta en el slug o en el otro campo (mirá el bloque "QUÉ CUBREN YA LOS OTROS CAMPOS"), NO la repitas: es espacio desperdiciado.
    - ${isTitle ? 'El TÍTULO lleva la intención principal + el diferencial del negocio. La marca de producto va en el título SOLO si no está ya en el slug/meta y captura búsquedas propias.' : 'La META nunca debe ser una copia del título: complementalo con el beneficio concreto, una marca o dato que el título no dijo, y un llamado a la acción.'}
 5. PRESERVÁ LOS DIFERENCIALES COMPETITIVOS: frases que distinguen al negocio de la competencia ("importación directa", "fabricantes", "envío a todo el país", "precios mayoristas", "distribuidora", "mayorista", "atención 24hs", años de trayectoria) valen MÁS que repetir una marca ya cubierta en otro campo. NUNCA elimines un diferencial presente en el texto actual para hacer lugar a una marca redundante NI a un producto suelto; si el espacio no alcanza, el diferencial gana.
-6. ${isHubPage ? 'ES HOME / HUB MAYORISTA / CATÁLOGO GLOBAL: optimizá para la IDENTIDAD DEL NEGOCIO (marca + rubro + rol: distribuidora/mayorista/tienda de detailing). PROHIBIDO ABSOLUTO enfocar el título en UN solo producto (shampoo, cera, pulidora, kit, etc.) aunque la keyword del sistema sea ese producto. Un mayorista de cientos de productos NO se resume en un SKU. Ejemplo VÁLIDO: "Distribuidora Mayorista de Detailing | Importación Directa". Ejemplo INVÁLIDO: "Shampoo para Autos por Mayor | Importación Directa".' : 'ES UNA PÁGINA INTERNA: optimizá para el producto/servicio/categoría específico de esta página, no para la marca genérica del sitio entero.'}
+6. ${isHubPage ? 'ES HOME / HUB MAYORISTA / CATÁLOGO GLOBAL: optimizá para la IDENTIDAD DEL NEGOCIO (marca + rubro + rol: distribuidora/mayorista/tienda de detailing). PROHIBIDO ABSOLUTO enfocar el título en UN solo producto (shampoo, cera, pulidora, kit, etc.) aunque la keyword del sistema sea ese producto. Un mayorista de cientos de productos NO se resume en un SKU. Ejemplo VÁLIDO: "Distribuidora Mayorista de Detailing | Importación Directa". Ejemplo INVÁLIDO: "Shampoo para Autos por Mayor | Importación Directa".' : isCategoryPage ? 'ES CATEGORÍA DE CATÁLOGO: el eje del título ES la categoría (shampoo, ceras, microfibras…). Podés agregar "venta mayorista", "importación directa" o la marca de la tienda si entra en 60 caracteres. PROHIBIDO borrar la categoría para hablar solo del rubro genérico. Ejemplo VÁLIDO: "Shampoos para Autos y Motos | Venta Mayorista". Ejemplo INVÁLIDO: "Estética Vehicular Mayorista | Tienda Detailing Argentina".' : 'ES UNA PÁGINA INTERNA: optimizá para el producto/servicio específico de esta página, no para la marca genérica del sitio entero.'}
 7. USÁ LA POSICIÓN: si ya está en página 1, hacé cambios conservadores (no arruines lo que funciona); si está en página 2 o más lejos, podés ser más agresivo.
 8. ELIMINÁ EL RUIDO: sacá gramaje, stock, tamaños y SKUs ("x 50gs/100gs", "500ml", "pack x12") y relleno vacío ("puro", "premium", "original") solo si hace falta para entrar en el límite.
 9. DESDUPLICÁ SINÓNIMOS: si hay dos palabras casi iguales ("vidrios" y "cristales"), quedate con la más buscada/específica.
@@ -1299,7 +1288,7 @@ ANTES DE RESPONDER, AUTO-VERIFICÁ tu sugerencia como un consultor que revisa su
   a) ¿Repetí una marca o frase que ya está en el slug o en el otro campo? → Reemplazala por un diferencial o término de intención (EXCEPTO "mayorista"/"distribuidora"/"importación directa" en home/hub: esas NUNCA se sacan).
   b) ¿Eliminé un diferencial competitivo que estaba en el texto actual? → Restauralo.
   c) ¿Se entiende QUÉ vende la página sin ver el resto del sitio? → Si no, corregilo.
-  d) ${isHubPage ? '¿El título habla de UN solo producto (shampoo, cera, etc.) en vez del negocio entero? → INVÁLIDO. Reescribí para el rubro/rol global.' : '¿El título es demasiado genérico de marca y no describe esta página? → Especificá el producto/categoría.'}
+  d) ${isHubPage ? '¿El título habla de UN solo producto (shampoo, cera, etc.) en vez del negocio entero? → INVÁLIDO. Reescribí para el rubro/rol global.' : isCategoryPage ? '¿El título perdió el nombre de la categoría (shampoo, etc.) y habla del negocio genérico? → INVÁLIDO. Restaurala.' : '¿El título es demasiado genérico de marca y no describe esta página? → Especificá el producto/categoría.'}
 
 En "reason", explicale al dueño en una frase qué decidiste y por qué, relacionando las variables. Si sumaste una marca por ser multimarca, decilo; si NO sumaste una marca declarada porque ya estaba cubierta en el slug o la meta, también decilo (ej: "No repetí Black Line en el título porque ya está en la dirección y la descripción; prioricé tu diferencial de importación directa").
 

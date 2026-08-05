@@ -1,3 +1,5 @@
+import { isHomePage } from './linkAudit';
+
 /** Límites de longitud para títulos SEO (Yoast / Rank Math — zona verde) */
 export const MAX_SEO_TITLE_LENGTH = 60;
 export const IDEAL_SEO_TITLE_MIN = 50;
@@ -141,16 +143,70 @@ export function isInstitutionalBusinessCopy(...sources: Array<string | undefined
 }
 
 /**
- * True si el título parece enfocado en UN producto concreto (malo para home/mayorista).
- * "Importación directa" sola NO lo salva: el eje sigue siendo el SKU.
+ * True si el título parece enfocado en UN producto/categoría concreta
+ * (malo para home; correcto para fichas y categorías de catálogo).
+ * "Mayorista" / "importación directa" NO lo salvan: el eje sigue siendo el SKU.
  */
 export function looksLikeSingleProductTitle(title: string): boolean {
   const t = normalizeSeoText(title);
   if (!t) return false;
-  const hasProduct = SINGLE_PRODUCT_FOCUS.some((p) => t.includes(normalizeSeoText(p)));
-  if (!hasProduct) return false;
-  // Solo deja de ser "producto suelto" si habla del rol/catálogo del negocio.
-  return !hasBusinessRoleSignals(title);
+  return SINGLE_PRODUCT_FOCUS.some((p) => t.includes(normalizeSeoText(p)));
+}
+
+/**
+ * True si la URL parece categoría o ficha (nunca debe tratarse como home/hub).
+ */
+export function isCategoryOrProductPath(pageUrl: string): boolean {
+  const lower = (pageUrl || '').toLowerCase();
+  if (!lower) return false;
+  if (/\/producto\/|\/product\/|\/shop\/[^/?#]+/.test(lower)) return true;
+  if (
+    /\/categoria-producto\/|\/product-category\/|\/categorias?\//.test(lower) ||
+    (/\/categoria\//.test(lower) && !/\/producto\//.test(lower))
+  ) {
+    return true;
+  }
+  // Permalinks Woo custom: /estetica-vehicular/shampoos/ (base + slug de categoría)
+  try {
+    const path = new URL(lower.startsWith('http') ? lower : `https://${lower}`).pathname;
+    const parts = path.split('/').filter(Boolean);
+    if (parts.length >= 2) {
+      const last = parts[parts.length - 1] || '';
+      if (SINGLE_PRODUCT_FOCUS.some((p) => normalizeSeoText(last).includes(normalizeSeoText(p)))) {
+        return true;
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return false;
+}
+
+/**
+ * Hub = solo portada real. Nunca categoría/producto aunque digan "mayorista".
+ * La home sigue siendo hub aunque el <title> vivo esté contaminado con un SKU.
+ */
+export function resolveIsHubPage(params: {
+  pageUrl: string;
+  siteUrl?: string;
+  pageType?: string;
+}): boolean {
+  const pageType = (params.pageType || '').toLowerCase();
+  if (pageType === 'category' || pageType === 'product') return false;
+  if (isCategoryOrProductPath(params.pageUrl)) return false;
+
+  const siteUrl = (params.siteUrl || '').trim();
+  if (siteUrl) {
+    return isHomePage(params.pageUrl, siteUrl);
+  }
+  try {
+    const p = new URL(
+      params.pageUrl.startsWith('http') ? params.pageUrl : `https://${params.pageUrl}`
+    ).pathname.replace(/\/+$/, '');
+    return p === '' || p === '/';
+  } catch {
+    return false;
+  }
 }
 
 /**

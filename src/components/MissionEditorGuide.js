@@ -114,6 +114,7 @@ export default function MissionEditorGuide({
       pageTitle: pagePreview?.title || '',
       pageH1: pagePreview?.h1 || '',
       pageDescription: pagePreview?.description || '',
+      pageType: pagePreview?.pageType || '',
       // Métricas de Search Console — cómo le va hoy a esta página.
       position: mission?.position,
       impressions: mission?.impressions,
