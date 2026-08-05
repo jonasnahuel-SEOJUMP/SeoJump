@@ -5,9 +5,11 @@ import {
   extractBrandHints,
   fitSeoTitle,
   hasBusinessRoleSignals,
+  isCategoryOrProductPath,
   isInstitutionalBusinessCopy,
   isSeoTitleLengthOk,
   looksLikeSingleProductTitle,
+  resolveIsHubPage,
   sanitizeHubTitleSuggestion,
 } from './seoTitle';
 
@@ -71,6 +73,7 @@ describe('extractBrandHints', () => {
 describe('hub / mayorista title safety', () => {
   const current =
     'Distribuidora mayorista de productos de Detailing - Importación directa - 55 Detail Shop';
+  const SITE = 'https://www.55detailshop.com.ar';
 
   it('detecta rol de negocio vs diferencial suelto', () => {
     expect(hasBusinessRoleSignals(current)).toBe(true);
@@ -78,16 +81,58 @@ describe('hub / mayorista title safety', () => {
     expect(isInstitutionalBusinessCopy('Importación Directa y Calidad')).toBe(true);
   });
 
-  it('marca shampoo+importacion como producto suelto (caso real 55 Detail Shop)', () => {
-    const bad = 'Shampoo para Autos por Mayor | Importación Directa y Calidad';
-    expect(looksLikeSingleProductTitle(bad)).toBe(true);
-    expect(hasBusinessRoleSignals(bad)).toBe(false);
+  it('marca shampoo aunque diga mayorista (eje sigue siendo el producto)', () => {
+    expect(
+      looksLikeSingleProductTitle('Shampoos para auto y motos - Venta Mayorista y Minorista')
+    ).toBe(true);
+    expect(
+      looksLikeSingleProductTitle('Shampoo para Autos por Mayor | Importación Directa y Calidad')
+    ).toBe(true);
   });
 
-  it('no marca como producto suelto un titulo de distribuidora', () => {
+  it('no marca como producto suelto un titulo solo de distribuidora', () => {
     expect(
       looksLikeSingleProductTitle('Distribuidora Mayorista de Detailing | Importación Directa')
     ).toBe(false);
+  });
+
+  it('categoria /estetica-vehicular/shampoos NO es hub', () => {
+    const catUrl = `${SITE}/estetica-vehicular/shampoos/`;
+    expect(isCategoryOrProductPath(catUrl)).toBe(true);
+    expect(
+      resolveIsHubPage({
+        pageUrl: catUrl,
+        siteUrl: SITE,
+        pageType: 'category',
+      })
+    ).toBe(false);
+    expect(
+      resolveIsHubPage({
+        pageUrl: catUrl,
+        siteUrl: SITE,
+      })
+    ).toBe(false);
+  });
+
+  it('home SI es hub aunque el title vivo diga shampoo', () => {
+    expect(
+      resolveIsHubPage({
+        pageUrl: `${SITE}/`,
+        siteUrl: SITE,
+        pageType: 'home',
+      })
+    ).toBe(true);
+  });
+
+  it('no reescribe sugerencias de categoria (isHubPage false)', () => {
+    const catTitle = 'Shampoos para auto y motos - Venta Mayorista y Minorista';
+    const result = sanitizeHubTitleSuggestion({
+      suggested: 'Shampoo para Autos y Motos | Venta Mayorista',
+      currentTitle: catTitle,
+      isHubPage: false,
+    });
+    expect(result.corrected).toBe(false);
+    expect(result.title.toLowerCase()).toContain('shampoo');
   });
 
   it('corrige sugerencia de shampoo en home/hub mayorista', () => {
