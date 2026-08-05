@@ -11,6 +11,8 @@ import {
   looksLikeSingleProductTitle,
   resolveIsHubPage,
   sanitizeHubTitleSuggestion,
+  categoryFocusTokenFromUrl,
+  titleKeepsCategoryFocus,
 } from './seoTitle';
 
 describe('isSeoTitleLengthOk', () => {
@@ -111,6 +113,17 @@ describe('hub / mayorista title safety', () => {
         pageUrl: catUrl,
         siteUrl: SITE,
       })
+    ).toBe(false);
+  });
+
+  it('bloquea titulos de home aplicados a categoria shampoos', () => {
+    const catUrl = `${SITE}/estetica-vehicular/shampoos/`;
+    expect(categoryFocusTokenFromUrl(catUrl)).toMatch(/shampoo/);
+    expect(
+      titleKeepsCategoryFocus('Shampoos para auto y motos | Venta Mayorista', catUrl)
+    ).toBe(true);
+    expect(
+      titleKeepsCategoryFocus('Estética Vehicular Mayorista | Tienda Detailing Argentina', catUrl)
     ).toBe(false);
   });
 

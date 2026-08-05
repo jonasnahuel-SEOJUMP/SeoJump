@@ -183,6 +183,52 @@ export function isCategoryOrProductPath(pageUrl: string): boolean {
 }
 
 /**
+ * Eje de categoría inferido del slug (ej. shampoos → "shampoo").
+ * Sirve para bloquear applies que borran la categoría del título.
+ */
+export function categoryFocusTokenFromUrl(pageUrl: string): string | null {
+  try {
+    const path = new URL(
+      pageUrl.startsWith('http') ? pageUrl : `https://${pageUrl}`
+    ).pathname;
+    const parts = path.split('/').filter(Boolean);
+    if (parts.length === 0) return null;
+    const last = normalizeSeoText(parts[parts.length - 1] || '');
+    if (!last || last === 'page' || /^\d+$/.test(last)) return null;
+    for (const p of SINGLE_PRODUCT_FOCUS) {
+      const norm = normalizeSeoText(p);
+      if (last === norm || last.includes(norm) || norm.includes(last)) {
+        // Preferir la forma del catálogo (singular corto) para el match en título.
+        return norm.endsWith('s') && norm.length > 4 ? norm.slice(0, -1) : norm;
+      }
+    }
+    // Si el path es claramente categoría Woo, devolver el slug crudo.
+    if (isCategoryOrProductPath(pageUrl) && !/\/producto\/|\/product\//i.test(pageUrl)) {
+      return last.replace(/-/g, ' ');
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+/**
+ * True si el título conserva el eje de la categoría de la URL.
+ * Ej: URL …/shampoos/ → el título debe mencionar shampoo/shampoos.
+ */
+export function titleKeepsCategoryFocus(title: string, pageUrl: string): boolean {
+  const focus = categoryFocusTokenFromUrl(pageUrl);
+  if (!focus) return true;
+  const t = normalizeSeoText(title);
+  if (!t) return false;
+  if (t.includes(focus)) return true;
+  // plural/singular simple
+  if (focus.endsWith('s') && t.includes(focus.slice(0, -1))) return true;
+  if (!focus.endsWith('s') && t.includes(`${focus}s`)) return true;
+  return false;
+}
+
+/**
  * Hub = solo portada real. Nunca categoría/producto aunque digan "mayorista".
  * La home sigue siendo hub aunque el <title> vivo esté contaminado con un SKU.
  */

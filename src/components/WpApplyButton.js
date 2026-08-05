@@ -97,9 +97,7 @@ export default function WpApplyButton({
             }
             setMessage({
               ok: true,
-              text:
-                (res.message || "Aplicado.") +
-                (pageUrl ? ` Página: ${pageUrl}` : ""),
+              text: res.message || "Aplicado.",
             });
           } catch {
             setMessage({
