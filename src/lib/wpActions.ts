@@ -25,6 +25,9 @@ import { isHomePage } from './linkAudit';
 import {
   extractBrandHints,
   sanitizeHubTitleSuggestion,
+  isCategoryOrProductPath,
+  titleKeepsCategoryFocus,
+  categoryFocusTokenFromUrl,
 } from './seoTitle';
 
 function pluginDownloadUrl(): string {
@@ -241,6 +244,27 @@ export async function applyMissionToWordpress(params: {
     }
   }
 
+  // Red de seguridad: en categorías, no aplicar títulos de "home/rubro" que borran el eje
+  // (ej. shampoos → "Estética Vehicular Mayorista…").
+  const isCategoryUrl =
+    field === 'seo_title' &&
+    valueToApply &&
+    !isHomePage(params.pageUrl, row.site_url) &&
+    isCategoryOrProductPath(params.pageUrl) &&
+    !/\/producto\/|\/product\//i.test(params.pageUrl);
+
+  if (isCategoryUrl && !titleKeepsCategoryFocus(valueToApply, params.pageUrl)) {
+    const focus = categoryFocusTokenFromUrl(params.pageUrl) || 'la categoría';
+    console.warn(
+      `[applyMissionToWordpress] Bloqueó título sin eje de categoría (${focus}): "${valueToApply}"`
+    );
+    return {
+      success: false as const,
+      error: `Ese título no menciona «${focus}». En una categoría el título SEO debe conservar esa palabra (ej. "Shampoos para autos | Venta Mayorista"). No lo aplicamos para no romper el posicionamiento.`,
+      code: 'CATEGORY_FOCUS',
+    };
+  }
+
   const result = await applyWpChange({
     siteUrl: row.site_url,
     tokenEncrypted: row.token_encrypted,
@@ -256,6 +280,11 @@ export async function applyMissionToWordpress(params: {
     return { success: false as const, error: result.error, code: result.code };
   }
 
+  const targetHint =
+    result.termId && result.termId > 0
+      ? 'Se actualizó el Título SEO de la categoría en Rank Math/Yoast (no el nombre visible de la categoría en la tienda).'
+      : 'Se actualizó el Título SEO en Rank Math/Yoast (no el nombre del producto/página en el editor).';
+
   return {
     success: true as const,
     postId: result.postId,
@@ -264,9 +293,9 @@ export async function applyMissionToWordpress(params: {
     appliedValue: valueToApply,
     hubCorrected,
     message: hubCorrected
-      ? 'La home no puede enfocarse en un solo producto. Aplicamos un título de catálogo/mayorista. Vaciá la caché y tocá Verificar.'
+      ? `La home no puede enfocarse en un solo producto. Aplicamos: «${valueToApply}». Vaciá la caché y tocá Verificar.`
       : field === 'meta'
-        ? 'Meta descripción aplicada (página, producto o categoría). Vaciá la caché y tocá Verificar.'
-        : 'Título SEO aplicado (página, producto o categoría). Vaciá la caché y tocá Verificar.',
+        ? `Meta descripción aplicada: «${valueToApply}». ${targetHint} Vaciá la caché y tocá Verificar.`
+        : `Título SEO aplicado: «${valueToApply}». ${targetHint} Vaciá la caché y tocá Verificar.`,
   };
 }
