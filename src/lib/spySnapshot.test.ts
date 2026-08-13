@@ -376,4 +376,41 @@ describe('enrichSpyGaps', () => {
     expect(enriched[0].schemaNote).toMatch(/preguntas/i);
     expect(enriched[0].questionsToAdd).toEqual(['¿Cuánto cuesta?', '¿Hay garantía?']);
   });
+
+  it('Intención/Contenido que pide agregar preguntas → verifica en vivo (no honor)', () => {
+    const own = {
+      title: 'Pulidoras',
+      h1: 'Pulidoras',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: [],
+      faqPairs: [],
+      hasFaqSchema: false,
+      schemaTypes: ['CollectionPage'],
+    };
+    const rival = {
+      title: 'Rival',
+      h1: 'Rival',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: ['¿Qué pulidora necesito para empezar?'],
+      hasFaqSchema: false,
+      schemaTypes: [],
+    };
+    const enriched = enrichSpyGaps(
+      [
+        {
+          area: 'Intención de búsqueda',
+          problem: 'Tu web vende pulidoras pero no responde preguntas comunes.',
+          suggestion:
+            "Identificá las 3-5 preguntas más frecuentes que tus clientes te hacen sobre pulidoras (ej: '¿Qué pulidora necesito?').",
+        },
+      ],
+      own,
+      rival
+    );
+    expect(enriched[0].requiresLiveVerify).toBe(true);
+    expect(enriched[0].verifyKind).toBe('faq_visible');
+    expect(enriched[0].area).toMatch(/Preguntas/i);
+  });
 });

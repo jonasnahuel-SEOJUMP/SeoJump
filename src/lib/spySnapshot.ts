@@ -152,6 +152,19 @@ export function isFaqGapArea(area: string): boolean {
   return /pregunta|faq/i.test(area || '');
 }
 
+/**
+ * La IA a menudo nombra el gap "Intención de búsqueda" o "Contenido/Temas"
+ * aunque la acción sea "agregá preguntas frecuentes". Esos deben verificarse
+ * en vivo (faq_visible), no con honor system.
+ */
+export function gapSuggestsAddingFaqs(area: string, problem: string, suggestion: string): boolean {
+  if (isFaqGapArea(area)) return true;
+  const txt = `${area} ${problem} ${suggestion}`.toLowerCase();
+  const mentionsFaq = /pregunta(?:s)?\s+frecuentes|\bfaqs?\b|preguntas?\s+comunes|preguntas?\s+que/.test(txt);
+  const asksToAdd = /agreg|sumá|suma |identificá|escrib|respond|incluí|incluir|poné|poner/.test(txt);
+  return mentionsFaq && asksToAdd;
+}
+
 /** ¿El gap de Schema se refiere a Product (no a FAQ)? Se decide por el texto. */
 export function isProductSchemaGap(area: string, problem: string, suggestion: string): boolean {
   const txt = `${area} ${problem} ${suggestion}`.toLowerCase();
@@ -257,9 +270,14 @@ export function enrichSpyGaps(
       return out;
     }
 
-    if (isFaqGapArea(g.area)) {
+    if (isFaqGapArea(g.area) || gapSuggestsAddingFaqs(g.area, g.problem, g.suggestion)) {
       out.requiresLiveVerify = true;
       out.verifyKind = 'faq_visible';
+      // Si el área no decía FAQ pero el texto pide preguntas, renombramos el
+      // cartel para que el usuario entienda qué se va a chequear.
+      if (!isFaqGapArea(g.area) && gapSuggestsAddingFaqs(g.area, g.problem, g.suggestion)) {
+        out.area = `${g.area} · Preguntas`;
+      }
       const ownFaqCount = own?.faqQuestions?.length ?? 0;
       // Corrección de contradicción: la IA a veces dice "no tenés preguntas"
       // aunque el detector determinístico YA encontró FAQ visibles en tu HTML

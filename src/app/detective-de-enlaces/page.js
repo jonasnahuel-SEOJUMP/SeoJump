@@ -445,6 +445,12 @@ export default function DetectiveDeEnlaces() {
     const schemaKindLabel = gap.schemaKind === "product" ? "Product" : "FAQPage";
     const needsLive = !!gap.requiresLiveVerify && gap.verifyKind && gap.verifyKind !== "honor";
     if (!needsLive) {
+      // Honor system: título/H1/etc. — lo dejamos claro para no fingir verificación.
+      setSpyVerifyInfo((prev) => ({
+        ...prev,
+        [identifier]:
+          "Marcamos este paso como hecho sin chequear tu web en vivo (no es un cambio de FAQ/Schema que podamos leer automáticamente).",
+      }));
       markSpyFixComplete(identifier);
       return;
     }
@@ -1564,6 +1570,11 @@ export default function DetectiveDeEnlaces() {
                           <p className="text-xs text-slate-500 font-bold">Lo que Google, ChatGPT y Gemini pueden citar</p>
                         </div>
                       </div>
+                      <p className="text-[11px] font-bold text-slate-500 leading-snug">
+                        Este panel es un snapshot del último espionaje. Si acabás de agregar FAQ o Schema, tocá{" "}
+                        <span className="text-slate-300">“Espiar otro competidor”</span> y volvé a espiar la misma URL
+                        (o usá <span className="text-slate-300">Verificar en mi web</span> en la misión) para actualizarlo.
+                      </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-2">
                           <p className="text-xs font-black text-emerald-400 uppercase">🟢 Vos</p>
@@ -1656,6 +1667,7 @@ export default function DetectiveDeEnlaces() {
                       else if (isSchema && !effectiveSchemaCode) spyBtnLabel = "🔎 GENERAR MI CÓDIGO SCHEMA";
                       else if (isSchema && effectiveSchemaCode) spyBtnLabel = "✅ YA LO PEGUÉ — VERIFICAR";
                       else if (needsLive) spyBtnLabel = "🔎 VERIFICAR EN MI WEB";
+                      else spyBtnLabel = "✅ MARCAR HECHO (sin chequear)";
 
                       // La comparación de la IA se equivocó: tu página YA tiene este
                       // Schema (lo detectamos al leer tu HTML al espiar). No hay nada
@@ -1760,13 +1772,17 @@ export default function DetectiveDeEnlaces() {
                                   {effectiveSchemaCode}
                                 </pre>
                                 <p className="text-[11px] font-bold text-amber-300/90 leading-snug">
-                                  ⚠️ Importante: no lo pegues en un párrafo normal de WordPress/Elementor — suelen borrar el{" "}
-                                  <code className="text-amber-200">&lt;script&gt;</code>. Usá “HTML personalizado” / código en el theme, o seguí la guía.
+                                  ⚠️ Importante: no lo pegues en un párrafo normal ni en la{" "}
+                                  <strong className="text-amber-200">descripción de una categoría</strong>{" "}
+                                  (Productos → Categorías): Wordfence suele bloquear el{" "}
+                                  <code className="text-amber-200">&lt;script&gt;</code> con error 403.
+                                  Usá la guía de abajo (pestaña Categoría / HTML personalizado / plugin SEO).
                                 </p>
                               </div>
                               <SchemaPasteGuideBox
                                 playClick={playClick}
                                 heading="¿Dónde lo pego? Elegí tu editor"
+                                pageUrl={ownComparisonUrl || spyResult?.comparedAgainst || siteUrl || ""}
                               />
                             </div>
                           )}
