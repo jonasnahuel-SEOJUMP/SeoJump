@@ -3573,7 +3573,7 @@ export async function verifySpyGap(
           success: false,
           missingAfterPaste: true,
           error:
-            'Todavía no vemos el Schema FAQPage en tu HTML. Causas típicas: (1) WordPress/Elementor borró el <script> al guardar — pegalo como HTML personalizado / en el theme, no en un párrafo; (2) la URL no es la misma página; (3) falta publicar o borrar caché. Revisá, guardá y reintentá.',
+            'Todavía no vemos el Schema FAQPage en tu HTML. Causas típicas: (1) Wordfence u otro firewall bloqueó el guardado al pegar el <script> en la descripción de una categoría — no lo pegues ahí; (2) WordPress/Elementor borró el <script> al guardar — usá HTML personalizado / plugin SEO / Code Snippets; (3) la URL no es la misma página; (4) falta publicar o borrar caché. Revisá, guardá y reintentá.',
         };
       }
       // El Schema no está, pero si ya tenés las preguntas visibles generamos el

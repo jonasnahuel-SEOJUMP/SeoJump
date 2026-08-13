@@ -8,6 +8,7 @@ export const SCHEMA_INSTALL_METHODS = [
   { id: 'wp_blocks', label: 'WordPress — Editor de bloques', shortLabel: 'Bloques', icon: '🧱', group: 'wp' },
   { id: 'wp_classic', label: 'WordPress — Editor clásico', shortLabel: 'Clásico', icon: '📝', group: 'wp' },
   { id: 'wp_builder', label: 'WordPress — Elementor / Divi / maquetador', shortLabel: 'Maquetador', icon: '🎨', group: 'wp' },
+  { id: 'wp_category', label: 'WordPress — Categoría WooCommerce', shortLabel: 'Categoría', icon: '📁', group: 'wp' },
   { id: 'shopify', label: 'Shopify', shortLabel: 'Shopify', icon: '🛍️', group: 'other' },
   { id: 'tiendanube', label: 'Tiendanube', shortLabel: 'Tiendanube', icon: '☁️', group: 'other' },
   { id: 'other', label: 'Otra plataforma / No sé', shortLabel: 'Otra', icon: '❓', group: 'other' },
@@ -18,7 +19,7 @@ export const SCHEMA_PASTE_BLOG_HREF = '/blog/donde-pegar-codigo-schema-wordpress
 const STORAGE_KEY = 'seojump_schema_install_method';
 const VALID_METHODS = new Set(SCHEMA_INSTALL_METHODS.map((method) => method.id));
 
-const WP_METHODS = new Set(['wp_blocks', 'wp_classic', 'wp_builder']);
+const WP_METHODS = new Set(['wp_blocks', 'wp_classic', 'wp_builder', 'wp_category']);
 
 function isCompatibleWithPlatform(methodId, platformId) {
   if (!platformId) return true;
@@ -151,7 +152,25 @@ export function detectSchemaInstallHints(html, pageType = '') {
     };
   }
 
+  // Categoría Woo: NO se edita como un post; la descripción de categoría + Wordfence
+  // suelen romper el <script>. Guiamos a la pestaña específica.
+  if (type === 'category' || type === 'collection') {
+    return {
+      suggestedMethod: 'wp_category',
+      confidence: 'alta',
+      reasons: [
+        'Es una categoría/colección: no pegues el Schema en Productos → Categorías → Descripción (Wordfence suele bloquearlo).',
+      ],
+    };
+  }
+
   return { suggestedMethod: null, confidence: null, reasons: [] };
+}
+
+/** Heurística de URL: categoría Woo / archive de productos. */
+export function isLikelyCategoryUrl(url = '') {
+  const u = String(url || '').toLowerCase();
+  return /categoria-producto|product-category|\/categorias?\/|\/category\/|\/coleccion(?:es)?\//.test(u);
 }
 
 /**
@@ -277,6 +296,20 @@ const GUIDES = {
     ],
     warning:
       'Si estás editando una plantilla global que se usa en muchos productos o páginas, no pegues un código específico allí: aparecería repetido con datos incorrectos. Editá solo esa página o pedí ayuda a quien administra tu plantilla.',
+  },
+  wp_category: {
+    title: 'Categoría WooCommerce (archivo de productos)',
+    recognition:
+      'Elegí esta opción si la URL es una categoría (ej. /categoria-producto/pulidoras). No se edita como un producto suelto.',
+    steps: [
+      '**No pegues el código** en Productos → Categorías → Descripción de la categoría. Wordfence y otros firewalls suelen bloquear el `<script>` ahí (error 403).',
+      'Opción A (recomendada): abrí **Rank Math**, **Yoast** u otro plugin SEO → la categoría → Schema / datos estructurados, y cargá FAQ ahí (o pegá el JSON-LD en el campo de Schema personalizado del plugin).',
+      'Opción B: Elementor Theme Builder / plantilla de **archivo de categoría** → agregá un widget **HTML** solo en esa categoría y pegá el código.',
+      'Opción C: plugin **Code Snippets** (o functions del tema hijo) que imprima el JSON-LD solo cuando `is_product_category("pulidoras")` (o el slug de tu categoría).',
+      'Publicá / guardá, borrá caché (WordPress + hosting + Wordfence si cachea), y volvé a SEO Jump a **Ya lo pegué — verificar**.',
+    ],
+    warning:
+      'Pegar `<script type="application/ld+json">` en la descripción de una categoría (edit-tags.php) es la causa #1 del cartel de Wordfence. Usá plugin SEO, plantilla de categoría o Code Snippets.',
   },
   shopify: {
     title: 'Shopify',

@@ -9,6 +9,7 @@ import {
   getStoredSchemaInstallMethod,
   setStoredSchemaInstallMethod,
   getMethodLabel,
+  isLikelyCategoryUrl,
 } from '../lib/schemaPasteGuide';
 
 /** Renderiza **negrita** de markdown como <strong> (evita mostrar asteriscos literales). */
@@ -41,17 +42,27 @@ export default function SchemaPasteGuideBox({
   onMethodChange,
   heading = '¿Con qué editor modificás esta página?',
   showBlogLink = true,
+  /** URL de la página propia (para sugerir pestaña Categoría Woo). */
+  pageUrl = '',
 }) {
   const isControlled = typeof method === 'string';
   const [internalMethod, setInternalMethod] = useState('');
+  const categoryPage = isLikelyCategoryUrl(pageUrl);
 
   useEffect(() => {
     if (!isControlled) {
-      setInternalMethod(getStoredSchemaInstallMethod());
+      const stored = getStoredSchemaInstallMethod();
+      // En categorías, priorizamos la guía correcta (Wordfence) sobre un stored viejo.
+      if (categoryPage && (!stored || stored.startsWith('wp_'))) {
+        setInternalMethod(stored === 'wp_category' ? stored : 'wp_category');
+      } else {
+        setInternalMethod(stored);
+      }
     }
-  }, [isControlled]);
+  }, [isControlled, categoryPage]);
 
   const installMethod = isControlled ? method : internalMethod;
+  const effectiveSuggested = suggestedEditor || (categoryPage ? 'wp_category' : null);
 
   const selectInstallMethod = (methodId) => {
     if (!methodId) return;
@@ -77,8 +88,19 @@ export default function SchemaPasteGuideBox({
         <p className="text-sm font-black text-white block mb-1">{heading}</p>
         <p className="text-xs font-bold text-slate-400 leading-relaxed mb-3">
           Tocá la pestaña correcta. La home suele usar bloques o un maquetador; un producto a veces
-          usa el editor clásico. No son lo mismo.
+          usa el editor clásico; una <strong className="text-slate-300">categoría</strong> no se
+          edita igual que un producto.
         </p>
+
+        {categoryPage && (
+          <div className="rounded-lg border border-amber-500/50 bg-amber-950/40 p-3 mb-3">
+            <p className="text-xs font-bold text-amber-100 leading-relaxed">
+              ⚠️ Detectamos que es una <strong>categoría</strong>. No pegues el código en
+              Productos → Categorías → Descripción: Wordfence u otros firewalls suelen
+              bloquearlo (error 403). Usá la pestaña <strong>Categoría</strong> abajo.
+            </p>
+          </div>
+        )}
 
         <p className="text-[10px] font-black uppercase tracking-wider text-slate-500 mb-2">
           WordPress
@@ -86,7 +108,7 @@ export default function SchemaPasteGuideBox({
         <div className="flex flex-wrap gap-2 mb-3" role="tablist" aria-label="Editor WordPress">
           {wpMethods.map((method) => {
             const active = installMethod === method.id;
-            const isSuggested = suggestedEditor === method.id;
+            const isSuggested = effectiveSuggested === method.id;
             return (
               <button
                 key={method.id}
@@ -119,7 +141,7 @@ export default function SchemaPasteGuideBox({
         <div className="flex flex-wrap gap-2" role="tablist" aria-label="Otras plataformas">
           {otherMethods.map((method) => {
             const active = installMethod === method.id;
-            const isSuggested = suggestedEditor === method.id;
+            const isSuggested = effectiveSuggested === method.id;
             return (
               <button
                 key={method.id}
@@ -150,13 +172,13 @@ export default function SchemaPasteGuideBox({
       {editorConflictMsg && (
         <div className="rounded-lg border border-amber-500/40 bg-amber-950/30 p-3 space-y-2">
           <p className="text-xs font-bold text-amber-200 leading-relaxed">⚠️ {editorConflictMsg}</p>
-          {suggestedEditor && (
+          {effectiveSuggested && (
             <button
               type="button"
-              onClick={() => selectInstallMethod(suggestedEditor)}
+              onClick={() => selectInstallMethod(effectiveSuggested)}
               className="text-xs font-black text-cyan-300 underline underline-offset-2 hover:text-cyan-200"
             >
-              Usar {getMethodLabel(suggestedEditor)}
+              Usar {getMethodLabel(effectiveSuggested)}
             </button>
           )}
         </div>
