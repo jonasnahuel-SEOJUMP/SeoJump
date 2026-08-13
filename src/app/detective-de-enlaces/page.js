@@ -121,6 +121,11 @@ export default function DetectiveDeEnlaces() {
     if (params.get("view") === "spy") {
       setDetectiveView("spy");
     }
+    // Prefill desde la landing (form GET → /comenzar?spy=1&url=…)
+    const prefill = (params.get("url") || "").trim();
+    if (prefill && prefill.length <= 500) {
+      setCompetitorUrl(prefill);
+    }
   }, []);
 
   // ── Indexation State (kept from original) ──

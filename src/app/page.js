@@ -3,13 +3,13 @@ import HomeApp from "./HomeApp";
 import LandingShell from "../components/LandingShell";
 
 export const metadata = {
-  title: "Espiá a tu competencia gratis en Google — y superala | SEO Jump",
+  title: "Espiá a tu competencia gratis — pegá su URL | SEO Jump",
   description:
-    "Espiá a tu competencia gratis: pegá la URL de un rival y la IA te muestra qué hace mejor en Google. Después SEO Jump te da misiones diarias para superarla — con AEO para ChatGPT y Gemini.",
+    "Pegá la URL de un rival y descubrí qué hace mejor en Google. Sin Semrush. Después, misiones diarias para superarlo — y AEO para ChatGPT y Gemini.",
   openGraph: {
     title: "Espiá a tu competencia gratis — SEO Jump",
     description:
-      "Espiá a tu competencia en Google gratis, sin Semrush. Descubrí sus brechas y superala con misiones diarias, Quick Wins con IA y AEO.",
+      "Pegá la URL de tu rival. Te decimos qué te gana y qué cambiar hoy. Luego, una misión por día.",
     type: "website",
     locale: "es_AR",
   },

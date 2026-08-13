@@ -5,8 +5,8 @@ import { useAudio } from "../../hooks/useAudio";
 
 /**
  * Landing dedicada para ads / campañas del Espía de la Competencia.
- * Misma UI que la home (variant spy). Los CTA de entrada usan Server Actions
- * dentro de LandingPage, así que no hace falta lógica de sesión acá.
+ * Misma UI que la home (variant spy). El cajón de URL va a /comenzar?spy=1&url=…
+ * vía form GET (Route Handler), sin lógica de sesión acá.
  */
 export default function EspiaCompetenciaPage() {
   const { playClick } = useAudio();
