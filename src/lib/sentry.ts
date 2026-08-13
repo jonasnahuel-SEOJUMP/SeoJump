@@ -9,7 +9,9 @@ export function getSentryDsn(): string {
     process.env['SENTRY_DSN'] ||
     process.env['NEXT_PUBLIC_SENTRY_DSN'] ||
     '';
-  return String(raw).trim();
+  const dsn = String(raw).trim();
+  if (!/^https?:\/\//i.test(dsn)) return '';
+  return dsn;
 }
 
 /** True si hay DSN configurado (Vercel / .env local). */

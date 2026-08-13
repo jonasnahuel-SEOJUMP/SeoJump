@@ -2,6 +2,22 @@
 export const CANONICAL_SITE_URL = "https://seo-jump.ai";
 
 /**
+ * Devuelve una URL http(s) absoluta o null si el valor no sirve para `new URL()`.
+ */
+function normalizeHttpUrl(value) {
+  if (!value || typeof value !== "string") return null;
+  const trimmed = value.trim().replace(/\/$/, "");
+  if (!trimmed) return null;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "http:" && url.protocol !== "https:") return null;
+    return trimmed;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Base URL para sitemap.xml y robots.txt.
  * Siempre el dominio canónico; nunca *.vercel.app.
  */
@@ -11,16 +27,21 @@ export function getSitemapBaseUrl() {
 
 /** URL canónica del sitio (metadata, redirects, previews). */
 export function getSiteUrl() {
-  const fromEnv = process.env.NEXT_PUBLIC_APP_URL?.trim();
-  if (fromEnv) return fromEnv.replace(/\/$/, "");
+  const fromEnv = normalizeHttpUrl(process.env.NEXT_PUBLIC_APP_URL);
+  if (fromEnv) return fromEnv;
 
   // Producción en Vercel: dominio custom, no el hostname interno del deploy.
   if (process.env.VERCEL_ENV === "production") {
     return CANONICAL_SITE_URL;
   }
 
-  const vercel = process.env.VERCEL_URL?.trim();
-  if (vercel) return `https://${vercel.replace(/\/$/, "")}`;
+  const vercelHost = process.env.VERCEL_URL?.trim().replace(/\/$/, "");
+  if (vercelHost) {
+    const fromVercel = normalizeHttpUrl(
+      /^https?:\/\//i.test(vercelHost) ? vercelHost : `https://${vercelHost}`
+    );
+    if (fromVercel) return fromVercel;
+  }
 
   return CANONICAL_SITE_URL;
 }
