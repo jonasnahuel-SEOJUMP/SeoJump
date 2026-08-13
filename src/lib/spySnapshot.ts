@@ -11,6 +11,8 @@ import {
   extractFaqPairs,
   extractExistingStructuredData,
   buildFaqJsonLd,
+  buildFaqVisibleHtml,
+  buildFaqVisiblePlain,
   type FaqPair,
 } from './comprehension';
 
@@ -27,6 +29,12 @@ export type SpyGapEnriched = {
   suggestion: string;
   /** Código Schema FAQ listo para pegar (si aplica). */
   schemaCode?: string;
+  /** JSON-LD puro (sin <script>) — más seguro de copiar / mostrar. */
+  schemaJson?: string;
+  /** HTML visible de FAQ (H2/H3/p) — sí se puede pegar en descripción de categoría. */
+  faqContentHtml?: string;
+  /** Misma FAQ en texto plano. */
+  faqContentPlain?: string;
   /** Nota / instrucción sobre el Schema. */
   schemaNote?: string;
   /** Preguntas del rival que el usuario todavía no responde. */
@@ -142,6 +150,39 @@ export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSn
 
 function normQ(q: string): string {
   return q.trim().toLowerCase();
+}
+
+/** Arma pares Q&A para el bloque de contenido visible (prioriza respuestas del rival). */
+function pairsForVisibleContent(
+  questions: string[],
+  rivalPairs: FaqPair[],
+  ownPairs: FaqPair[]
+): Array<{ question: string; answer?: string }> {
+  const byQ = new Map<string, string>();
+  for (const p of [...rivalPairs, ...ownPairs]) {
+    const k = normQ(p.question);
+    if (k && p.answer) byQ.set(k, p.answer);
+  }
+  return (questions || []).filter(Boolean).map((q) => ({
+    question: q,
+    answer: byQ.get(normQ(q)) || '',
+  }));
+}
+
+function attachFaqContent(
+  out: SpyGapEnriched,
+  pairs: Array<{ question: string; answer?: string }>,
+  heading?: string
+) {
+  if (!pairs.length) return;
+  out.faqContentHtml = buildFaqVisibleHtml(pairs, { heading });
+  out.faqContentPlain = buildFaqVisiblePlain(pairs, { heading });
+}
+
+function attachSchemaCode(out: SpyGapEnriched, pairs: FaqPair[]) {
+  if (!pairs.length) return;
+  out.schemaCode = buildFaqJsonLd(pairs); // con <script> (compat verify/copy avanzado)
+  out.schemaJson = buildFaqJsonLd(pairs, { wrapScript: false });
 }
 
 export function isSchemaGapArea(area: string): boolean {
@@ -261,11 +302,18 @@ export function enrichSpyGaps(
         out.schemaNote = OWN_UNREADABLE_NOTE;
       } else {
         out.schemaNote =
-          'Este es el ÚLTIMO paso. Primero asegurate de tener las preguntas visibles en tu página; después generamos el código Schema para pegar.';
+          'Último paso técnico: el Schema NO va en la descripción de la categoría. Primero el contenido visible; después el JSON-LD vía plugin SEO / HTML seguro.';
       }
-      // Si ya tiene FAQ visibles, adelantamos el código.
+      // Contenido AEO primero (si faltan preguntas), Schema después.
+      if (questionsToAdd.length) {
+        attachFaqContent(
+          out,
+          pairsForVisibleContent(questionsToAdd, rival.faqPairs || [], ownPairs),
+          'Preguntas frecuentes'
+        );
+      }
       if (ownPairs.length >= 1) {
-        out.schemaCode = buildFaqJsonLd(ownPairs);
+        attachSchemaCode(out, ownPairs);
       }
       return out;
     }
@@ -303,10 +351,11 @@ export function enrichSpyGaps(
           out.verifyKind = 'schema_faq';
           out.requiresLiveVerify = true;
           out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles, pero falta el bloque técnico Schema FAQPage (JSON-LD) que leen Google y las IA. No es lo mismo que el texto de las FAQ.`;
-          out.suggestion = 'Generá el Schema FAQPage con tus preguntas actuales y pegalo en tu página.';
-          out.schemaCode = buildFaqJsonLd(ownPairs);
+          out.suggestion =
+            'Usá el JSON-LD abajo vía Rank Math / Yoast / HTML personalizado. No lo pegues en la descripción de una categoría.';
+          attachSchemaCode(out, ownPairs);
           out.schemaNote =
-            'Te armamos el código con tus preguntas actuales. Copialo, elegí tu editor abajo y pegalo donde indica la guía.';
+            'El Schema es invisible para visitantes. No va en la descripción de WordPress (Wordfence lo bloquea).';
           return out;
         }
         // Ya hay otro gap de Schema FAQ (o no hay pares): solo informamos.
@@ -320,10 +369,18 @@ export function enrichSpyGaps(
       }
       if (questionsToAdd.length) {
         out.questionsToAdd = questionsToAdd;
+        attachFaqContent(
+          out,
+          pairsForVisibleContent(questionsToAdd, rival.faqPairs || [], ownPairs),
+          'Preguntas frecuentes'
+        );
         // Si ya tiene FAQ pero el rival cubre otras, reencuadramos el problema
         // para no decir "no tenés preguntas".
         if (ownReadable && ownFaqCount > 0) {
           out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles, pero el competidor cubre otras que te conviene sumar.`;
+        } else {
+          out.suggestion =
+            'Copiá el bloque de contenido AEO (HTML) y pegalo en la descripción/contenido de tu página. Después verificamos en vivo.';
         }
       }
       return out;

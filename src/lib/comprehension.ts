@@ -43,8 +43,12 @@ export type StructuredOfferType = 'faq' | 'product' | 'article' | 'organization'
 
 export type StructuredOffer = {
   type: StructuredOfferType;
-  /** JSON-LD listo para pegar. */
+  /** JSON-LD listo para pegar (históricamente con <script>; preferir codeJson en UI). */
   code: string;
+  /** JSON-LD puro sin <script> (más seguro de copiar). */
+  codeJson?: string;
+  /** HTML visible de FAQ (solo type=faq) — sí se puede pegar en descripción. */
+  contentHtml?: string;
   /** Título de la misión (sin jerga Schema). */
   missionTitle: string;
   /** Qué hace, en lenguaje simple. */
@@ -406,7 +410,7 @@ export function extractEntities(title: string, h1: string, max = 8): string[] {
   return entities.slice(0, max);
 }
 
-export function buildFaqJsonLd(pairs: FaqPair[]): string {
+export function buildFaqJsonLd(pairs: FaqPair[], opts?: { wrapScript?: boolean }): string {
   const mainEntity = pairs.map((p) => ({
     '@type': 'Question',
     name: p.question,
@@ -420,7 +424,78 @@ export function buildFaqJsonLd(pairs: FaqPair[]): string {
     '@type': 'FAQPage',
     mainEntity,
   };
+  // Por defecto seguimos envolviendo en <script> (compat). Para UI segura
+  // preferimos JSON puro (wrapScript: false) — Wordfence no lo bloquea igual.
+  if (opts?.wrapScript === false) {
+    return JSON.stringify(payload, null, 2);
+  }
   return wrapJsonLd(payload);
+}
+
+function escapeHtmlText(s: string): string {
+  return String(s || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
+ * Contenido AEO visible (sin <script>): listo para pegar en la descripción
+ * de una categoría Woo / editor de página. Wordfence NO lo bloquea.
+ */
+export function buildFaqVisibleHtml(
+  pairs: Array<{ question: string; answer?: string }>,
+  opts?: { heading?: string }
+): string {
+  const list = (Array.isArray(pairs) ? pairs : [])
+    .map((p) => ({
+      question: String(p?.question || '').trim(),
+      answer: String(p?.answer || '').trim(),
+    }))
+    .filter((p) => p.question.length >= 8);
+  if (!list.length) return '';
+
+  const heading = (opts?.heading || 'Preguntas frecuentes').trim();
+  const parts: string[] = [`<h2>${escapeHtmlText(heading)}</h2>`];
+  for (const p of list) {
+    parts.push(`<h3>${escapeHtmlText(p.question)}</h3>`);
+    if (p.answer.length >= 20) {
+      parts.push(`<p>${escapeHtmlText(p.answer)}</p>`);
+    } else {
+      parts.push(
+        '<p>Escribí acá tu respuesta en 2–4 oraciones, con tu experiencia o datos propios (no copies texto genérico de IA).</p>'
+      );
+    }
+  }
+  return parts.join('\n\n');
+}
+
+/** Misma FAQ en texto plano (editores que no aceptan HTML). */
+export function buildFaqVisiblePlain(
+  pairs: Array<{ question: string; answer?: string }>,
+  opts?: { heading?: string }
+): string {
+  const list = (Array.isArray(pairs) ? pairs : [])
+    .map((p) => ({
+      question: String(p?.question || '').trim(),
+      answer: String(p?.answer || '').trim(),
+    }))
+    .filter((p) => p.question.length >= 8);
+  if (!list.length) return '';
+
+  const heading = (opts?.heading || 'Preguntas frecuentes').trim();
+  const lines: string[] = [heading, ''];
+  for (const p of list) {
+    lines.push(p.question);
+    lines.push(
+      p.answer.length >= 20
+        ? p.answer
+        : 'Escribí acá tu respuesta en 2–4 oraciones, con tu experiencia o datos propios.'
+    );
+    lines.push('');
+  }
+  return lines.join('\n').trim();
 }
 
 function wrapJsonLd(payload: unknown): string {
@@ -594,15 +669,17 @@ export function resolveStructuredOffer(
     return {
       type: 'faq',
       code: buildFaqJsonLd(questions),
+      codeJson: buildFaqJsonLd(questions, { wrapScript: false }),
+      contentHtml: buildFaqVisibleHtml(questions, { heading: 'Preguntas frecuentes' }),
       missionTitle: 'Hacer que las IA lean tus preguntas',
       description: `Esta página responde ${questions.length} ${
         questions.length === 1 ? 'pregunta' : 'preguntas'
-      }. Generamos el bloque (invisible para tus visitantes) que Google y las IA leen para entenderlas.`,
-      copyLabel: 'Copiar código listo para pegar',
+      }. Primero asegurate de que estén visibles en la página; después instalá el Schema (código técnico) con un plugin SEO o HTML seguro — nunca en la descripción de una categoría.`,
+      copyLabel: 'Copiar Schema (JSON-LD)',
       note:
         questions.length === 1
           ? 'Con 1 pregunta las IA ya la entienden. Para el resultado enriquecido de Google, sumá otra pregunta con su respuesta.'
-          : undefined,
+          : 'El Schema es invisible. No lo pegues en Productos → Categorías → Descripción (Wordfence lo bloquea).',
     };
   }
 

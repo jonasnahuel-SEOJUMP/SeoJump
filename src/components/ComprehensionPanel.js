@@ -407,11 +407,49 @@ export default function ComprehensionPanel({
               <div className="rounded-lg bg-slate-900/60 border border-slate-700/60 p-3 space-y-1">
                 <p className="text-xs font-black text-slate-300">¿Qué es este código?</p>
                 <p className="text-xs font-bold text-slate-400 leading-relaxed">
-                  Es un pequeño bloque técnico (lo que Google llama «datos estructurados»).
-                  <span className="text-slate-200"> No cambia cómo se ve tu página: es invisible para quien la visita.</span> Solo
-                  le explica a Google y a las IA, en su idioma, de qué trata esta página.
+                  Es un bloque técnico invisible (datos estructurados).
+                  <span className="text-slate-200"> No cambia cómo se ve tu página.</span> Solo
+                  le explica a Google y a las IA de qué trata.
+                  {offer.type === 'faq' && (
+                    <>
+                      {' '}
+                      <strong className="text-amber-200">
+                        No lo pegues en la descripción de una categoría WooCommerce
+                      </strong>
+                      {' '}
+                      (Wordfence suele devolver 403). Usá Rank Math / Yoast o HTML personalizado.
+                    </>
+                  )}
                 </p>
               </div>
+
+              {offer.type === 'faq' && offer.contentHtml && (
+                <div className="rounded-lg border border-emerald-500/30 bg-emerald-950/20 p-3 space-y-2">
+                  <p className="text-xs font-black text-emerald-300 uppercase">Contenido AEO (si todavía no está en la página)</p>
+                  <p className="text-[11px] font-bold text-slate-400 leading-relaxed">
+                    Esto sí se puede pegar en la descripción o en el editor. Son las preguntas visibles.
+                  </p>
+                  <pre className="max-h-32 overflow-auto text-[10px] text-slate-400 whitespace-pre-wrap">
+                    {offer.contentHtml}
+                  </pre>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (playClick) playClick();
+                      try {
+                        await navigator.clipboard.writeText(offer.contentHtml);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2500);
+                      } catch {
+                        /* ignore */
+                      }
+                    }}
+                    className="text-xs font-black text-emerald-300 underline"
+                  >
+                    Copiar HTML de preguntas
+                  </button>
+                </div>
+              )}
 
               <SchemaPasteGuideBox
                 playClick={playClick}
@@ -419,24 +457,36 @@ export default function ComprehensionPanel({
                 suggestedEditor={suggestedEditor}
                 editorConflictMsg={editorConflictMsg}
                 onMethodChange={selectInstallMethod}
-                heading="1. ¿Con qué editor modificás esta página?"
+                heading="1. ¿Con qué editor / plugin instalás el Schema?"
+                pageUrl={map?.pageUrl || ''}
               />
 
               <div className="space-y-2">
                 <p className="text-sm font-black text-white">
-                  2. Copiá, pegá siguiendo la guía y comprobalo
+                  2. Copiá el Schema, instalalo según la guía y comprobalo
                 </p>
                 <div className="flex flex-wrap gap-2">
                   <button
                     type="button"
-                    onClick={handleCopy}
+                    onClick={async () => {
+                      const toCopy = offer.codeJson || offerCode;
+                      if (!toCopy) return;
+                      if (playClick) playClick();
+                      try {
+                        await navigator.clipboard.writeText(toCopy);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2500);
+                      } catch {
+                        setVerifyMsg({ ok: false, text: 'No se pudo copiar. Seleccioná el código manualmente.' });
+                      }
+                    }}
                     disabled={!pasteGuide}
                     className="btn-3d bg-cyan-600 border-cyan-800 border-b-4 hover:bg-cyan-500 text-white text-sm font-black px-4 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     {copied
                       ? '✓ Copiado'
                       : pasteGuide
-                        ? `📋 ${offer.copyLabel || payload.guide?.copyLabel || 'Copiar código'}`
+                        ? `📋 ${offer.copyLabel || 'Copiar Schema'}`
                         : 'Primero elegí tu editor'}
                   </button>
                   <button
@@ -445,17 +495,17 @@ export default function ComprehensionPanel({
                     disabled={verifying || loading || !pasteGuide}
                     className="btn-3d bg-emerald-600 border-emerald-800 border-b-4 hover:bg-emerald-500 text-white text-sm font-black px-4 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    {verifying ? 'Verificando…' : 'Ya lo pegué (+40 XP)'}
+                    {verifying ? 'Verificando…' : 'Ya lo instalé (+40 XP)'}
                   </button>
                 </div>
               </div>
 
               <details className="text-xs text-slate-500">
                 <summary className="cursor-pointer font-black text-slate-400 hover:text-slate-300">
-                  Ver código (solo si tu plataforma lo pide)
+                  Ver código (JSON-LD / script)
                 </summary>
                 <pre className="mt-2 p-3 rounded-lg bg-black/40 overflow-x-auto text-[10px] text-slate-400 max-h-40">
-                  {offerCode}
+                  {offer.codeJson || offerCode}
                 </pre>
               </details>
             </div>

@@ -114,6 +114,7 @@ export default function DetectiveDeEnlaces() {
   // no pegó ningún código, así que dar puntos sería un falso positivo.
   const [spyAlreadyHad, setSpyAlreadyHad] = useState(new Set()); // Set<identifier>
   const [spyCopiedGap, setSpyCopiedGap] = useState(null);
+  // Qué se copió: 'content' | 'schema' | 'schema-script' (para feedback del botón)
   const { refresh: refreshCredits } = useSubscription();
 
   useEffect(() => {
@@ -517,16 +518,26 @@ export default function DetectiveDeEnlaces() {
         markSpyFixComplete(identifier);
       } else if (res.schemaReady && res.schemaCode && !alreadyGenerated) {
         // Primer click: contenido OK → código generado. Es progreso, no un error.
-        setSpyVerifiedCode((prev) => ({ ...prev, [identifier]: res.schemaCode }));
+        setSpyVerifiedCode((prev) => ({
+          ...prev,
+          [identifier]: res.schemaJson
+            ? { script: res.schemaCode, json: res.schemaJson }
+            : res.schemaCode,
+        }));
         setSpyVerifyInfo((prev) => ({
           ...prev,
           [identifier]:
-            "✅ Listo tu código. Copialo, pegalo en tu web, guardá/borrá caché y tocá “Ya lo pegué — verificar”.",
+            "✅ Listo tu Schema. Copiá el JSON-LD (abajo), instalalo con Rank Math/Yoast o HTML seguro — NO en la descripción de una categoría — y tocá “Ya lo pegué — verificar”.",
         }));
       } else {
         // Segundo click (o fallo): mostrar error visible — nunca “no hacer nada”.
         if (res.schemaCode && !alreadyGenerated) {
-          setSpyVerifiedCode((prev) => ({ ...prev, [identifier]: res.schemaCode }));
+          setSpyVerifiedCode((prev) => ({
+            ...prev,
+            [identifier]: res.schemaJson
+              ? { script: res.schemaCode, json: res.schemaJson }
+              : res.schemaCode,
+          }));
         }
         setSpyVerifyError((prev) => ({
           ...prev,
@@ -555,11 +566,11 @@ export default function DetectiveDeEnlaces() {
     }
   };
 
-  const handleCopySchema = async (code, identifier) => {
+  const handleCopySchema = async (code, identifier, kind = "schema") => {
     playClick();
     try {
       await navigator.clipboard.writeText(code);
-      setSpyCopiedGap(identifier);
+      setSpyCopiedGap(`${identifier}:${kind}`);
       setTimeout(() => setSpyCopiedGap(null), 2000);
     } catch {
       setSpyVerifyError((prev) => ({
@@ -1659,13 +1670,23 @@ export default function DetectiveDeEnlaces() {
                       const verifying = spyVerifyLoading === identifier;
                       const verifyErr = spyVerifyError[identifier];
                       const needsLive = !!gap.requiresLiveVerify && gap.verifyKind !== "honor";
-                      const effectiveSchemaCode = spyVerifiedCode[identifier] || gap.schemaCode;
+                      const verifiedRaw = spyVerifiedCode[identifier];
+                      const effectiveSchemaCode =
+                        (verifiedRaw && typeof verifiedRaw === "object" ? verifiedRaw.script : verifiedRaw) ||
+                        gap.schemaCode;
+                      const effectiveSchemaJson =
+                        (verifiedRaw && typeof verifiedRaw === "object" ? verifiedRaw.json : null) ||
+                        gap.schemaJson ||
+                        null;
+                      const schemaDisplay = effectiveSchemaJson || effectiveSchemaCode;
                       const isSchema = !!gap.isSchemaGap;
                       const schemaLabel = gap.schemaKind === "product" ? "Product" : "FAQ";
+                      const copiedContent = spyCopiedGap === `${identifier}:content`;
+                      const copiedSchema = spyCopiedGap === `${identifier}:schema` || spyCopiedGap === `${identifier}:schema-script`;
                       let spyBtnLabel = "✅ YA LO APLIQUÉ";
                       if (verifying) spyBtnLabel = "🔎 VERIFICANDO EN VIVO...";
-                      else if (isSchema && !effectiveSchemaCode) spyBtnLabel = "🔎 GENERAR MI CÓDIGO SCHEMA";
-                      else if (isSchema && effectiveSchemaCode) spyBtnLabel = "✅ YA LO PEGUÉ — VERIFICAR";
+                      else if (isSchema && !schemaDisplay) spyBtnLabel = "🔎 GENERAR MI SCHEMA FAQ";
+                      else if (isSchema && schemaDisplay) spyBtnLabel = "✅ YA LO INSTALÉ — VERIFICAR";
                       else if (needsLive) spyBtnLabel = "🔎 VERIFICAR EN MI WEB";
                       else spyBtnLabel = "✅ MARCAR HECHO (sin chequear)";
 
@@ -1720,14 +1741,49 @@ export default function DetectiveDeEnlaces() {
                             <FaqHowToBox />
                           )}
 
-                          {gap.questionsToAdd?.length > 0 && !resolved && (
-                            <div className="bg-cyan-950/20 border border-cyan-700/40 rounded-xl p-3 space-y-2">
-                              <p className="text-xs font-black text-cyan-300 uppercase">Preguntas a sumar</p>
-                              <ul className="space-y-1.5">
-                                {gap.questionsToAdd.map((q, qi) => (
-                                  <li key={qi} className="text-sm font-bold text-slate-200">❓ {q}</li>
-                                ))}
-                              </ul>
+                          {/* 1) CONTENIDO AEO — HTML visible (sí se pega en descripción) */}
+                          {(gap.faqContentHtml || gap.questionsToAdd?.length > 0) && !resolved && (
+                            <div className="rounded-xl border-2 border-emerald-500/35 bg-emerald-950/20 p-4 space-y-3">
+                              <div>
+                                <p className="text-xs font-black text-emerald-300 uppercase tracking-wider">
+                                  1 · Contenido AEO (texto visible)
+                                </p>
+                                <p className="text-xs font-bold text-slate-400 leading-relaxed mt-1">
+                                  Esto <strong className="text-slate-200">sí</strong> lo podés pegar en la descripción
+                                  de la categoría o en el editor de la página. Son preguntas y respuestas que ve el visitante.
+                                </p>
+                              </div>
+                              {gap.faqContentHtml ? (
+                                <>
+                                  <pre className="max-h-56 overflow-auto rounded-xl border border-emerald-700/40 bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-300 whitespace-pre-wrap break-words">
+                                    {gap.faqContentHtml}
+                                  </pre>
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleCopySchema(gap.faqContentHtml, identifier, "content")}
+                                      className="btn-3d bg-emerald-600 border-emerald-800 border-b-4 hover:bg-emerald-500 text-white !py-2 !px-4 text-xs font-black"
+                                    >
+                                      {copiedContent ? "✅ Copiado" : "📋 Copiar HTML (para pegar en la página)"}
+                                    </button>
+                                    {gap.faqContentPlain && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopySchema(gap.faqContentPlain, identifier, "content")}
+                                        className="btn-3d bg-slate-700 border-slate-800 border-b-4 hover:bg-slate-600 text-white !py-2 !px-4 text-xs font-black"
+                                      >
+                                        Copiar texto plano
+                                      </button>
+                                    )}
+                                  </div>
+                                </>
+                              ) : (
+                                <ul className="space-y-1.5">
+                                  {gap.questionsToAdd.map((q, qi) => (
+                                    <li key={qi} className="text-sm font-bold text-slate-200">❓ {q}</li>
+                                  ))}
+                                </ul>
+                              )}
                             </div>
                           )}
 
@@ -1735,18 +1791,19 @@ export default function DetectiveDeEnlaces() {
                             <div className="bg-slate-900/40 border border-slate-700 rounded-xl p-3">
                               <p className="text-xs font-black text-slate-300 uppercase mb-2">Cómo se hace (por pasos)</p>
                               <ol className="list-decimal list-inside space-y-1 text-xs font-bold text-slate-400">
-                                <li className={effectiveSchemaCode ? "line-through text-slate-600" : ""}>
+                                <li className={schemaDisplay || gap.faqContentHtml ? "line-through text-slate-600" : ""}>
                                   {gap.schemaKind === "product"
                                     ? "Tené la ficha del producto publicada (nombre, imagen, descripción)."
-                                    : "Agregá las preguntas y respuestas visibles en tu página."}
+                                    : "Pegá el contenido AEO (bloque de arriba) en tu página y publicá."}
                                 </li>
-                                <li className={effectiveSchemaCode ? "line-through text-slate-600" : ""}>
-                                  Tocá <span className="text-slate-200">“Generar mi código Schema”</span> y lo armamos con tus datos.
+                                <li className={schemaDisplay ? "line-through text-slate-600" : ""}>
+                                  Tocá <span className="text-slate-200">“Generar mi Schema FAQ”</span> si todavía no aparece el JSON-LD.
                                 </li>
-                                <li className={effectiveSchemaCode ? "text-slate-200" : ""}>
-                                  Copiá el código, elegí tu editor abajo y pegalo donde indica la guía.
+                                <li className={schemaDisplay ? "text-slate-200" : ""}>
+                                  Instalá el Schema con Rank Math / Yoast / HTML seguro (guía abajo).{" "}
+                                  <span className="text-amber-300">Nunca en la descripción de una categoría.</span>
                                 </li>
-                                <li>Tocá <span className="text-slate-200">“Ya lo pegué — verificar”</span> y confirmamos que quedó online.</li>
+                                <li>Tocá <span className="text-slate-200">“Ya lo instalé — verificar”</span>.</li>
                               </ol>
                             </div>
                           )}
@@ -1755,33 +1812,65 @@ export default function DetectiveDeEnlaces() {
                             <p className="text-xs font-bold text-slate-400 leading-relaxed">{gap.schemaNote}</p>
                           )}
 
-                          {effectiveSchemaCode && !alreadyHad && (
-                            <div className="space-y-3">
+                          {/* 2) SCHEMA — código técnico (NO descripción WP) */}
+                          {schemaDisplay && !alreadyHad && (
+                            <div className="space-y-3 rounded-xl border-2 border-amber-500/35 bg-amber-950/15 p-4">
+                              <div>
+                                <p className="text-xs font-black text-amber-200 uppercase tracking-wider">
+                                  2 · Schema FAQ {schemaLabel} (código técnico)
+                                </p>
+                                <p className="text-xs font-bold text-slate-400 leading-relaxed mt-1">
+                                  Esto es <strong className="text-slate-200">invisible</strong> para tus visitantes.
+                                  Le habla a Google y a las IA.{" "}
+                                  <strong className="text-amber-200">No lo pegues en Productos → Categorías → Descripción</strong>
+                                  {" "}(Wordfence lo bloquea con error 403).
+                                </p>
+                              </div>
                               <div className="space-y-2">
-                                <div className="flex items-center justify-between gap-2">
-                                  <p className="text-xs font-black text-duo-yellow uppercase">Código Schema {schemaLabel} (listo para pegar)</p>
+                                <div className="flex flex-wrap items-center justify-between gap-2">
+                                  <p className="text-xs font-black text-duo-yellow uppercase">
+                                    {effectiveSchemaJson ? "JSON-LD (recomendado copiar esto)" : `Código Schema ${schemaLabel}`}
+                                  </p>
                                   <button
                                     type="button"
-                                    onClick={() => handleCopySchema(effectiveSchemaCode, identifier)}
+                                    onClick={() =>
+                                      handleCopySchema(
+                                        effectiveSchemaJson || effectiveSchemaCode,
+                                        identifier,
+                                        "schema"
+                                      )
+                                    }
                                     className="btn-3d btn-yellow !py-1.5 !px-3 text-xs font-black"
                                   >
-                                    {spyCopiedGap === identifier ? "✅ Copiado" : "📋 Copiar"}
+                                    {copiedSchema ? "✅ Copiado" : "📋 Copiar Schema"}
                                   </button>
                                 </div>
                                 <pre className="max-h-48 overflow-auto rounded-xl border border-slate-700 bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-300 whitespace-pre-wrap break-words">
-                                  {effectiveSchemaCode}
+                                  {schemaDisplay}
                                 </pre>
-                                <p className="text-[11px] font-bold text-amber-300/90 leading-snug">
-                                  ⚠️ Importante: no lo pegues en un párrafo normal ni en la{" "}
-                                  <strong className="text-amber-200">descripción de una categoría</strong>{" "}
-                                  (Productos → Categorías): Wordfence suele bloquear el{" "}
-                                  <code className="text-amber-200">&lt;script&gt;</code> con error 403.
-                                  Usá la guía de abajo (pestaña Categoría / HTML personalizado / plugin SEO).
-                                </p>
+                                {effectiveSchemaCode && effectiveSchemaJson && (
+                                  <details className="text-[11px] text-slate-500">
+                                    <summary className="cursor-pointer font-bold text-slate-400 hover:text-slate-300">
+                                      Ver versión con &lt;script&gt; (solo si tu editor HTML personalizado lo pide)
+                                    </summary>
+                                    <div className="mt-2 flex justify-end">
+                                      <button
+                                        type="button"
+                                        onClick={() => handleCopySchema(effectiveSchemaCode, identifier, "schema-script")}
+                                        className="text-xs font-black text-cyan-300 underline"
+                                      >
+                                        Copiar con &lt;script&gt;
+                                      </button>
+                                    </div>
+                                    <pre className="mt-2 max-h-32 overflow-auto rounded-lg bg-black/40 p-2 text-[10px] text-slate-500 whitespace-pre-wrap">
+                                      {effectiveSchemaCode}
+                                    </pre>
+                                  </details>
+                                )}
                               </div>
                               <SchemaPasteGuideBox
                                 playClick={playClick}
-                                heading="¿Dónde lo pego? Elegí tu editor"
+                                heading="¿Dónde instalo el Schema? (no en la descripción)"
                                 pageUrl={ownComparisonUrl || spyResult?.comparedAgainst || siteUrl || ""}
                               />
                             </div>

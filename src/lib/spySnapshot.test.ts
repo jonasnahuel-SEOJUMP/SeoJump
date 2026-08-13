@@ -373,8 +373,9 @@ describe('enrichSpyGaps', () => {
     );
 
     expect(enriched[0].schemaCode).toBeUndefined();
-    expect(enriched[0].schemaNote).toMatch(/preguntas/i);
+    expect(enriched[0].schemaNote).toMatch(/contenido visible|JSON-LD|categoría/i);
     expect(enriched[0].questionsToAdd).toEqual(['¿Cuánto cuesta?', '¿Hay garantía?']);
+    expect(enriched[0].faqContentHtml).toContain('<h3>');
   });
 
   it('Intención/Contenido que pide agregar preguntas → verifica en vivo (no honor)', () => {
@@ -412,5 +413,7 @@ describe('enrichSpyGaps', () => {
     expect(enriched[0].requiresLiveVerify).toBe(true);
     expect(enriched[0].verifyKind).toBe('faq_visible');
     expect(enriched[0].area).toMatch(/Preguntas/i);
+    expect(enriched[0].faqContentHtml).toContain('<h3>');
+    expect(enriched[0].faqContentHtml).not.toContain('<script');
   });
 });
