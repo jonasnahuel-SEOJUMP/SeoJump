@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   analyzeComprehension,
   buildFaqJsonLd,
+  buildFaqVisibleHtml,
   extractExistingStructuredData,
   extractFaqPairs,
   extractEntities,
@@ -128,6 +129,31 @@ describe('buildFaqJsonLd', () => {
     expect(code).toContain('application/ld+json');
     expect(code).toContain('FAQPage');
     expect(code).toContain('¿Qué es X?');
+  });
+
+  it('puede devolver JSON puro sin script', () => {
+    const json = buildFaqJsonLd(
+      [{ question: '¿Qué es X?', answer: 'X es un producto de prueba con más de veinte caracteres.' }],
+      { wrapScript: false }
+    );
+    expect(json).not.toContain('<script');
+    expect(JSON.parse(json)['@type']).toBe('FAQPage');
+  });
+});
+
+describe('buildFaqVisibleHtml', () => {
+  it('arma H2/H3/p sin script (apto para descripción WP)', () => {
+    const html = buildFaqVisibleHtml([
+      {
+        question: '¿Qué pulidora necesito para empezar?',
+        answer: 'Para empezar en detailing conviene una roto-orbital de 5 pulgadas con pads suaves.',
+      },
+    ]);
+    expect(html).toContain('<h2>');
+    expect(html).toContain('<h3>¿Qué pulidora necesito para empezar?</h3>');
+    expect(html).toContain('<p>');
+    expect(html).not.toContain('<script');
+    expect(html).not.toContain('FAQPage');
   });
 });
 

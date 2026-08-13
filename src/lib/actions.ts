@@ -3584,9 +3584,10 @@ export async function verifySpyGap(
           success: false,
           schemaReady: true,
           schemaCode: buildFaqJsonLd(livePairs),
+          schemaJson: buildFaqJsonLd(livePairs, { wrapScript: false }),
           foundQuestions: livePairs.map((p) => p.question).slice(0, 8),
           error:
-            `Detectamos ${livePairs.length} pregunta(s) en tu página ✅, pero todavía falta el Schema FAQPage (el código que leen Google y las IA). Copiá el bloque de acá abajo, pegalo en el HTML antes de </body>, guardá, borrá caché y reintentá.`,
+            `Detectamos ${livePairs.length} pregunta(s) en tu página ✅, pero todavía falta el Schema FAQPage (el código que leen Google y las IA). Copiá el JSON-LD (no el <script> en la descripción de una categoría), instalalo con Rank Math/Yoast o HTML seguro, guardá, borrá caché y reintentá.`,
         };
       }
       return {
