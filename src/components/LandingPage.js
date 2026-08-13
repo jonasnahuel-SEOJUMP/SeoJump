@@ -68,9 +68,9 @@ export default function LandingPage({ onRegister, playClick, variant = "default"
             Verificamos en vivo. Sumás XP. Mañana, otra.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left mb-10">
-            <BridgeCard n="1" title="Espías" desc="Pegás la URL del rival y ves qué te gana." />
-            <BridgeCard n="2" title="Conectás GSC" desc="Tus datos reales de Google, sin adivinar." />
-            <BridgeCard n="3" title="Misión diaria" desc="Una mejora clara. 15 minutos. Hecho." />
+            <BridgeCard icon="📡" title="Search Console" desc="Sumás tus datos reales de Google para cruzarlos con lo del rival." />
+            <BridgeCard icon="🎯" title="Misión del día" desc="Una mejora clara: título, H1 o FAQ. 15 minutos. Hecho." />
+            <BridgeCard icon="⭐" title="XP y racha" desc="Verificamos en vivo. Sumás puntos. Mañana, otra misión." />
           </div>
           <StartCta className="btn-3d btn-green text-lg md:text-xl px-8 py-5 inline-flex transform hover:scale-105 transition-transform">
             Empezar con misiones gratis
@@ -327,11 +327,11 @@ function HowSpyWorks() {
   );
 }
 
-function BridgeCard({ n, title, desc }) {
+function BridgeCard({ icon, title, desc }) {
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
-      <div className="w-8 h-8 rounded-full bg-duo-green/20 border border-duo-green/40 text-duo-green font-black flex items-center justify-center mb-3 text-sm">
-        {n}
+      <div className="text-2xl mb-3" aria-hidden>
+        {icon}
       </div>
       <h3 className="font-black text-white text-lg mb-1">{title}</h3>
       <p className="text-slate-400 text-sm font-medium leading-relaxed">{desc}</p>
