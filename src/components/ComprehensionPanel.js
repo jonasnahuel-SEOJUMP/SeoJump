@@ -230,8 +230,9 @@ export default function ComprehensionPanel({
           ¿Qué entienden Google y las IA de esta página?
         </h3>
         <p className="text-sm font-bold text-slate-400 leading-relaxed">
-          No es magia ni promesas de citas. Es reducir ambigüedad: tipo de página, temas, preguntas,
-          autor y empresa. Después podés completar lo que falta y volver a comprobar.
+          Primero: qué tan clara y útil es la página para un humano (y para una IA). Después, solo si el
+          tipo de URL lo justifica, datos estructurados técnicos. No es magia ni “pegá este script”: es
+          reducir ambigüedad — tipo de página, temas, preguntas, autor y empresa.
         </p>
       </div>
 

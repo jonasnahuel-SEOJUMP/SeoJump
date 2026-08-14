@@ -12,6 +12,12 @@ import SchemaPasteGuideBox from "../../components/SchemaPasteGuideBox";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
 import { useSubscription } from "../../hooks/useSubscription";
+import {
+  shouldAutoOfferFaqSchema,
+  aeoEndsAtVisibleContent,
+  aeoNextStepCopy,
+  pageTypeLabel,
+} from "../../lib/aeoSchemaPolicy";
 
 const SPY_LOADING_MESSAGES = [
   "Estoy leyendo la web de tu competidor...",
@@ -42,7 +48,11 @@ function isSpecificUrlClient(raw) {
 function FaqHowToBox() {
   return (
     <div className="rounded-xl border-2 border-cyan-500/30 bg-slate-950/50 p-4 space-y-2">
-      <p className="text-sm font-black text-white">📝 Cómo cargar tus preguntas para que las detectemos</p>
+      <p className="text-sm font-black text-white">📝 Contenido útil primero (AEO humano)</p>
+      <p className="text-xs font-bold text-slate-400 leading-relaxed">
+        SEO Jump primero te ayuda a responder lo que pregunta tu cliente. El Schema técnico viene después,
+        y solo si el tipo de página lo justifica (en una categoría, el trabajo suele terminar en el texto).
+      </p>
       <ul className="space-y-1.5 text-xs font-bold text-slate-300 leading-relaxed list-disc list-inside">
         <li>
           Escribí cada pregunta como <span className="text-cyan-300">texto visible</span>: un
@@ -59,11 +69,12 @@ function FaqHowToBox() {
         </li>
         <li>
           Ojo con la URL: revisá la <span className="text-cyan-300">página exacta</span> que estás
-          comparando (la de tu producto, no tu home). Pegala en <em>“Tu página equivalente”</em>.
+          comparando (la de tu producto o categoría, no tu home). Pegala en <em>“Tu página equivalente”</em>.
         </li>
       </ul>
       <p className="text-[11px] font-bold text-slate-500 leading-snug">
-        Después, cuando generes el código Schema, te mostramos <span className="text-slate-300">dónde pegarlo según tu editor</span>.
+        Si más adelante hay Schema, te mostramos <span className="text-slate-300">dónde instalarlo con seguridad</span>
+        {" "}(nunca en la descripción de una categoría: Wordfence lo bloquea).
       </p>
     </div>
   );
@@ -1581,6 +1592,20 @@ export default function DetectiveDeEnlaces() {
                           <p className="text-xs text-slate-500 font-bold">Lo que Google, ChatGPT y Gemini pueden citar</p>
                         </div>
                       </div>
+                      {(spyResult.ownPageType || spyResult.rivalPageType) && (() => {
+                        const next = aeoNextStepCopy(spyResult.ownPageType);
+                        return (
+                        <div className="rounded-xl border border-slate-700/80 bg-slate-950/50 p-3 space-y-1">
+                          <p className="text-[11px] font-black text-slate-300 uppercase tracking-wider">
+                            Lógica SEO Jump · {pageTypeLabel(spyResult.ownPageType)}
+                          </p>
+                          <p className="text-xs font-bold text-slate-400 leading-relaxed">
+                            {next.contentFirst}{" "}
+                            <span className="text-emerald-300/90">{next.schemaLater}</span>
+                          </p>
+                        </div>
+                        );
+                      })()}
                       <p className="text-[11px] font-bold text-slate-500 leading-snug">
                         Este panel es un snapshot del último espionaje. Si acabás de agregar FAQ o Schema, tocá{" "}
                         <span className="text-slate-300">“Espiar otro competidor”</span> y volvé a espiar la misma URL
@@ -1597,17 +1622,45 @@ export default function DetectiveDeEnlaces() {
                                 : "❌ No"}
                             </span>
                           </p>
-                          <p className="text-xs font-bold text-slate-400">
-                            Schema FAQPage (código):{" "}
-                            <span className={spyResult.you?.hasFaqSchema ? "text-emerald-300" : "text-amber-300"}>
-                              {spyResult.you?.hasFaqSchema ? "✅ Sí" : "❌ No"}
-                            </span>
-                          </p>
-                          {!spyResult.you?.hasFaqSchema && (spyResult.you?.faqQuestions?.length > 0) && (
-                            <p className="text-[11px] font-bold text-amber-200/90 leading-snug">
-                              Vemos tus preguntas en la página, pero falta el bloque técnico FAQPage (JSON-LD) que leen Google y las IA. No es lo mismo que el texto de las FAQ.
-                            </p>
-                          )}
+                          {(() => {
+                            const needsFaq = shouldAutoOfferFaqSchema(spyResult.ownPageType);
+                            const hasFaq = !!spyResult.you?.hasFaqSchema;
+                            const endsAtContent = aeoEndsAtVisibleContent(spyResult.ownPageType);
+                            return (
+                              <>
+                                <p className="text-xs font-bold text-slate-400">
+                                  Schema FAQPage (código):{" "}
+                                  <span
+                                    className={
+                                      hasFaq
+                                        ? "text-emerald-300"
+                                        : needsFaq
+                                          ? "text-amber-300"
+                                          : "text-slate-500"
+                                    }
+                                  >
+                                    {hasFaq
+                                      ? "✅ Sí"
+                                      : needsFaq
+                                        ? "❌ No"
+                                        : endsAtContent || spyResult.ownPageType === "product"
+                                          ? "— no requerido acá"
+                                          : "— opcional"}
+                                  </span>
+                                </p>
+                                {needsFaq && !hasFaq && (spyResult.you?.faqQuestions?.length > 0) && (
+                                  <p className="text-[11px] font-bold text-amber-200/90 leading-snug">
+                                    Vemos tus preguntas en la página, pero falta el bloque técnico FAQPage (JSON-LD) que leen Google y las IA. No es lo mismo que el texto de las FAQ.
+                                  </p>
+                                )}
+                                {!needsFaq && !hasFaq && (spyResult.you?.faqQuestions?.length > 0) && (
+                                  <p className="text-[11px] font-bold text-emerald-200/80 leading-snug">
+                                    Con preguntas visibles ya cerrás el AEO principal en este tipo de página. El Schema FAQPage no es el siguiente paso automático.
+                                  </p>
+                                )}
+                              </>
+                            );
+                          })()}
                           {(spyResult.you?.schemaTypes?.length > 0) && (
                             <p className="text-[11px] text-slate-500 font-bold">
                               Schema detectado: {spyResult.you.schemaTypes.slice(0, 4).join(", ")}
@@ -1635,8 +1688,8 @@ export default function DetectiveDeEnlaces() {
                           </p>
                           <p className="text-xs font-bold text-slate-400">
                             Schema FAQPage (código):{" "}
-                            <span className={spyResult.competitor?.hasFaqSchema ? "text-emerald-300" : "text-amber-300"}>
-                              {spyResult.competitor?.hasFaqSchema ? "✅ Sí" : "❌ No"}
+                            <span className={spyResult.competitor?.hasFaqSchema ? "text-emerald-300" : "text-slate-500"}>
+                              {spyResult.competitor?.hasFaqSchema ? "✅ Sí" : "— no detectado"}
                             </span>
                           </p>
                           {(spyResult.competitor?.schemaTypes?.length > 0) && (
@@ -1685,8 +1738,12 @@ export default function DetectiveDeEnlaces() {
                       const copiedSchema = spyCopiedGap === `${identifier}:schema` || spyCopiedGap === `${identifier}:schema-script`;
                       let spyBtnLabel = "✅ YA LO APLIQUÉ";
                       if (verifying) spyBtnLabel = "🔎 VERIFICANDO EN VIVO...";
-                      else if (isSchema && !schemaDisplay) spyBtnLabel = "🔎 GENERAR MI SCHEMA FAQ";
-                      else if (isSchema && schemaDisplay) spyBtnLabel = "✅ YA LO INSTALÉ — VERIFICAR";
+                      else if (isSchema && !schemaDisplay) {
+                        spyBtnLabel =
+                          gap.schemaKind === "product"
+                            ? "🔎 GENERAR MI SCHEMA PRODUCT"
+                            : "🔎 GENERAR MI SCHEMA FAQ";
+                      } else if (isSchema && schemaDisplay) spyBtnLabel = "✅ YA LO INSTALÉ — VERIFICAR";
                       else if (needsLive) spyBtnLabel = "🔎 VERIFICAR EN MI WEB";
                       else spyBtnLabel = "✅ MARCAR HECHO (sin chequear)";
 
@@ -1797,7 +1854,7 @@ export default function DetectiveDeEnlaces() {
                                     : "Pegá el contenido AEO (bloque de arriba) en tu página y publicá."}
                                 </li>
                                 <li className={schemaDisplay ? "line-through text-slate-600" : ""}>
-                                  Tocá <span className="text-slate-200">“Generar mi Schema FAQ”</span> si todavía no aparece el JSON-LD.
+                                  Tocá <span className="text-slate-200">“Generar mi Schema {schemaLabel}”</span> si todavía no aparece el JSON-LD.
                                 </li>
                                 <li className={schemaDisplay ? "text-slate-200" : ""}>
                                   Instalá el Schema con Rank Math / Yoast / HTML seguro (guía abajo).{" "}
@@ -1817,7 +1874,7 @@ export default function DetectiveDeEnlaces() {
                             <div className="space-y-3 rounded-xl border-2 border-amber-500/35 bg-amber-950/15 p-4">
                               <div>
                                 <p className="text-xs font-black text-amber-200 uppercase tracking-wider">
-                                  2 · Schema FAQ {schemaLabel} (código técnico)
+                                  2 · Schema {schemaLabel} (código técnico)
                                 </p>
                                 <p className="text-xs font-bold text-slate-400 leading-relaxed mt-1">
                                   Esto es <strong className="text-slate-200">invisible</strong> para tus visitantes.

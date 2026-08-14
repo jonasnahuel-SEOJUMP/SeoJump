@@ -137,7 +137,8 @@ export default function WpConnectPanel({ defaultSiteUrl = "", playClick }) {
         inicio de tu tienda). Después, en cada misión de título o meta,{" "}
         <span className="text-white">«Aplicar en mi web»</span> usa la URL de{" "}
         <span className="text-white">ese producto/página</span> — no la home. Solo escribe título SEO
-        y meta (Yoast o Rank Math). No toca el nombre del producto ni el diseño.
+        y meta (Yoast o Rank Math). No toca el nombre del producto, el diseño, ni FAQ/Schema
+        (eso se pega a mano y se verifica en vivo: en categorías, nunca el Schema en la descripción).
       </p>
       <div className="rounded-xl bg-slate-900/60 border border-sky-700/40 px-4 py-3 space-y-2">
         <p className="text-sm font-black text-sky-200">¿Cómo conectar tu sitio?</p>

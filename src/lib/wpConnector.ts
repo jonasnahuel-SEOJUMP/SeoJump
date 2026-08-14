@@ -2,7 +2,11 @@ import { assertSafePublicUrl } from './urlSafety.js';
 import { fetchWithSsrfGuard } from './safeHttp.js';
 import { decryptWpToken, normalizeSiteUrl } from './wpCrypto';
 
-/** Campos que entiende el plugin WordPress. */
+/** Campos que entiende el plugin WordPress.
+ * Solo título SEO y meta descripción.
+ * FAQ visible / Schema JSON-LD NO se aplican por el conector: van por pegado
+ * manual + verificación en vivo (política AEO / Wordfence en categorías).
+ */
 export type WpApplyField = 'seo_title' | 'meta';
 
 export function mapMissionTypeToWpField(missionType: string): WpApplyField | null {

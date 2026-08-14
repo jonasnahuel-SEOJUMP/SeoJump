@@ -28,6 +28,11 @@ import {
 } from './scraping'
 import { buildCompetitorSnapshot, enrichSpyGaps, type SpyGapEnriched } from './spySnapshot'
 import {
+  shouldAutoOfferFaqSchema,
+  refinePageTypeWithSchema,
+  pageTypeLabel,
+} from './aeoSchemaPolicy'
+import {
   computeHumanScore,
   humanMissionVerified,
   humanVerifyHint,
@@ -52,6 +57,7 @@ import {
   buildFaqJsonLd,
   detectProductInfo,
   buildProductJsonLd,
+  resolvePageType,
 } from './comprehension'
 import { detectSchemaInstallHints } from './schemaPasteGuide'
 import {
@@ -3357,9 +3363,14 @@ export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, g
 
   const systemInstructions = `Sos un consultor SEO + AEO senior que ayuda a dueños de PyMES (sin conocimientos técnicos) a entender qué hace mejor su competencia y cómo superarla. Hablás en español rioplatense, claro y directo, sin jerga.
 
+Principio de SEO Jump (importante):
+1) Primero ayudás a crear información útil y estructurada para humanos e IA (preguntas que el usuario realmente se hace).
+2) Después, solo cuando el TIPO DE PÁGINA lo justifica, sugerís datos estructurados técnicos (Schema).
+Nunca empieces por "te falta FAQ Schema". Empezá por: "tu página no responde suficientemente bien estas preguntas…".
+
 Te paso dos webs: la del USUARIO y la de un COMPETIDOR. Compará:
 1) On-page SEO: título, H1, temas/encabezados.
-2) Respuestas a preguntas (AEO): qué preguntas responde cada uno (FAQ visible) y si tiene Schema FAQPage / Product (lo que Google, ChatGPT y Gemini leen para citar).
+2) Respuestas a preguntas (AEO): qué preguntas responde cada uno (FAQ visible) y si tiene Schema Product / FAQPage según el tipo de página.
 
 Devolvé ESTRICTAMENTE un JSON (sin markdown) con esta forma:
 {
@@ -3374,12 +3385,18 @@ Devolvé ESTRICTAMENTE un JSON (sin markdown) con esta forma:
 }
 
 Reglas:
-- COHERENCIA CON LOS DATOS (importante): el campo "faqQuestions" de cada web es la lista REAL de preguntas visibles detectada en su HTML. Si el USUARIO ya tiene "faqQuestions" (lista NO vacía), NUNCA digas que "no tiene preguntas frecuentes" ni le pidas "agregar una sección de FAQ": ya la tiene. En ese caso, solo generá un gap de "Preguntas/FAQ" si el COMPETIDOR responde preguntas puntuales que el usuario NO cubre (listá esas específicas); si no hay preguntas nuevas para sumar, no generes gap de "Preguntas/FAQ" y enfocá el AEO en el Schema FAQPage si al usuario le falta.
-- Máximo 4 gaps, priorizando impacto. Si el rival responde preguntas que el usuario no, ESO es un gap de alta prioridad (área "Preguntas/FAQ"): listá 1-3 preguntas concretas que debería agregar.
-- Si el rival tiene Schema FAQPage (o Product) y el usuario no, incluí un gap "Schema AEO" con acción clara (ej: "Agregá el bloque FAQPage con estas preguntas…").
+- COHERENCIA CON LOS DATOS (importante): el campo "faqQuestions" de cada web es la lista REAL de preguntas visibles detectada en su HTML. Si el USUARIO ya tiene "faqQuestions" (lista NO vacía), NUNCA digas que "no tiene preguntas frecuentes" ni le pidas "agregar una sección de FAQ": ya la tiene. En ese caso, solo generá un gap de "Preguntas/FAQ" si el COMPETIDOR responde preguntas puntuales que el usuario NO cubre (listá esas específicas); si no hay preguntas nuevas para sumar, no generes gap de "Preguntas/FAQ".
+- Máximo 4 gaps, priorizando impacto. Si el rival responde preguntas que el usuario no, ESO es un gap de alta prioridad (área "Preguntas/FAQ"): listá 1-3 preguntas concretas que debería agregar, formuladas como las haría un cliente real.
+- POLÍTICA POR TIPO DE PÁGINA DEL USUARIO (obligatoria):
+  * CATEGORÍA: priorizá contenido útil y preguntas recomendadas. PROHIBIDO generar gap "Schema AEO" de FAQPage. En una categoría el trabajo AEO termina en el contenido visible.
+  * PRODUCTO: priorizá contenido útil de la ficha; el Schema técnico típico es Product (área "Schema AEO" solo si hablás de Product Schema). NO empujes FAQPage como cierre.
+  * HOME: claridad de marca; no FAQPage.
+  * ENTRADA/ARTÍCULO: contenido; no FAQPage automático.
+  * PÁGINA genérica: contenido primero; Schema FAQ solo si ya hay preguntas visibles y aporta.
+- Si el rival tiene Schema Product y el usuario (en un PRODUCTO) no, podés incluir gap "Schema AEO" de Product con acción clara.
 - Si el usuario ya está mejor, devolvé menos gaps y un verdict positivo.
 - No inventes datos que no estén en la info provista. Si no tenés la web del usuario, basá las sugerencias en buenas prácticas vs el competidor.
-- Las sugerencias deben ser accionables y específicas (ej: "Cambiá tu H1 a 'X'" o "Agregá la pregunta '¿Cuánto dura el efecto?' con una respuesta de 2-3 frases"), nunca genéricas como "mejorá tu SEO".`;
+- Las sugerencias deben ser accionables y específicas (ej: "Cambiá tu H1 a 'X'" o "Agregá la pregunta '¿Cuánto dura el efecto?' con una respuesta de 2-3 frases"), nunca genéricas como "mejorá tu SEO" ni "pegá este script en WordPress".`;
 
   const mismatchNote = pageTypeMismatch
     ? `
@@ -3393,9 +3410,12 @@ ATENCIÓN — DESAJUSTE DE PÁGINAS: La web del USUARIO que recibís es su PÁGI
     faqQuestions: s.faqQuestions || [],
     hasFaqSchema: !!s.hasFaqSchema,
     schemaTypes: s.schemaTypes || [],
+    pageType: s.pageType || 'unknown',
   });
 
   const userPrompt = `Tema/keyword en juego: "${effectiveKeyword || 'no especificada'}"
+Tipo de página del USUARIO: ${ownSnapshot?.pageType || (pageTypeMismatch ? 'home' : 'unknown')}
+Tipo de página del COMPETIDOR: ${rivalSnapshot.pageType || 'unknown'}
 ${mismatchNote}
 WEB DEL USUARIO (${pageTypeMismatch ? 'PÁGINA DE INICIO / HOME' : effectiveOwnUrl || 'no disponible'}):
 ${ownSnapshot ? JSON.stringify(packSnapshot(ownSnapshot), null, 2) : '(no disponible — analizá solo al competidor y sugerí cómo competirle)'}
@@ -3454,7 +3474,9 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
           problem: String(g.problem || '').trim(),
           suggestion: String(g.suggestion || '').trim(),
         }));
-      gaps = enrichSpyGaps(rawGaps, ownSnapshot, rivalSnapshot);
+      gaps = enrichSpyGaps(rawGaps, ownSnapshot, rivalSnapshot, {
+        ownPageType: ownSnapshot?.pageType || (pageTypeMismatch ? 'home' : null),
+      });
     }
   } catch (err) {
     console.error('[spyCompetitor] Error parseando respuesta IA:', err);
@@ -3500,6 +3522,8 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
         : null,
       comparedAgainst: effectiveOwnUrl || null,
       pageTypeMismatch,
+      ownPageType: ownSnapshot?.pageType || (pageTypeMismatch ? 'home' : null),
+      rivalPageType: rivalSnapshot.pageType || null,
       autoMatched: !!autoMatchedOwnUrl,
       autoMatchedUrl: autoMatchedOwnUrl || null,
       verdict,
@@ -3567,6 +3591,31 @@ export async function verifySpyGap(
       if (structured.hasFaqPage) {
         return { success: true, verified: true, detail: 'Detectamos Schema FAQPage en tu página. ¡Listo!' };
       }
+
+      // Red de seguridad: no regenerar FAQPage si el tipo de URL no lo justifica.
+      const livePageType = refinePageTypeWithSchema(
+        resolvePageType(html, target),
+        structured.typesFound
+      );
+      if (!shouldAutoOfferFaqSchema(livePageType)) {
+        const livePairs = extractFaqPairs(html, 12);
+        const typeLabel = pageTypeLabel(livePageType);
+        if (livePairs.length >= 1) {
+          return {
+            success: true,
+            verified: true,
+            contentOnly: true,
+            detail: `En una ${typeLabel}, el trabajo AEO principal son las preguntas visibles. Detectamos ${livePairs.length}. No hace falta FAQPage Schema automático acá.`,
+          };
+        }
+        return {
+          success: false,
+          checkedUrl: target,
+          error:
+            `En una ${typeLabel} no pedimos FAQPage Schema. Primero agregá preguntas y respuestas visibles en el contenido, publicá, borrá caché y verificá de nuevo.`,
+        };
+      }
+
       // Segundo click: ya le dimos el código y dice haberlo pegado → error claro, no regenerar.
       if (alreadyGenerated) {
         return {

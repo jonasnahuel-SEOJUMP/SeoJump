@@ -650,8 +650,8 @@ export default function ContenidoFase2() {
                       </h4>
                       <p className="text-sm font-bold text-slate-500 dark:text-slate-400 mt-1">
                         {auditResult.success
-                          ? 'Miles de páginas ya usan tu misma palabra clave con textos hechos por IA. El Human Score te muestra qué le falta a la tuya para ganarles.'
-                          : 'Aunque la palabra clave todavía no aparezca, el Human Score y el Mapa de comprensión funcionan igual sobre esta URL.'}
+                          ? 'Primero el Human Score (valor humano). Después el Mapa de comprensión (claridad para IA + Schema solo si el tipo de página lo justifica). Misma URL, dos capas.'
+                          : 'Aunque la palabra clave todavía no aparezca, Human Score y Mapa de comprensión funcionan igual: valor humano primero, estructura para IA después.'}
                       </p>
                     </div>
                     <HumanScorePanel

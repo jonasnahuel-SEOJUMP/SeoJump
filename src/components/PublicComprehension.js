@@ -190,10 +190,31 @@ export default function PublicComprehension({ onRegister, playClick, playSuccess
                   : "Registrate gratis y SEO Jump te arma el código exacto y te guía paso a paso para pegarlo. Sin ver JSON, sin tecnicismos."}
               </p>
 
-              {/* Preview borroso del código (señuelo visual) */}
+              {/* Preview borroso del código (señuelo visual; tipo según oferta real) */}
               <div className="relative mb-6">
                 <pre className="text-left text-[11px] leading-relaxed text-cyan-300/80 bg-slate-950 border border-slate-800 rounded-xl p-4 blur-[5px] select-none overflow-hidden max-h-32">
-{`{
+{result.offerTeaser?.type === "product"
+  ? `{
+  "@context": "https://schema.org",
+  "@type": "Product",
+  "name": "...",
+  "offers": { "@type": "Offer", ... }
+}`
+  : result.offerTeaser?.type === "article"
+    ? `{
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "...",
+  "author": { ... }
+}`
+    : result.offerTeaser?.type === "organization"
+      ? `{
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "...",
+  "url": "..."
+}`
+      : `{
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [{ "@type": "Question", ... }]

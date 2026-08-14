@@ -440,6 +440,8 @@ export type CompetitorSnapshot = {
   hasFaqSchema?: boolean;
   /** Tipos Schema.org encontrados (Product, FAQPage, Organization…). */
   schemaTypes?: string[];
+  /** Tipo de página inferido (product, category, home…). */
+  pageType?: string;
 };
 
 /** Resuelve (o crea) el profile id por email. Devuelve null si Supabase no está. */

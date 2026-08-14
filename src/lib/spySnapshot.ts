@@ -13,8 +13,16 @@ import {
   buildFaqJsonLd,
   buildFaqVisibleHtml,
   buildFaqVisiblePlain,
+  resolvePageType,
   type FaqPair,
 } from './comprehension';
+import {
+  shouldAutoOfferFaqSchema,
+  aeoEndsAtVisibleContent,
+  aeoNextStepCopy,
+  pageTypeLabel,
+  refinePageTypeWithSchema,
+} from './aeoSchemaPolicy';
 
 export type SpyAeoSignals = {
   faqQuestions: string[];
@@ -136,6 +144,10 @@ export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSn
   if (!page.ok || !page.html) return empty;
 
   const aeo = extractSpyAeoSignals(page.html);
+  const pageType = refinePageTypeWithSchema(
+    resolvePageType(page.html, targetUrl),
+    aeo.schemaTypes
+  );
   return {
     title: extractTitle(page.html),
     h1: extractH1(page.html),
@@ -145,6 +157,7 @@ export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSn
     faqPairs: aeo.faqPairs,
     hasFaqSchema: aeo.hasFaqSchema,
     schemaTypes: aeo.schemaTypes,
+    pageType,
   };
 }
 
@@ -215,19 +228,28 @@ export function isProductSchemaGap(area: string, problem: string, suggestion: st
 }
 
 /**
- * Enriquece gaps del Espía con código Schema copiable y metadatos de verificación.
- * - Schema AEO: si el usuario ya tiene FAQ visibles sin Schema → genera el JSON-LD.
- * - Si no tiene FAQ visibles → lista preguntas del rival a agregar primero (sin inventar respuestas).
+ * Enriquece gaps del Espía con contenido AEO visible y Schema solo si la
+ * política por tipo de URL lo permite (categoría ≠ FAQPage automático).
  */
 export function enrichSpyGaps(
   gaps: Array<{ area: string; problem: string; suggestion: string }>,
   own: CompetitorSnapshot | null,
-  rival: CompetitorSnapshot
+  rival: CompetitorSnapshot,
+  opts?: { ownPageType?: string | null }
 ): SpyGapEnriched[] {
   const ownPairs = own?.faqPairs || [];
   const ownQs = new Set((own?.faqQuestions || []).map(normQ));
   const rivalQs = rival.faqQuestions || [];
   const questionsToAdd = rivalQs.filter((q) => !ownQs.has(normQ(q))).slice(0, 5);
+
+  const ownPageType = refinePageTypeWithSchema(
+    opts?.ownPageType || own?.pageType || 'unknown',
+    own?.schemaTypes
+  );
+  const allowFaqSchema = shouldAutoOfferFaqSchema(ownPageType);
+  const endsAtContent = aeoEndsAtVisibleContent(ownPageType);
+  const typeLabel = pageTypeLabel(ownPageType);
+  const nextCopy = aeoNextStepCopy(ownPageType);
 
   // ¿Pudimos leer la página propia? Si el snapshot vino vacío (fetch fallido),
   // no sabemos si ya tiene el Schema: no debemos afirmar "no lo tenés".
@@ -244,11 +266,12 @@ export function enrichSpyGaps(
     'Cuando toques generar/verificar lo chequeamos en vivo; si tu plataforma o plugin ya lo genera, ' +
     'te lo marcamos como "ya lo tenías" sin pedirte pegar nada.';
 
-  // ¿La IA ya generó un gap de Schema FAQ? Para no duplicarlo cuando
-  // convertimos un gap "Preguntas/FAQ" en gap de Schema FAQPage accionable.
-  const hasFaqSchemaGapAlready = gaps.some(
-    (g) => isSchemaGapArea(g.area) && !isProductSchemaGap(g.area, g.problem, g.suggestion)
-  );
+  // ¿La IA ya generó un gap de Schema FAQ? (solo cuenta si la política lo permite)
+  const hasFaqSchemaGapAlready =
+    allowFaqSchema &&
+    gaps.some(
+      (g) => isSchemaGapArea(g.area) && !isProductSchemaGap(g.area, g.problem, g.suggestion)
+    );
 
   const enriched = gaps.map((g) => {
     const out: SpyGapEnriched = {
@@ -260,20 +283,17 @@ export function enrichSpyGaps(
     };
 
     if (isSchemaGapArea(g.area)) {
-      out.requiresLiveVerify = true;
-      out.isSchemaGap = true;
-
-      // Schema de Producto (precio, disponibilidad, etc.) — distinto de FAQ.
+      // Schema Product — válido sobre todo en fichas de producto.
       if (isProductSchemaGap(g.area, g.problem, g.suggestion)) {
+        out.requiresLiveVerify = true;
+        out.isSchemaGap = true;
         out.verifyKind = 'schema_product';
         out.schemaKind = 'product';
         const ownTypes = (own?.schemaTypes || []).map((t) => t.toLowerCase());
-        // La IA comparó snapshots y a veces sugiere este gap por error cuando
-        // el propio sitio YA tiene Product (WooCommerce/Shopify/plugin SEO lo
-        // ponen solos). No pedirle "implementar" algo que ya está: avisarlo.
         if (ownTypes.includes('product')) {
           out.alreadySatisfied = true;
-          out.problem = 'Ya tenés el Schema Product en tu página. La comparación lo marcó como brecha, pero al chequear tu HTML en vivo, ya está.';
+          out.problem =
+            'Ya tenés el Schema Product en tu página. La comparación lo marcó como brecha, pero al chequear tu HTML en vivo, ya está.';
           out.suggestion = '';
           out.schemaNote =
             'No hace falta hacer nada: tu plataforma o plugin SEO ya lo genera automáticamente.';
@@ -282,16 +302,51 @@ export function enrichSpyGaps(
           out.schemaNote = OWN_UNREADABLE_NOTE;
         } else {
           out.schemaNote =
-            'Último paso: generamos el código con los datos de tu página (sin precio, para que no quede desactualizado). Si tu tienda ya lo pone, lo confirmamos y listo.';
+            'Cierre técnico de un producto: Product Schema (invisible). No confundir con FAQPage ni pegarlo en la descripción de una categoría.';
         }
         return out;
       }
 
+      // Schema FAQPage — la IA a menudo lo pide en categorías; la política lo frena.
+      if (!allowFaqSchema) {
+        out.isSchemaGap = false;
+        out.verifyKind = 'faq_visible';
+        out.requiresLiveVerify = true;
+        out.area = endsAtContent ? `Contenido útil · ${typeLabel}` : g.area;
+        out.problem =
+          ownReadable && (own?.faqQuestions?.length ?? 0) > 0
+            ? `Tu ${typeLabel} ya tiene preguntas visibles. ${nextCopy.contentFirst}`
+            : `Esta ${typeLabel} necesita más información útil que responda lo que pregunta tu usuario — no un bloque técnico FAQPage.`;
+        out.suggestion = questionsToAdd.length
+          ? 'Copiá el contenido AEO (HTML) y pegalo en la descripción/contenido de la página. Después verificamos en vivo.'
+          : 'Mejorá el texto visible con respuestas concretas. El Schema FAQPage no es el siguiente paso automático acá.';
+        out.questionsToAdd = questionsToAdd.length ? questionsToAdd : undefined;
+        if (questionsToAdd.length) {
+          attachFaqContent(
+            out,
+            pairsForVisibleContent(questionsToAdd, rival.faqPairs || [], ownPairs),
+            'Preguntas frecuentes'
+          );
+        }
+        out.schemaNote = nextCopy.schemaLater;
+        // Si ya tiene contenido FAQ visible y no hay preguntas nuevas → listo.
+        if (ownReadable && (own?.faqQuestions?.length ?? 0) > 0 && questionsToAdd.length === 0) {
+          out.alreadySatisfied = true;
+          out.requiresLiveVerify = false;
+          out.problem = `Ya tenés ${(own?.faqQuestions?.length ?? 0)} pregunta(s) visibles en tu ${typeLabel}. Eso es el trabajo AEO principal acá.`;
+          out.suggestion = '';
+        }
+        return out;
+      }
+
+      out.requiresLiveVerify = true;
+      out.isSchemaGap = true;
       out.verifyKind = 'schema_faq';
       out.schemaKind = 'faq';
       if (own?.hasFaqSchema) {
         out.alreadySatisfied = true;
-        out.problem = 'Ya tenés el Schema FAQPage en tu página. La comparación lo marcó como brecha, pero al chequear tu HTML en vivo, ya está.';
+        out.problem =
+          'Ya tenés el Schema FAQPage en tu página. La comparación lo marcó como brecha, pero al chequear tu HTML en vivo, ya está.';
         out.suggestion = '';
         out.schemaNote = 'No hace falta hacer nada más acá.';
         return out;
@@ -302,9 +357,8 @@ export function enrichSpyGaps(
         out.schemaNote = OWN_UNREADABLE_NOTE;
       } else {
         out.schemaNote =
-          'Último paso técnico: el Schema NO va en la descripción de la categoría. Primero el contenido visible; después el JSON-LD vía plugin SEO / HTML seguro.';
+          'Paso técnico opcional: JSON-LD vía plugin SEO / HTML seguro. Primero el contenido visible. Nunca en la descripción de una categoría.';
       }
-      // Contenido AEO primero (si faltan preguntas), Schema después.
       if (questionsToAdd.length) {
         attachFaqContent(
           out,
@@ -321,52 +375,50 @@ export function enrichSpyGaps(
     if (isFaqGapArea(g.area) || gapSuggestsAddingFaqs(g.area, g.problem, g.suggestion)) {
       out.requiresLiveVerify = true;
       out.verifyKind = 'faq_visible';
-      // Si el área no decía FAQ pero el texto pide preguntas, renombramos el
-      // cartel para que el usuario entienda qué se va a chequear.
       if (!isFaqGapArea(g.area) && gapSuggestsAddingFaqs(g.area, g.problem, g.suggestion)) {
-        out.area = `${g.area} · Preguntas`;
+        out.area = `${g.area} · Preguntas útiles`;
       }
       const ownFaqCount = own?.faqQuestions?.length ?? 0;
-      // Corrección de contradicción: la IA a veces dice "no tenés preguntas"
-      // aunque el detector determinístico YA encontró FAQ visibles en tu HTML
-      // (lo mostramos en la comparación AEO). La señal determinística manda:
-      // no afirmamos lo contrario ni te pedimos "agregar FAQ" que ya tenés.
+
       if (ownReadable && ownFaqCount > 0 && questionsToAdd.length === 0) {
-        // Ya tenés preguntas visibles y el rival no aporta nuevas.
         if (own?.hasFaqSchema) {
-          // Preguntas + Schema FAQPage → no hay nada que hacer.
           out.alreadySatisfied = true;
           out.requiresLiveVerify = false;
-          out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles y el Schema FAQPage en tu página. La comparación lo marcó como brecha, pero ya está.`;
+          out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles y el Schema FAQPage. La comparación lo marcó como brecha, pero ya está.`;
           out.suggestion = '';
           out.schemaNote = 'No hace falta hacer nada más acá. ✅';
           return out;
         }
+        // Contenido visible OK: en categoría/post/home NO empujar FAQ Schema.
+        if (!allowFaqSchema || endsAtContent) {
+          out.alreadySatisfied = true;
+          out.requiresLiveVerify = false;
+          out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles en tu ${typeLabel}. ${nextCopy.contentFirst}`;
+          out.suggestion = '';
+          out.schemaNote = nextCopy.schemaLater;
+          return out;
+        }
         if (!hasFaqSchemaGapAlready && ownPairs.length >= 1) {
-          // Tenés las preguntas visibles pero falta el Schema FAQPage: en vez de
-          // un cartel muerto, lo volvemos accionable — código listo + guía de
-          // pegado (por eso antes "no aparecía la caja para pegar el schema").
           out.isSchemaGap = true;
           out.schemaKind = 'faq';
           out.verifyKind = 'schema_faq';
           out.requiresLiveVerify = true;
-          out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles, pero falta el bloque técnico Schema FAQPage (JSON-LD) que leen Google y las IA. No es lo mismo que el texto de las FAQ.`;
+          out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles. El paso técnico opcional es el Schema FAQPage (JSON-LD), distinto del texto de las FAQ.`;
           out.suggestion =
-            'Usá el JSON-LD abajo vía Rank Math / Yoast / HTML personalizado. No lo pegues en la descripción de una categoría.';
+            'Instalá el JSON-LD con Rank Math / Yoast / HTML seguro. No lo pegues en la descripción de una categoría.';
           attachSchemaCode(out, ownPairs);
           out.schemaNote =
             'El Schema es invisible para visitantes. No va en la descripción de WordPress (Wordfence lo bloquea).';
           return out;
         }
-        // Ya hay otro gap de Schema FAQ (o no hay pares): solo informamos.
         out.alreadySatisfied = true;
         out.requiresLiveVerify = false;
-        out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles en tu página. La comparación lo marcó como brecha, pero al leer tu HTML ya están.`;
+        out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles en tu página.`;
         out.suggestion = '';
-        out.schemaNote =
-          'Para que Google y las IA las puedan citar como respuesta, lo que falta es el bloque técnico Schema FAQPage (lo ves en el paso de Schema).';
+        out.schemaNote = nextCopy.schemaLater;
         return out;
       }
+
       if (questionsToAdd.length) {
         out.questionsToAdd = questionsToAdd;
         attachFaqContent(
@@ -374,14 +426,16 @@ export function enrichSpyGaps(
           pairsForVisibleContent(questionsToAdd, rival.faqPairs || [], ownPairs),
           'Preguntas frecuentes'
         );
-        // Si ya tiene FAQ pero el rival cubre otras, reencuadramos el problema
-        // para no decir "no tenés preguntas".
         if (ownReadable && ownFaqCount > 0) {
-          out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles, pero el competidor cubre otras que te conviene sumar.`;
+          out.problem = `Ya tenés ${ownFaqCount} pregunta(s) visibles, pero el competidor cubre otras que te conviene sumar (más útiles / más específicas).`;
         } else {
+          out.problem =
+            out.problem ||
+            `Tu ${typeLabel} todavía no responde suficientemente bien las preguntas que probablemente tiene tu usuario.`;
           out.suggestion =
-            'Copiá el bloque de contenido AEO (HTML) y pegalo en la descripción/contenido de tu página. Después verificamos en vivo.';
+            'Copiá el bloque de contenido AEO (HTML) y pegalo en la descripción/contenido. Eso es el trabajo principal. Después verificamos en vivo.';
         }
+        out.schemaNote = endsAtContent ? nextCopy.schemaLater : undefined;
       }
       return out;
     }
@@ -389,11 +443,10 @@ export function enrichSpyGaps(
     return out;
   });
 
-  // Orden lógico: primero título/H1/contenido, el Schema (código) SIEMPRE al final.
   const rank = (g: SpyGapEnriched) => {
     if (g.isSchemaGap) return 3;
     if (g.verifyKind === 'faq_visible') return 2;
-    return 1; // título, H1, intención, temas
+    return 1;
   };
   return enriched
     .map((g, i) => ({ g, i }))

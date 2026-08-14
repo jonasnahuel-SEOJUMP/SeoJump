@@ -67,6 +67,7 @@ describe('enrichSpyGaps', () => {
       headings: [],
       scrapedAt: new Date().toISOString(),
       ...ownSignals,
+      pageType: 'page',
     };
     const rival = {
       title: 'Rival',
@@ -81,7 +82,8 @@ describe('enrichSpyGaps', () => {
     const enriched = enrichSpyGaps(
       [{ area: 'Schema AEO', problem: 'El rival tiene Schema', suggestion: 'Agregá FAQPage' }],
       own,
-      rival
+      rival,
+      { ownPageType: 'page' }
     );
 
     expect(enriched[0].schemaCode).toContain('FAQPage');
@@ -180,7 +182,8 @@ describe('enrichSpyGaps', () => {
     const enriched = enrichSpyGaps(
       [{ area: 'Preguntas/FAQ Schema', problem: 'Vos no tenés Schema FAQPage', suggestion: 'Agregá FAQPage' }],
       own,
-      rival
+      rival,
+      { ownPageType: 'page' }
     );
     expect(enriched[0].alreadySatisfied).toBe(true);
     expect(enriched[0].schemaCode).toBeUndefined();
@@ -230,7 +233,8 @@ describe('enrichSpyGaps', () => {
     const enriched = enrichSpyGaps(
       [{ area: 'Schema AEO', problem: 'Falta schema', suggestion: 'Agregalo' }],
       null,
-      rival
+      rival,
+      { ownPageType: 'page' }
     );
     expect(enriched[0].verifyKind).toBe('schema_faq');
     expect(enriched[0].ownUnreadable).toBe(true);
@@ -289,6 +293,7 @@ describe('enrichSpyGaps', () => {
       ],
       hasFaqSchema: false, // tiene preguntas visibles pero NO el Schema FAQPage
       schemaTypes: ['WebPage'],
+      pageType: 'page',
     };
     const rival = {
       title: 'Rival',
@@ -302,7 +307,8 @@ describe('enrichSpyGaps', () => {
     const enriched = enrichSpyGaps(
       [{ area: 'Preguntas/FAQ', problem: 'Ni tu web ni la del competidor responden preguntas', suggestion: 'Agregá FAQ' }],
       own,
-      rival
+      rival,
+      { ownPageType: 'page' }
     );
     // Se vuelve accionable como Schema FAQPage (no queda como cartel muerto).
     expect(enriched[0].isSchemaGap).toBe(true);
@@ -369,7 +375,8 @@ describe('enrichSpyGaps', () => {
     const enriched = enrichSpyGaps(
       [{ area: 'Schema AEO', problem: 'Falta schema', suggestion: 'Agregalo' }],
       own,
-      rival
+      rival,
+      { ownPageType: 'page' }
     );
 
     expect(enriched[0].schemaCode).toBeUndefined();
@@ -415,5 +422,84 @@ describe('enrichSpyGaps', () => {
     expect(enriched[0].area).toMatch(/Preguntas/i);
     expect(enriched[0].faqContentHtml).toContain('<h3>');
     expect(enriched[0].faqContentHtml).not.toContain('<script');
+  });
+
+  it('en categoría: Schema FAQ de la IA se convierte en contenido (no FAQPage automático)', () => {
+    const own = {
+      title: 'Pulidoras',
+      h1: 'Pulidoras',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: [],
+      faqPairs: [],
+      hasFaqSchema: false,
+      schemaTypes: ['CollectionPage'],
+      pageType: 'category',
+    };
+    const rival = {
+      title: 'Rival pulidoras',
+      h1: 'Pulidoras',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: ['¿Qué pulidora conviene para comenzar?'],
+      faqPairs: [
+        {
+          question: '¿Qué pulidora conviene para comenzar?',
+          answer: 'Para empezar conviene una roto-orbital de entrada con pads suaves incluidos.',
+        },
+      ],
+      hasFaqSchema: true,
+      schemaTypes: ['FAQPage', 'CollectionPage'],
+      pageType: 'category',
+    };
+    const enriched = enrichSpyGaps(
+      [{ area: 'Schema AEO', problem: 'El rival tiene FAQPage', suggestion: 'Agregá FAQPage' }],
+      own,
+      rival,
+      { ownPageType: 'category' }
+    );
+    expect(enriched[0].isSchemaGap).toBeFalsy();
+    expect(enriched[0].schemaCode).toBeUndefined();
+    expect(enriched[0].verifyKind).toBe('faq_visible');
+    expect(enriched[0].faqContentHtml).toContain('¿Qué pulidora conviene');
+    expect(enriched[0].schemaNote || '').toMatch(/no hace falta FAQPage/i);
+  });
+
+  it('en categoría con FAQ visibles: no empuja Schema FAQPage', () => {
+    const own = {
+      title: 'Pulidoras',
+      h1: 'Pulidoras',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: ['¿Qué pulidora necesito?'],
+      faqPairs: [
+        {
+          question: '¿Qué pulidora necesito?',
+          answer: 'Depende del trabajo: corrección fuerte vs mantenimiento suave del brillo.',
+        },
+      ],
+      hasFaqSchema: false,
+      schemaTypes: ['CollectionPage'],
+      pageType: 'category',
+    };
+    const rival = {
+      title: 'Rival',
+      h1: 'Rival',
+      headings: [],
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: [],
+      hasFaqSchema: false,
+      schemaTypes: [],
+      pageType: 'category',
+    };
+    const enriched = enrichSpyGaps(
+      [{ area: 'Preguntas/FAQ', problem: 'falta FAQ', suggestion: 'agregá' }],
+      own,
+      rival,
+      { ownPageType: 'category' }
+    );
+    expect(enriched[0].alreadySatisfied).toBe(true);
+    expect(enriched[0].isSchemaGap).toBeFalsy();
+    expect(enriched[0].schemaCode).toBeUndefined();
   });
 });

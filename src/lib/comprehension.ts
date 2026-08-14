@@ -6,6 +6,11 @@
 
 import { detectPageTypeFromHtml } from './scraping';
 import { decodeHtmlEntities } from './textUtils';
+import {
+  refinePageTypeWithSchema,
+  shouldAutoOfferFaqSchema,
+  shouldAutoOfferProductSchema,
+} from './aeoSchemaPolicy';
 
 export type ComprehensionPageType =
   | 'product'
@@ -112,7 +117,7 @@ function extractH1(html: string): string {
   return m ? stripTags(m[1]) : '';
 }
 
-function pageTypeFromUrl(pageUrl: string): ComprehensionPageType {
+export function pageTypeFromUrl(pageUrl: string): ComprehensionPageType {
   try {
     const lower = pageUrl.toLowerCase();
     const path = new URL(lower.startsWith('http') ? lower : `https://${lower}`).pathname;
@@ -652,7 +657,8 @@ export function buildOrganizationJsonLd(info: OrgInfo): string {
 
 /**
  * Elige la mejor estructura para ofrecer según el tipo de página.
- * Prioridad: FAQ (mayor valor AEO) → Producto → Artículo → Organización.
+ * Prioridad (política AEO): Producto → FAQ (solo page) → Artículo → Organización.
+ * El contenido útil siempre va antes; Schema es el cierre técnico condicional.
  * Devuelve null si ya está todo cubierto.
  */
 export function resolveStructuredOffer(
@@ -664,8 +670,30 @@ export function resolveStructuredOffer(
   questions: FaqPair[],
   existing: ExistingStructuredData
 ): StructuredOffer | null {
-  // 1. FAQ — la de mayor valor para que las IA citen
-  if (questions.length >= 1 && !existing.hasFaqPage) {
+  // 1. Producto → Product Schema (cierre técnico natural de una ficha)
+  if (shouldAutoOfferProductSchema(pageType) && !existing.hasProduct) {
+    const info = detectProductInfo(html, title, h1);
+    if (info.name) {
+      return {
+        type: 'product',
+        code: buildProductJsonLd(info, pageUrl),
+        missionTitle: 'Hacer que Google entienda que esto es un producto',
+        description:
+          'Primero el contenido de la ficha (para qué sirve, para quién). Después este bloque técnico Product Schema — invisible para visitantes — ayuda a Google y a las IA a clasificarlo.',
+        copyLabel: 'Copiar Schema Product',
+        note: info.price
+          ? 'No hace falta FAQPage Schema acá: en un producto el cierre técnico típico es Product.'
+          : 'No detectamos precio para incluir automáticamente. El bloque igual ayuda; el precio conviene dejarlo al plugin de la tienda.',
+      };
+    }
+  }
+
+  // 2. FAQ Schema — solo en tipos donde la política lo permite (no categoría/producto/home/post)
+  if (
+    questions.length >= 1 &&
+    !existing.hasFaqPage &&
+    shouldAutoOfferFaqSchema(pageType)
+  ) {
     return {
       type: 'faq',
       code: buildFaqJsonLd(questions),
@@ -674,31 +702,13 @@ export function resolveStructuredOffer(
       missionTitle: 'Hacer que las IA lean tus preguntas',
       description: `Esta página responde ${questions.length} ${
         questions.length === 1 ? 'pregunta' : 'preguntas'
-      }. Primero asegurate de que estén visibles en la página; después instalá el Schema (código técnico) con un plugin SEO o HTML seguro — nunca en la descripción de una categoría.`,
+      }. El contenido visible es lo primero; el Schema es el paso técnico opcional (JSON-LD vía plugin SEO / HTML seguro).`,
       copyLabel: 'Copiar Schema (JSON-LD)',
       note:
         questions.length === 1
           ? 'Con 1 pregunta las IA ya la entienden. Para el resultado enriquecido de Google, sumá otra pregunta con su respuesta.'
-          : 'El Schema es invisible. No lo pegues en Productos → Categorías → Descripción (Wordfence lo bloquea).',
+          : 'El Schema es invisible. No lo pegues en la descripción de una categoría (Wordfence lo bloquea).',
     };
-  }
-
-  // 2. Producto sin Product schema
-  if (pageType === 'product' && !existing.hasProduct) {
-    const info = detectProductInfo(html, title, h1);
-    if (info.name) {
-      return {
-        type: 'product',
-        code: buildProductJsonLd(info, pageUrl),
-        missionTitle: 'Hacer que Google entienda que esto es un producto',
-        description:
-          'Generamos la ficha de producto (nombre, imagen, precio y marca si están) que Google y las IA usan para mostrarlo y recomendarlo.',
-        copyLabel: 'Copiar código del producto',
-        note: info.price
-          ? undefined
-          : 'No detectamos un precio para incluir automáticamente. El bloque igual ayuda; si querés, agregá el precio en tu tienda.',
-      };
-    }
   }
 
   // 3. Artículo/blog sin Article schema
@@ -710,22 +720,24 @@ export function resolveStructuredOffer(
         code: buildArticleJsonLd(info, pageUrl),
         missionTitle: 'Hacer que Google entienda que esto es un artículo',
         description:
-          'Generamos la ficha de artículo (título, autor y fecha si están) para que Google y las IA sepan de qué trata y cuándo se publicó.',
+          'Generamos la ficha de artículo (título, autor y fecha si están) para que Google y las IA sepan de qué trata y cuándo se publicó. En entradas, el AEO principal sigue siendo el contenido útil — no FAQPage automático.',
         copyLabel: 'Copiar código del artículo',
       };
     }
   }
 
-  // 4. Organización responsable (fallback: home, categoría, página)
+  // 4. Organización (home / categoría / página sin identidad clara)
   if (!existing.hasOrganization && !existing.hasLocalBusiness) {
     const info = detectOrgInfo(html, title, pageUrl);
-    if (info.name) {
+    if (info.name && (pageType === 'home' || pageType === 'category' || pageType === 'page' || pageType === 'unknown')) {
       return {
         type: 'organization',
         code: buildOrganizationJsonLd(info),
         missionTitle: 'Decirle a Google qué empresa está detrás',
         description:
-          'Generamos la identidad de tu empresa (nombre, sitio y logo) para que Google y las IA sepan quién es responsable de esta página.',
+          pageType === 'category'
+            ? 'En una categoría el trabajo AEO principal es el contenido útil (preguntas que ayuda a responder). Este Schema de organización es opcional y habla de la marca, no reemplaza el texto de la categoría.'
+            : 'Generamos la identidad de tu empresa (nombre, sitio y logo) para que Google y las IA sepan quién es responsable de esta página.',
         copyLabel: 'Copiar código de la empresa',
       };
     }
@@ -768,13 +780,17 @@ function buildHeadline(
  * Análisis completo de comprensión a partir del HTML en vivo.
  */
 export function analyzeComprehension(html: string, pageUrl: string): ComprehensionMap {
-  const pageType = resolvePageType(html, pageUrl);
+  const existingStructured = extractExistingStructuredData(html);
+  // Misma refinación que el Espía: CollectionPage / Product / Article corrigen el tipo.
+  const pageType = refinePageTypeWithSchema(
+    resolvePageType(html, pageUrl),
+    existingStructured.typesFound
+  );
   const pageTypeLabel = PAGE_TYPE_LABELS[pageType];
   const title = extractTitle(html);
   const h1 = extractH1(html);
   const entities = extractEntities(title, h1);
   const questions = extractFaqPairs(html);
-  const existingStructured = extractExistingStructuredData(html);
   const author = detectAuthor(html);
   const organization = detectOrganization(html, title);
   const date = detectDate(html);
@@ -787,7 +803,9 @@ export function analyzeComprehension(html: string, pageUrl: string): Comprehensi
   const faqStructureAlreadyPresent = existingStructured.hasFaqPage;
   // Con 1+ pregunta ya generamos el bloque: para las IA una sola Q&A estructurada
   // ya ayuda. (Google prefiere 2+ para el resultado enriquecido; se avisa en la UI.)
-  const canOfferFaqStructure = questions.length >= 1 && !faqStructureAlreadyPresent;
+  const canOfferFaqStructure =
+    questions.length >= 1 && !faqStructureAlreadyPresent && shouldAutoOfferFaqSchema(pageType);
+
 
   const checks: ComprehensionCheck[] = [
     {
@@ -864,8 +882,9 @@ export function analyzeComprehension(html: string, pageUrl: string): Comprehensi
           ? questions.length === 1
             ? 'Detectamos 1 pregunta. Podés generar la estructura para que las IA la lean sin ambigüedad (para el resultado enriquecido de Google conviene sumar otra).'
             : `Tenés ${questions.length} preguntas en el texto. Podés generar la estructura lista para que Google/IA las lean sin ambigüedad.`
-          : 'Todavía no hay un bloque de preguntas listo para Google/IA.',
-      applicable: questions.length >= 1 || faqStructureAlreadyPresent,
+          : 'En este tipo de página el cierre AEO es el contenido visible; no pedimos FAQPage Schema automático.',
+      // Solo puntúa si la política ofrece FAQ Schema o ya está presente (no castigar categorías).
+      applicable: canOfferFaqStructure || faqStructureAlreadyPresent,
     },
   ];
 

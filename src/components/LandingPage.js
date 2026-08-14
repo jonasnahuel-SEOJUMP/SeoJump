@@ -64,12 +64,12 @@ export default function LandingPage({ onRegister, playClick, variant = "default"
             Espiaste. Ahora <span className="text-duo-green">superarlos</span> es una misión por día.
           </h2>
           <p className="text-slate-300 text-lg md:text-xl max-w-2xl mx-auto mb-10 font-semibold leading-relaxed">
-            SEO Jump convierte cada brecha en una acción concreta: cambiás un título, un H1, un FAQ.
-            Verificamos en vivo. Sumás XP. Mañana, otra.
+            SEO Jump convierte cada brecha en una acción concreta: título, H1 o contenido útil
+            (preguntas visibles). Verificamos en vivo. Sumás XP. Mañana, otra.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-left mb-10">
             <BridgeCard icon="📡" title="Search Console" desc="Sumás tus datos reales de Google para cruzarlos con lo del rival." />
-            <BridgeCard icon="🎯" title="Misión del día" desc="Una mejora clara: título, H1 o FAQ. 15 minutos. Hecho." />
+            <BridgeCard icon="🎯" title="Misión del día" desc="Una mejora clara: título, H1 o respuestas útiles. 15 minutos. Hecho." />
             <BridgeCard icon="⭐" title="XP y racha" desc="Verificamos en vivo. Sumás puntos. Mañana, otra misión." />
           </div>
           <StartCta className="btn-3d btn-green text-lg md:text-xl px-8 py-5 inline-flex transform hover:scale-105 transition-transform">
@@ -90,7 +90,7 @@ export default function LandingPage({ onRegister, playClick, variant = "default"
               ¿Las IA entienden tu página?
             </h2>
             <p className="text-slate-400 font-semibold text-base md:text-lg max-w-xl mx-auto">
-              Pegá tu URL y mirá qué ven ChatGPT, Gemini y Google — y qué les falta.
+              Pegá tu URL: primero miramos si el contenido responde bien; el Schema técnico solo si el tipo de página lo justifica.
             </p>
           </div>
           <PublicComprehension onRegister={onRegister} playClick={playClick} />
@@ -137,7 +137,7 @@ export default function LandingPage({ onRegister, playClick, variant = "default"
         <div className="space-y-4">
           <Faq
             q="¿Cómo funciona el Espía?"
-            a="Pegás la URL de un rival. La IA compara título, H1, temas, FAQ y Schema con tu web, y te dice qué cambiar hoy. Después SEO Jump arma misiones diarias para cerrar esas brechas."
+            a="Pegás la URL de un rival. La IA compara título, H1, temas y contenido útil (preguntas visibles) con tu web. Schema técnico solo cuando el tipo de página lo justifica (p. ej. Product en una ficha). Después SEO Jump arma misiones diarias para cerrar esas brechas."
           />
           <Faq
             q="¿Puedo espiar varias páginas del mismo competidor?"
@@ -145,11 +145,11 @@ export default function LandingPage({ onRegister, playClick, variant = "default"
           />
           <Faq
             q="¿Qué es AEO?"
-            a="SEO = aparecer en los enlaces de Google. AEO = que ChatGPT y Gemini te citen. El mapa gratis de arriba te muestra qué entienden las IA de tu página."
+            a="SEO = aparecer en los enlaces de Google. AEO = que ChatGPT y Gemini te citen porque tu página responde bien. Primero el contenido útil; Schema después y solo si corresponde al tipo de URL. El mapa gratis de arriba te muestra qué entienden las IA."
           />
           <Faq
             q="¿Y el Human Score?"
-            a="Métrica en evolución que mide valor humano del contenido (experiencia, evidencia, casos, opinión, datos). No detecta «si es IA»: mide si aportás algo que el resto no tiene. Vive dentro de la app."
+            a="Mide valor humano del contenido (experiencia, evidencia, casos, opinión, datos). No detecta «si es IA»: mide si aportás algo que el resto no tiene. Complementa al AEO: Human Score = calidad humana; Mapa/Espía = claridad para IA + Schema por tipo. Vive dentro de la app."
           />
           <Faq q="¿Es seguro conectar Google?" a="Sí. OAuth oficial de Google. No vemos tu contraseña." />
         </div>
@@ -295,7 +295,7 @@ function HowSpyWorks() {
     {
       n: "2",
       title: "Comparamos con la tuya",
-      desc: "Título, H1, temas, FAQ y Schema — en castellano, sin dashboard eterno.",
+      desc: "Título, H1, temas y contenido útil — Schema solo si el tipo de página lo pide.",
     },
     {
       n: "3",
