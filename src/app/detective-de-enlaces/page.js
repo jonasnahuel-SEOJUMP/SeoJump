@@ -42,7 +42,11 @@ function isSpecificUrlClient(raw) {
 function FaqHowToBox() {
   return (
     <div className="rounded-xl border-2 border-cyan-500/30 bg-slate-950/50 p-4 space-y-2">
-      <p className="text-sm font-black text-white">📝 Cómo cargar tus preguntas para que las detectemos</p>
+      <p className="text-sm font-black text-white">📝 Contenido útil primero (AEO humano)</p>
+      <p className="text-xs font-bold text-slate-400 leading-relaxed">
+        SEO Jump primero te ayuda a responder lo que pregunta tu cliente. El Schema técnico viene después,
+        y solo si el tipo de página lo justifica (en una categoría, el trabajo suele terminar en el texto).
+      </p>
       <ul className="space-y-1.5 text-xs font-bold text-slate-300 leading-relaxed list-disc list-inside">
         <li>
           Escribí cada pregunta como <span className="text-cyan-300">texto visible</span>: un
@@ -59,11 +63,12 @@ function FaqHowToBox() {
         </li>
         <li>
           Ojo con la URL: revisá la <span className="text-cyan-300">página exacta</span> que estás
-          comparando (la de tu producto, no tu home). Pegala en <em>“Tu página equivalente”</em>.
+          comparando (la de tu producto o categoría, no tu home). Pegala en <em>“Tu página equivalente”</em>.
         </li>
       </ul>
       <p className="text-[11px] font-bold text-slate-500 leading-snug">
-        Después, cuando generes el código Schema, te mostramos <span className="text-slate-300">dónde pegarlo según tu editor</span>.
+        Si más adelante hay Schema, te mostramos <span className="text-slate-300">dónde instalarlo con seguridad</span>
+        {" "}(nunca en la descripción de una categoría: Wordfence lo bloquea).
       </p>
     </div>
   );
@@ -1581,6 +1586,41 @@ export default function DetectiveDeEnlaces() {
                           <p className="text-xs text-slate-500 font-bold">Lo que Google, ChatGPT y Gemini pueden citar</p>
                         </div>
                       </div>
+                      {(spyResult.ownPageType || spyResult.rivalPageType) && (
+                        <div className="rounded-xl border border-slate-700/80 bg-slate-950/50 p-3 space-y-1">
+                          <p className="text-[11px] font-black text-slate-300 uppercase tracking-wider">
+                            Lógica SEO Jump · tipo de página
+                          </p>
+                          <p className="text-xs font-bold text-slate-400 leading-relaxed">
+                            Primero contenido útil para humanos e IA.
+                            {spyResult.ownPageType === "category" ||
+                            spyResult.ownPageType === "post" ||
+                            spyResult.ownPageType === "home" ? (
+                              <>
+                                {" "}
+                                En una{" "}
+                                <strong className="text-slate-200">
+                                  {spyResult.ownPageType === "category"
+                                    ? "categoría"
+                                    : spyResult.ownPageType === "home"
+                                      ? "home"
+                                      : "entrada"}
+                                </strong>
+                                , el trabajo AEO termina en el texto visible:{" "}
+                                <strong className="text-emerald-300">no empujamos FAQPage Schema automático</strong>.
+                              </>
+                            ) : spyResult.ownPageType === "product" ? (
+                              <>
+                                {" "}
+                                En un <strong className="text-slate-200">producto</strong>, el cierre técnico típico es{" "}
+                                <strong className="text-emerald-300">Product Schema</strong> — no FAQPage en la descripción.
+                              </>
+                            ) : (
+                              <> Después, solo si corresponde, Schema técnico.</>
+                            )}
+                          </p>
+                        </div>
+                      )}
                       <p className="text-[11px] font-bold text-slate-500 leading-snug">
                         Este panel es un snapshot del último espionaje. Si acabás de agregar FAQ o Schema, tocá{" "}
                         <span className="text-slate-300">“Espiar otro competidor”</span> y volvé a espiar la misma URL

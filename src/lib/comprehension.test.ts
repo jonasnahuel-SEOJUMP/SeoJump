@@ -173,11 +173,12 @@ describe('extractEntities / author / org', () => {
 });
 
 describe('analyzeComprehension', () => {
-  it('arma mapa con confianza y ofrece estructura FAQ', () => {
+  it('arma mapa con confianza; en post no ofrece FAQ Schema automático', () => {
     const map = analyzeComprehension(SAMPLE_HTML, 'https://example.com/blog/sellado');
     expect(map.pageType).toBe('post');
     expect(map.questions.length).toBeGreaterThanOrEqual(2);
-    expect(map.canOfferFaqStructure).toBe(true);
+    expect(map.canOfferFaqStructure).toBe(false);
+    expect(map.offer?.type).not.toBe('faq');
     expect(map.faqStructureAlreadyPresent).toBe(false);
     expect(map.checks.some((c) => c.id === 'author' && c.present)).toBe(true);
     expect(['bajo', 'medio', 'alto']).toContain(map.confidence);
@@ -192,7 +193,7 @@ describe('analyzeComprehension', () => {
     expect(map.canOfferFaqStructure).toBe(false);
   });
 
-  it('ofrece estructura FAQ con una sola pregunta detectada', () => {
+  it('en producto prioriza Product Schema (no FAQPage automático)', () => {
     const html = `
       <html><head><title>Shampoo Luxury Foam</title></head>
       <body>
@@ -201,10 +202,27 @@ describe('analyzeComprehension', () => {
         <p>Su fórmula concentrada rinde entre 10 y 12 lavados completos en balde.</p>
       </body></html>`;
     const map = analyzeComprehension(html, 'https://example.com/producto/shampoo');
+    expect(map.pageType).toBe('product');
     expect(map.questions.length).toBe(1);
-    expect(map.canOfferFaqStructure).toBe(true);
-    expect(map.faqStructureAlreadyPresent).toBe(false);
-    expect(map.offer?.type).toBe('faq');
+    expect(map.canOfferFaqStructure).toBe(false);
+    expect(map.offer?.type).toBe('product');
+  });
+
+  it('en categoría no ofrece FAQ Schema aunque haya preguntas', () => {
+    const html = `
+      <html><head><title>Pulidoras</title>
+      <script type="application/ld+json">{"@type":"CollectionPage"}</script>
+      </head>
+      <body class="tax-product_cat">
+        <h1>Pulidoras</h1>
+        <h2>¿Qué pulidora conviene para empezar?</h2>
+        <p>Para detailing de entrada conviene una roto-orbital con pads suaves incluidos de fábrica.</p>
+      </body></html>`;
+    const map = analyzeComprehension(html, 'https://example.com/categoria-producto/pulidoras');
+    expect(map.pageType).toBe('category');
+    expect(map.questions.length).toBeGreaterThanOrEqual(1);
+    expect(map.canOfferFaqStructure).toBe(false);
+    expect(map.offer?.type).not.toBe('faq');
   });
 
   it('ofrece Product schema en producto sin preguntas ni Product previo', () => {
