@@ -285,6 +285,14 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
     } else if (missionType === 'META') {
       fieldLabel = 'Meta descripción en Yoast / Rank Math';
       yoastMetaSteps();
+    } else if (missionType === 'AEO') {
+      fieldLabel = 'Descripción de la categoría (texto visible)';
+      steps.push('En la **Descripción** de la categoría, agregá un bloque de preguntas y respuestas que vea el visitante.');
+      steps.push('Cada pregunta como subtítulo (H2/H3) o en negrita con «¿…?», y la respuesta en el párrafo de abajo.');
+      steps.push('Ejemplo: «¿Qué pulidora conviene para empezar?» + 2–3 oraciones de respuesta concreta.');
+      steps.push('⚠️ **No pegues** código Schema ni un `<script>` en la descripción: Wordfence lo bloquea (403). En categorías el trabajo AEO termina en el contenido visible.');
+      commonMistakes.push('No pegues JSON-LD / FAQPage en la descripción de la categoría.');
+      commonMistakes.push('No confundas «contenido útil visible» con «Schema técnico»: son dos capas distintas.');
     } else {
       steps.push(`Completá la mejora: ${labels.shortTitle}.`);
     }
@@ -549,9 +557,11 @@ export function getOwlExplanation(missionType, keyword, pageTypeId = '') {
     case 'ALT':
       return 'Google no ve imágenes, pero sí lee su descripción. Si subís una foto sin describirla, perdés oportunidades en Google Imágenes.';
     case 'AEO':
-      return kw
-        ? `Cuando alguien le pregunta a ChatGPT o Google IA algo como «${kw}», la máquina busca páginas que respondan claro. Lo que tenés que agregar es un bloque de preguntas y respuestas al final de la página: preguntas reales (por ejemplo «¿Para qué sirve?») con respuestas cortas en texto normal. No es un formulario ni un chat del sitio: es contenido escrito, como un mini manual para el cliente.`
-        : 'Un bloque de preguntas y respuestas es un texto al final de tu página con dudas reales de tus clientes y respuestas cortas. ChatGPT y Google IA leen eso para recomendar tu negocio cuando alguien hace una pregunta.';
+      return isCategory
+        ? 'En una categoría, ChatGPT y Google IA miran el texto visible. Agregá preguntas reales con respuestas concretas en la descripción — no Schema FAQPage. El trabajo AEO termina en el contenido.'
+        : kw
+          ? `Cuando alguien le pregunta a ChatGPT o Google IA algo como «${kw}», la máquina busca páginas que respondan claro. Lo que tenés que agregar es un bloque de preguntas y respuestas al final de la página: preguntas reales (por ejemplo «¿Para qué sirve?») con respuestas cortas en texto normal. No es un formulario ni un chat del sitio: es contenido escrito, como un mini manual para el cliente.`
+          : 'Un bloque de preguntas y respuestas es un texto al final de tu página con dudas reales de tus clientes y respuestas cortas. ChatGPT y Google IA leen eso para recomendar tu negocio cuando alguien hace una pregunta.';
     default:
       return 'Hacé el cambio en tu web siguiendo los pasos de arriba. Cuando termines, pegá acá lo que escribiste para que lo verifiquemos en vivo.';
   }

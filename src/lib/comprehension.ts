@@ -6,7 +6,11 @@
 
 import { detectPageTypeFromHtml } from './scraping';
 import { decodeHtmlEntities } from './textUtils';
-import { shouldAutoOfferFaqSchema, shouldAutoOfferProductSchema } from './aeoSchemaPolicy';
+import {
+  refinePageTypeWithSchema,
+  shouldAutoOfferFaqSchema,
+  shouldAutoOfferProductSchema,
+} from './aeoSchemaPolicy';
 
 export type ComprehensionPageType =
   | 'product'
@@ -653,7 +657,8 @@ export function buildOrganizationJsonLd(info: OrgInfo): string {
 
 /**
  * Elige la mejor estructura para ofrecer según el tipo de página.
- * Prioridad: FAQ (mayor valor AEO) → Producto → Artículo → Organización.
+ * Prioridad (política AEO): Producto → FAQ (solo page) → Artículo → Organización.
+ * El contenido útil siempre va antes; Schema es el cierre técnico condicional.
  * Devuelve null si ya está todo cubierto.
  */
 export function resolveStructuredOffer(
@@ -775,13 +780,17 @@ function buildHeadline(
  * Análisis completo de comprensión a partir del HTML en vivo.
  */
 export function analyzeComprehension(html: string, pageUrl: string): ComprehensionMap {
-  const pageType = resolvePageType(html, pageUrl);
+  const existingStructured = extractExistingStructuredData(html);
+  // Misma refinación que el Espía: CollectionPage / Product / Article corrigen el tipo.
+  const pageType = refinePageTypeWithSchema(
+    resolvePageType(html, pageUrl),
+    existingStructured.typesFound
+  );
   const pageTypeLabel = PAGE_TYPE_LABELS[pageType];
   const title = extractTitle(html);
   const h1 = extractH1(html);
   const entities = extractEntities(title, h1);
   const questions = extractFaqPairs(html);
-  const existingStructured = extractExistingStructuredData(html);
   const author = detectAuthor(html);
   const organization = detectOrganization(html, title);
   const date = detectDate(html);
@@ -873,8 +882,9 @@ export function analyzeComprehension(html: string, pageUrl: string): Comprehensi
           ? questions.length === 1
             ? 'Detectamos 1 pregunta. Podés generar la estructura para que las IA la lean sin ambigüedad (para el resultado enriquecido de Google conviene sumar otra).'
             : `Tenés ${questions.length} preguntas en el texto. Podés generar la estructura lista para que Google/IA las lean sin ambigüedad.`
-          : 'Todavía no hay un bloque de preguntas listo para Google/IA.',
-      applicable: questions.length >= 1 || faqStructureAlreadyPresent,
+          : 'En este tipo de página el cierre AEO es el contenido visible; no pedimos FAQPage Schema automático.',
+      // Solo puntúa si la política ofrece FAQ Schema o ya está presente (no castigar categorías).
+      applicable: canOfferFaqStructure || faqStructureAlreadyPresent,
     },
   ];
 

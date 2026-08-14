@@ -223,6 +223,24 @@ describe('analyzeComprehension', () => {
     expect(map.questions.length).toBeGreaterThanOrEqual(1);
     expect(map.canOfferFaqStructure).toBe(false);
     expect(map.offer?.type).not.toBe('faq');
+    const faqCheck = map.checks.find((c) => c.id === 'faqStructure');
+    expect(faqCheck?.applicable).toBe(false);
+  });
+
+  it('refina page→category con CollectionPage aunque la URL sea genérica', () => {
+    const html = `
+      <html><head><title>Pulidoras</title>
+      <script type="application/ld+json">{"@type":"CollectionPage","name":"Pulidoras"}</script>
+      </head>
+      <body>
+        <h1>Pulidoras</h1>
+        <h2>¿Cuál conviene?</h2>
+        <p>Para empezar, una roto-orbital de entrada con pads suaves incluidos.</p>
+      </body></html>`;
+    const map = analyzeComprehension(html, 'https://example.com/pulidoras/');
+    expect(map.pageType).toBe('category');
+    expect(map.canOfferFaqStructure).toBe(false);
+    expect(map.offer?.type).not.toBe('faq');
   });
 
   it('ofrece Product schema en producto sin preguntas ni Product previo', () => {

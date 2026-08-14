@@ -28,6 +28,11 @@ import {
 } from './scraping'
 import { buildCompetitorSnapshot, enrichSpyGaps, type SpyGapEnriched } from './spySnapshot'
 import {
+  shouldAutoOfferFaqSchema,
+  refinePageTypeWithSchema,
+  pageTypeLabel,
+} from './aeoSchemaPolicy'
+import {
   computeHumanScore,
   humanMissionVerified,
   humanVerifyHint,
@@ -52,6 +57,7 @@ import {
   buildFaqJsonLd,
   detectProductInfo,
   buildProductJsonLd,
+  resolvePageType,
 } from './comprehension'
 import { detectSchemaInstallHints } from './schemaPasteGuide'
 import {
@@ -3585,6 +3591,31 @@ export async function verifySpyGap(
       if (structured.hasFaqPage) {
         return { success: true, verified: true, detail: 'Detectamos Schema FAQPage en tu página. ¡Listo!' };
       }
+
+      // Red de seguridad: no regenerar FAQPage si el tipo de URL no lo justifica.
+      const livePageType = refinePageTypeWithSchema(
+        resolvePageType(html, target),
+        structured.typesFound
+      );
+      if (!shouldAutoOfferFaqSchema(livePageType)) {
+        const livePairs = extractFaqPairs(html, 12);
+        const typeLabel = pageTypeLabel(livePageType);
+        if (livePairs.length >= 1) {
+          return {
+            success: true,
+            verified: true,
+            contentOnly: true,
+            detail: `En una ${typeLabel}, el trabajo AEO principal son las preguntas visibles. Detectamos ${livePairs.length}. No hace falta FAQPage Schema automático acá.`,
+          };
+        }
+        return {
+          success: false,
+          checkedUrl: target,
+          error:
+            `En una ${typeLabel} no pedimos FAQPage Schema. Primero agregá preguntas y respuestas visibles en el contenido, publicá, borrá caché y verificá de nuevo.`,
+        };
+      }
+
       // Segundo click: ya le dimos el código y dice haberlo pegado → error claro, no regenerar.
       if (alreadyGenerated) {
         return {

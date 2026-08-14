@@ -134,7 +134,10 @@ export default function HumanScorePanel({
               La IA optimiza títulos y metadatos. <strong className="text-fuchsia-300">Vos aportás lo irreemplazable</strong>: experiencia, evidencia y criterio. Este análisis mide cuánto de eso tiene tu página, sin importar si el borrador lo escribió una IA.
             </p>
             <p className="text-xs font-bold text-slate-500">
-              No detecta "si es IA". Detecta si tu contenido aporta algo que los otros 100 resultados de Google no tienen.
+              No detecta &quot;si es IA&quot;. Detecta si tu contenido aporta algo que los otros 100 resultados de Google no tienen.
+            </p>
+            <p className="text-xs font-bold text-slate-500 leading-relaxed">
+              Relación con AEO: el Human Score mide valor humano; el Mapa de comprensión (abajo) mira si la página responde claro para IA y, solo si el tipo de URL lo justifica, sugiere Schema técnico. Son capas distintas del mismo objetivo: contenido que gana.
             </p>
           </div>
         </div>
