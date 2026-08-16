@@ -69,7 +69,7 @@ Es la capa más nueva. Cuando alguien le dice a ChatGPT *"recomendame una tienda
 
 No son tres estrategias separadas. Son **tres formas en que tu cliente te busca**:
 
-| El cliente... | Busca en... | Vos optimizás con... |
+| El cliente... | Busca en... | Usted optimiza con... |
 |---------------|-------------|----------------------|
 | "pintura retoque auto" | Google resultados | **SEO** (título + descripción) |
 | "¿para qué sirve la pintura de retoque?" | Google IA / ChatGPT | **AEO** (bloque FAQ) |
@@ -135,7 +135,7 @@ Para profundizar en cada capa, leé: [¿Qué es el AEO en detalle?](/blog/que-es
 No. Son tres capas distintas de visibilidad online. SEO = aparecer en los resultados clásicos de Google (links). AEO = aparecer en respuestas directas generadas por IA dentro del buscador. GEO = ser recomendado por ChatGPT, Gemini y otros asistentes conversacionales cuando alguien pregunta algo de tu sector. Las tres se refuerzan entre sí pero requieren acciones específicas.
 
 **¿Necesito contratar a alguien para hacer AEO y GEO?**
-No necesariamente. Las acciones básicas —estructurar bien el contenido con preguntas y respuestas, agregar FAQ a las páginas más importantes, actualizar los contenidos con regularidad— las podés hacer vos mismo. Lo que sí conviene es tener datos para saber dónde enfocar el esfuerzo, que es exactamente para lo que sirve SEO Jump.
+No necesariamente. Las acciones básicas —estructurar bien el contenido con preguntas y respuestas, agregar FAQ a las páginas más importantes, actualizar los contenidos con regularidad— las puede hacer usted mismo. Lo que sí conviene es tener datos para saber dónde enfocar el esfuerzo, que es exactamente para lo que sirve SEO Jump.
 
 **¿El GEO funciona para negocios locales o pequeños?**
 Sí, y especialmente bien. ChatGPT y Gemini tienden a citar negocios o expertos que tienen contenido específico sobre su nicho o zona. Un contador de Rosario con un blog sobre "monotributo en Argentina" tiene muchas más chances de ser citado por una IA que un portal genérico sin foco geográfico.

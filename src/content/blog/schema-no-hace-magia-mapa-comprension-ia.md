@@ -116,7 +116,7 @@ Un FAQ Schema vacío, mal armado o duplicado puede ser peor que no tenerlo.
 
 **Sirven** para armar un JSON-LD puntual.
 
-**Límite:** vos tenés que saber qué tipo elegir (FAQ, Product, LocalBusiness…). No diagnostican tu URL en vivo. No te avisan si ya tenés un FAQPage y estás a punto de duplicarlo. No te dan XP ni verificación.
+**Límite:** usted tiene que saber qué tipo elegir (FAQ, Product, LocalBusiness…). No diagnostican tu URL en vivo. No te avisan si ya tenés un FAQPage y estás a punto de duplicarlo. No te dan XP ni verificación.
 
 ### Suites grandes (Semrush, Ahrefs y similares)
 
@@ -153,7 +153,7 @@ No es un editor de JSON. Es un **mapa**:
 
 Si te ofrece código, la misión es simple:
 
-1. Copiar el **código listo para pegar** (vos no necesitás leer la jerga).
+1. Copiar el **código listo para pegar** (usted no necesita leer la jerga).
 2. Pegarlo donde corresponde ([guía según tu editor](/blog/donde-pegar-codigo-schema-wordpress-shopify)).
 3. Verificar en vivo y sumar XP.
 
@@ -194,7 +194,7 @@ Para dueños de tienda, profesionales y pymes que:
 - Usan WordPress / WooCommerce (o similar) y pueden pegar un bloque HTML.
 - Prefieren una misión de 10 minutos a pelearse con Schema.org.
 
-Si tu objetivo es auditar mil dominios de clientes con dashboards enterprise, hay otras herramientas. Si tu objetivo es **que tu propia web se entienda mejor esta semana**, el Mapa está pensado para vos.
+Si tu objetivo es auditar mil dominios de clientes con dashboards enterprise, hay otras herramientas. Si tu objetivo es **que tu propia web se entienda mejor esta semana**, el Mapa está pensado para usted.
 
 ## Probá el Mapa de comprensión en tu web
 

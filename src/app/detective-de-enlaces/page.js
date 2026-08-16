@@ -1548,7 +1548,7 @@ export default function DetectiveDeEnlaces() {
                       <div className="space-y-1">
                         <p className="text-sm font-black text-sky-300">Comparamos tu HOME contra una página de producto</p>
                         <p className="text-xs font-bold text-slate-400 leading-relaxed">
-                          El competidor apunta a un producto específico y vos no pasaste una página equivalente, así que usamos tu home (general por naturaleza). Para una comparación exacta, volvé a espiar pegando <strong className="text-slate-300">tu página de ese mismo producto</strong> en el campo "Tu página equivalente".
+                          El competidor apunta a un producto específico y usted no pasó una página equivalente, así que usamos su home (general por naturaleza). Para una comparación exacta, vuelva a espiar pegando <strong className="text-slate-300">su página de ese mismo producto</strong> en el campo "Tu página equivalente".
                         </p>
                       </div>
                     </div>
@@ -1571,7 +1571,7 @@ export default function DetectiveDeEnlaces() {
                   {spyResult.you && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="card-3d bg-slate-800/60 border-slate-700 p-4 space-y-2">
-                        <p className="text-xs font-black text-emerald-400 uppercase">🟢 Vos</p>
+                        <p className="text-xs font-black text-emerald-400 uppercase">🟢 Usted</p>
                         <p className="text-xs text-slate-500 font-bold">Título: <span className="text-slate-300">{spyResult.you.title || "(vacío)"}</span></p>
                         <p className="text-xs text-slate-500 font-bold">H1: <span className="text-slate-300">{spyResult.you.h1 || "(vacío)"}</span></p>
                       </div>
@@ -1626,7 +1626,7 @@ export default function DetectiveDeEnlaces() {
                       </p>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div className="bg-slate-800/60 border border-slate-700 rounded-xl p-4 space-y-2">
-                          <p className="text-xs font-black text-emerald-400 uppercase">🟢 Vos</p>
+                          <p className="text-xs font-black text-emerald-400 uppercase">🟢 Usted</p>
                           <p className="text-xs font-bold text-slate-400">
                             Preguntas visibles:{" "}
                             <span className={(spyResult.you?.faqQuestions?.length > 0) ? "text-emerald-300" : "text-amber-300"}>

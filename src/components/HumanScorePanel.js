@@ -131,7 +131,7 @@ export default function HumanScorePanel({
           <div className="space-y-1.5">
             <h3 className="text-xl md:text-2xl font-black text-white">Human Score</h3>
             <p className="text-sm md:text-base font-bold text-slate-300 leading-relaxed">
-              La IA optimiza títulos y metadatos. <strong className="text-fuchsia-300">Vos aportás lo irreemplazable</strong>: experiencia, evidencia y criterio. Este análisis mide cuánto de eso tiene tu página, sin importar si el borrador lo escribió una IA.
+              La IA optimiza títulos y metadatos. <strong className="text-fuchsia-300">Usted aporta lo irreemplazable</strong>: experiencia, evidencia y criterio. Este análisis mide cuánto de eso tiene su página, sin importar si el borrador lo escribió una IA.
             </p>
             <p className="text-xs font-bold text-slate-500">
               No detecta &quot;si es IA&quot;. Detecta si tu contenido aporta algo que los otros 100 resultados de Google no tienen.
@@ -241,7 +241,7 @@ export default function HumanScorePanel({
                   👤 Misiones Human
                 </h4>
                 <p className="text-sm font-bold text-slate-400">
-                  Estas las tenés que hacer vos: la IA no puede inventar tu experiencia. Publicá el cambio en la web (no en borrador) y tocá <strong className="text-white">Verificar</strong>.
+                  Estas las tiene que hacer usted: la IA no puede inventar su experiencia. Publique el cambio en la web (no en borrador) y toque <strong className="text-white">Verificar</strong>.
                 </p>
               </div>
 

@@ -150,7 +150,7 @@ describe('enrichSpyGaps', () => {
       schemaTypes: ['Product'],
     };
     const enriched = enrichSpyGaps(
-      [{ area: 'Schema AEO', problem: "tiene Schema 'Product'. Vos no lo tenés implementado.", suggestion: 'Implementá Product' }],
+      [{ area: 'Schema AEO', problem: "tiene Schema 'Product'. Usted no lo tiene implementado.", suggestion: 'Implementá Product' }],
       own,
       rival
     );
@@ -180,7 +180,7 @@ describe('enrichSpyGaps', () => {
       schemaTypes: ['FAQPage'],
     };
     const enriched = enrichSpyGaps(
-      [{ area: 'Preguntas/FAQ Schema', problem: 'Vos no tenés Schema FAQPage', suggestion: 'Agregá FAQPage' }],
+      [{ area: 'Preguntas/FAQ Schema', problem: 'Usted no tiene Schema FAQPage', suggestion: 'Agregá FAQPage' }],
       own,
       rival,
       { ownPageType: 'page' }

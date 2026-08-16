@@ -52,7 +52,7 @@ Si nadie te conoce todavía, nadie busca tu nombre. La gente busca lo que necesi
 
 Esto es lo que llamamos **keyword de intención** vs **keyword de marca**. Si optimizás tu página solo con el nombre de tu local, solo vas a aparecer cuando alguien ya sabe que existís. Y eso no genera clientes nuevos.
 
-**La regla:** tu página principal tiene que rankear para lo que busca tu cliente, no para lo que vos querés que busquen.
+**La regla:** tu página principal tiene que rankear para lo que busca tu cliente, no para lo que usted quiere que busquen.
 
 Explicamos esto a fondo en: [Por qué no optimizás tu marca en Google (y qué sí deberías atacar)](/blog/marca-vs-intencion-busqueda).
 

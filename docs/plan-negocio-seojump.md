@@ -307,7 +307,7 @@ sites (agencia):
 
 ### Objetivo
 
-Saber si alguien que no sos vos usa la app cada semana.
+Saber si alguien que no es usted usa la app cada semana.
 
 ### Pasos
 

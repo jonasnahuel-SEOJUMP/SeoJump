@@ -859,7 +859,7 @@ export default function HomeApp() {
                 <div>
                   <p className="font-black text-white text-base">📈 Aplicá los cambios en tu web</p>
                   <p className="text-sm font-bold text-slate-400 mt-0.5 leading-snug">
-                    Vos editás título, meta o contenido; SEO Jump te guía y sumás XP por cada avance.
+                    Usted edita título, meta o contenido; SEO Jump lo guía y suma XP por cada avance.
                   </p>
                 </div>
               </div>

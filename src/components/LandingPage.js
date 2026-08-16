@@ -160,7 +160,7 @@ export default function LandingPage({ onRegister, playClick, variant = "default"
         <div className="max-w-3xl mx-auto relative overflow-hidden rounded-3xl border-2 border-duo-green/30 bg-slate-900 p-10 md:p-14 text-center shadow-2xl">
           <div className="absolute inset-0 bg-duo-green/5 blur-xl pointer-events-none" />
           <h3 className="relative z-10 text-2xl md:text-4xl font-black text-white mb-4">
-            Tu rival ya está en Google. ¿Y vos?
+            Tu rival ya está en Google. ¿Y usted?
           </h3>
           <p className="relative z-10 text-slate-300 text-lg mb-8 font-medium">
             Pegá su URL. En minutos sabés qué te gana — y qué hacer hoy.

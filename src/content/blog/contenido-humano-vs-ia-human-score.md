@@ -148,7 +148,7 @@ Todo esto suena lindo en teoría, pero la mejor forma de entenderlo es mirar tu 
 
 Eso es exactamente lo que hace SEO Jump. Conectás tu sitio y te da **misiones concretas**: por un lado, las que la IA resuelve rápido (título, meta descripción, encabezados, enlaces); por otro, las **Misiones Human**, que te muestran qué le falta a tu contenido para dejar de parecerse a los otros cien resultados: una experiencia propia, un dato real, una foto tuya, una opinión.
 
-No te pedimos que dejes de usar IA. Te ayudamos a que, arriba de ese borrador, pongas lo único que la IA no puede inventar: **vos**.
+No te pedimos que dejes de usar IA. Te ayudamos a que, arriba de ese borrador, pongas lo único que la IA no puede inventar: **usted**.
 
 [**Analizá tu web gratis y medí su valor humano →**](/)
 
