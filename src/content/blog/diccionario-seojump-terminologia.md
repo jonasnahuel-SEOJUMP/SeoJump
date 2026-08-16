@@ -2,8 +2,8 @@
 title: "El Diccionario de SEOJump: Entendiendo tus métricas (sin tecnicismos)"
 description: "Descubrí qué significa 'Dinero sobre la mesa', 'Oportunidades de Venta' y 'Fugas de Clientes'. Traducimos el aburrido idioma de Google al idioma de tus ventas."
 date: "2026-05-27"
-dateModified: "2026-06-16"
-readTime: "4 min"
+dateModified: "2026-08-16"
+readTime: "5 min"
 author: "SeoJump"
 ---
 
@@ -52,11 +52,27 @@ Por eso, diseñamos nuestra aplicación para hablarte en tu idioma: el idioma de
 
 **Por qué importa:** Los robots de Google son ciegos; usan el texto del enlace para entender de qué trata la página a la que vas. Si el enlace dice "Hacé clic acá", Google no aprende nada. Si el enlace dice "Ver máquinas pulidoras", Google anota: *"Ah, esta página de destino vende máquinas pulidoras"*, y la sube de posición.
 
+## ❓ Preguntas visibles (FAQ en el texto)
+
+**Qué es en SEOJump:** Bloques de pregunta + respuesta que un humano lee en la página (por ejemplo “¿Cuánto dura?” con el párrafo abajo). No es un código oculto.
+
+**Qué significa técnicamente:** Contenido FAQ / Q&A en HTML visible.
+
+**Por qué importa:** Google y las IA citan lo que pueden entender. En categorías, inicio o artículos, SEO Jump prioriza estas preguntas visibles antes que cualquier código.
+
+## 🏷️ Código técnico (Schema)
+
+**Qué es en SEOJump:** Un bloque invisible que le explica a Google/IA el tipo de página (producto, empresa, etc.). Solo lo sugerimos cuando el tipo de URL lo justifica — por ejemplo Product en una ficha, después de que el contenido esté claro. En una categoría a menudo verás “no requerido”.
+
+**Qué significa técnicamente:** Datos estructurados JSON-LD (Schema.org).
+
+**Por qué importa:** Reduce ambigüedad. No reemplaza un buen texto. Explicación completa: [Schema no hace magia](/blog/schema-no-hace-magia-mapa-comprension-ia).
+
 ---
 
 **Resumen:** En SEOJump nuestro objetivo es que no pierdas tiempo mirando gráficos técnicos. Si la app te dice que arregles una **Fuga de Cliente** o rescates el **Dinero sobre la mesa**, hacelo. Atrás de esos términos amigables hay motores técnicos súper potentes trabajando para tu posicionamiento.
 
-¿Querés profundizar en alguno de estos conceptos? Leé sobre [la zona de ataque y cómo explotar las oportunidades de venta](/blog/zona-de-ataque-posicion-google) o sobre [por qué las palabras clave de intención valen más que las de marca](/blog/palabras-clave-ventas).
+¿Querés profundizar en alguno de estos conceptos? Leé sobre [la zona de ataque y cómo explotar las oportunidades de venta](/blog/zona-de-ataque-posicion-google), [por qué las palabras clave de intención valen más que las de marca](/blog/palabras-clave-ventas) o [cuándo SEO Jump genera Schema (y cuándo no)](/blog/schema-no-hace-magia-mapa-comprension-ia).
 
 ## Preguntas frecuentes sobre métricas SEO
 

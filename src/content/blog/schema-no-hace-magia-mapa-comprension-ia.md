@@ -1,14 +1,37 @@
 ---
 title: "Schema no hace magia: lo que Google y las IA necesitan es entender tu página"
-description: "Instalar FAQ Schema o Yoast no alcanza para AEO. Te explicamos por qué reducir ambigüedad importa más que el JSON-LD, cómo se diferencia SEO Jump de plugins y generadores de Schema, y cómo probar el Mapa de comprensión gratis."
+description: "Sin tecnicismos: qué es el Schema, por qué el contenido va primero, y cuándo SEO Jump genera código (producto sí; categoría e inicio no empujan FAQ automático)."
 date: "2026-07-15"
-dateModified: "2026-07-15"
-readTime: "8 min"
+dateModified: "2026-08-16"
+readTime: "9 min"
 author: "Equipo SEO Jump"
 ---
 # Schema no hace magia: lo que Google y las IA necesitan es entender tu página
 
 *Todo el mundo habla de AEO. Muchos responden “poné Schema”. Eso es incompleto. En SEO Jump construimos otra cosa: un mapa que te muestra qué entienden Google y las IA de tu página — y qué falta — antes de generar cualquier código.*
+
+## En dos minutos (si no querés jerga)
+
+Imaginate que tu página es un negocio físico.
+
+1. **El escaparate y el cartel** = el texto que ve un humano (título, preguntas, respuestas). Eso es lo primero.
+2. **La etiqueta del producto en el depósito** = el Schema: un papelito técnico que Google y las IA leen sin mirar el diseño.
+
+Si el escaparate está vacío, la etiqueta no salva la venta.
+
+Por eso SEO Jump **no te pide pegar código en cualquier página**. Primero te empuja a responder bien. Después, **solo si el tipo de página lo justifica**, te ofrece el bloque técnico.
+
+| Tipo de página | Qué prioriza SEO Jump | ¿Genera código Schema automático? |
+| --- | --- | --- |
+| Inicio (home) | Claridad de marca y oferta | No FAQ automático |
+| Categoría / listado (tienda, alquileres, catálogo) | Preguntas y respuestas **visibles** en el texto | No FAQ automático |
+| Artículo / blog | Contenido útil | No FAQ automático |
+| Página genérica con preguntas reales | Contenido +, si aplica, estructura de preguntas | Sí, FAQ (después de detectar las preguntas en el texto) |
+| Ficha de producto | Contenido de la ficha (para qué sirve, para quién) | Sí, **Product** (no FAQ) cuando el contenido está claro |
+
+Si en el Espía ves **“Schema FAQPage — no requerido acá”**, no es un error: es la app diciéndote que en esa URL el trabajo importante son las **preguntas visibles**, no un script.
+
+¿Dónde pegar el código cuando sí corresponde? Guía práctica: [dónde pegar Schema en WordPress o Shopify](/blog/donde-pegar-codigo-schema-wordpress-shopify).
 
 ## La pregunta que casi nadie se hace bien
 
@@ -122,10 +145,16 @@ No es un editor de JSON. Es un **mapa**:
 - Nivel de claridad (bajo, medio, alto)
 - Si **ya** hay preguntas en formato que la IA lee fácil → te lo dice y **no te pide duplicar**
 
-Cuando hay dos o más preguntas reales y todavía falta la estructura, SEO Jump te da una misión:
+### Cuándo te ofrece código (y cuándo no)
 
-1. Copiar un **código listo para pegar** (por detrás es FAQPage; vos no necesitás ver la jerga).
-2. Pegarlo en WordPress (HTML personalizado o el lugar que uses con Rank Math / Yoast).
+- **Categoría, inicio o artículo:** la misión es mejorar el texto (preguntas con respuestas debajo). **No** te empuja a pegar FAQ Schema.
+- **Página genérica** con preguntas reales detectadas: ahí sí puede ofrecerte el bloque técnico de preguntas (FAQ), como paso **después** del contenido.
+- **Producto:** primero el contenido de la ficha; el cierre técnico típico es **Product Schema**, no un FAQ pegado en la descripción.
+
+Si te ofrece código, la misión es simple:
+
+1. Copiar el **código listo para pegar** (vos no necesitás leer la jerga).
+2. Pegarlo donde corresponde ([guía según tu editor](/blog/donde-pegar-codigo-schema-wordpress-shopify)).
 3. Verificar en vivo y sumar XP.
 
 El mensaje comercial correcto no es “generamos Schema markup”.
