@@ -243,6 +243,37 @@ describe('analyzeComprehension', () => {
     expect(map.offer?.type).not.toBe('faq');
   });
 
+  it('listado con Product embebidos (alquiler/catálogo) sigue siendo categoría, no ficha', () => {
+    const html = `
+      <html><head>
+        <title>Alquiler de Yates en Menorca</title>
+        <script type="application/ld+json">${JSON.stringify({
+          '@graph': [
+            { '@type': 'CollectionPage', name: 'Alquiler de Yates en Menorca' },
+            { '@type': 'Product', name: 'Bluegame BG704' },
+            { '@type': 'Product', name: 'Riva 63 Virtus' },
+            { '@type': 'LocalBusiness', name: 'Menorca Luxury Broker' },
+          ],
+        })}</script>
+      </head>
+      <body class="archive tax-service_type term-boat mybooking-product">
+        <h1>Alquiler de Yates en Menorca</h1>
+        <h2>¿Cuánto Cuesta Alquilar un Barco en Menorca?</h2>
+        <p>El precio depende del tamaño, la temporada y si preferís patrón incluido o navegación a tu ritmo.</p>
+        <h3>¿Yate o Barco de Lujo? Elige la Opción que Mejor se Adapte a Ti</h3>
+        <p>Los yates de lujo ofrecen más espacio y confort; un barco más compacto conviene para calas y días cortos.</p>
+      </body></html>`;
+    const map = analyzeComprehension(html, 'https://example.com/es/alquiler-barcos-menorca/');
+    expect(map.pageType).toBe('category');
+    expect(map.pageTypeLabel).toMatch(/listado|categor/i);
+    expect(map.pageTypeLabel).not.toMatch(/tienda/i);
+    expect(map.canOfferFaqStructure).toBe(false);
+    expect(map.offer?.type).not.toBe('faq');
+    const faqCheck = map.checks.find((c) => c.id === 'faqStructure');
+    expect(faqCheck?.applicable).toBe(false);
+    expect(faqCheck?.detail || '').toMatch(/no pedimos FAQPage/i);
+  });
+
   it('ofrece Product schema en producto sin preguntas ni Product previo', () => {
     const html = `
       <html><head>

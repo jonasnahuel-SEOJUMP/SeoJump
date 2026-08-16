@@ -28,7 +28,7 @@ import { useSubscription } from "../hooks/useSubscription";
 const getBadgeInfo = (url) => {
   const staticResponse = { text: "Página Estática", color: "bg-slate-500/20 text-slate-200 border border-slate-400/30", wpPath: "🗺️ Ruta en WP: Páginas" };
   const homeResponse = { text: "Página de Inicio", color: "bg-emerald-500/20 text-emerald-200 border border-emerald-400/30", wpPath: "🗺️ Ruta en WP: Páginas" };
-  const categoryResponse = { text: "Categoría de Tienda", color: "bg-purple-500/20 text-purple-200 border border-purple-400/30", wpPath: "🗺️ Ruta en WP: Productos > Categorías" };
+  const categoryResponse = { text: "Categoría / listado", color: "bg-purple-500/20 text-purple-200 border border-purple-400/30", wpPath: "🗺️ Ruta en WP: Productos > Categorías" };
   const productResponse = { text: "Producto", color: "bg-blue-500/20 text-sky-200 border border-blue-400/30", wpPath: "🗺️ Ruta en WP: Productos > Todos los productos" };
 
   if (!url) return staticResponse;

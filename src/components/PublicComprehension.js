@@ -172,7 +172,7 @@ export default function PublicComprehension({ onRegister, playClick, playSuccess
             </div>
           )}
 
-          {/* Bloque gateado: el arreglo */}
+          {/* Bloque gateado: el arreglo — solo si hay oferta real (no inventar FAQ Schema) */}
           <div className="relative rounded-2xl border-2 border-cyan-500/40 bg-gradient-to-b from-slate-900 to-slate-950 p-6 md:p-8 overflow-hidden">
             <div className="absolute -top-16 -right-16 w-48 h-48 bg-cyan-500/10 blur-3xl rounded-full pointer-events-none" />
             <div className="relative text-center">
@@ -187,43 +187,52 @@ export default function PublicComprehension({ onRegister, playClick, playSuccess
               <p className="text-slate-300 font-semibold max-w-xl mx-auto mb-6">
                 {result.offerTeaser
                   ? result.offerTeaser.description
-                  : "Registrate gratis y SEO Jump te arma el código exacto y te guía paso a paso para pegarlo. Sin ver JSON, sin tecnicismos."}
+                  : map?.pageType === "category" || map?.pageType === "home" || map?.pageType === "post" || map?.pageType === "product"
+                    ? "En este tipo de página el trabajo principal es el contenido visible (preguntas y respuestas claras). Registrate gratis y SEO Jump te arma misiones diarias — sin empujar Schema FAQ automático."
+                    : "Registrate gratis y SEO Jump te arma el código exacto y te guía paso a paso para pegarlo. Sin ver JSON, sin tecnicismos."}
               </p>
 
-              {/* Preview borroso del código (señuelo visual; tipo según oferta real) */}
-              <div className="relative mb-6">
-                <pre className="text-left text-[11px] leading-relaxed text-cyan-300/80 bg-slate-950 border border-slate-800 rounded-xl p-4 blur-[5px] select-none overflow-hidden max-h-32">
-{result.offerTeaser?.type === "product"
+              {/* Preview borroso del código solo si hay oferta técnica real; nunca FAQ por defecto */}
+              {result.offerTeaser?.type && (
+                <div className="relative mb-6">
+                  <pre className="text-left text-[11px] leading-relaxed text-cyan-300/80 bg-slate-950 border border-slate-800 rounded-xl p-4 blur-[5px] select-none overflow-hidden max-h-32">
+{result.offerTeaser.type === "product"
   ? `{
   "@context": "https://schema.org",
   "@type": "Product",
   "name": "...",
   "offers": { "@type": "Offer", ... }
 }`
-  : result.offerTeaser?.type === "article"
+  : result.offerTeaser.type === "article"
     ? `{
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": "...",
   "author": { ... }
 }`
-    : result.offerTeaser?.type === "organization"
+    : result.offerTeaser.type === "organization"
       ? `{
   "@context": "https://schema.org",
   "@type": "Organization",
   "name": "...",
   "url": "..."
 }`
-      : `{
+      : result.offerTeaser.type === "faq"
+        ? `{
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [{ "@type": "Question", ... }]
+}`
+        : `{
+  "@context": "https://schema.org",
+  "@type": "WebPage"
 }`}
-                </pre>
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <span className="text-3xl">🔒</span>
+                  </pre>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-3xl">🔒</span>
+                  </div>
                 </div>
-              </div>
+              )}
 
               <button
                 onClick={() => {

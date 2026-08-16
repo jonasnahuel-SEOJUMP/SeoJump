@@ -97,7 +97,8 @@ export type ComprehensionMap = {
 const PAGE_TYPE_LABELS: Record<ComprehensionPageType, string> = {
   product: 'Producto',
   post: 'Artículo / blog',
-  category: 'Categoría de tienda',
+  // No decir "tienda": también cubre alquileres, servicios y catálogos.
+  category: 'Categoría / listado',
   home: 'Página de inicio',
   page: 'Página',
   unknown: 'Página (tipo poco claro)',

@@ -9,9 +9,10 @@ import { fetchHtmlSafe, fetchWithSsrfGuard } from './safeHttp.js'
 
 /**
  * Detecta el tipo real de página desde el HTML (huellas de WooCommerce/WordPress
- * en la clase del <body>). Es mucho más confiable que adivinar por la URL, porque
- * muchas tiendas usan enlaces "limpios" (ej: /pulidoras/ en vez de
- * /categoria-producto/pulidoras/) donde la URL no revela el tipo.
+ * / taxonomías de catálogo en la clase del <body>). Es mucho más confiable que
+ * adivinar por la URL, porque muchas tiendas usan enlaces "limpios" (ej:
+ * /pulidoras/ en vez de /categoria-producto/pulidoras/) donde la URL no revela
+ * el tipo.
  * Devuelve: 'home' | 'category' | 'product' | 'post' | 'page' | '' (desconocido).
  */
 export function detectPageTypeFromHtml(html: string): string {
@@ -20,11 +21,11 @@ export function detectPageTypeFromHtml(html: string): string {
   const bodyClass = (bodyMatch ? bodyMatch[1] : '').toLowerCase();
 
   if (bodyClass) {
-    // Categoría de tienda (archivo de taxonomía de productos)
-    if (/\b(tax-product_cat|term-|post-type-archive-product|woocommerce-shop|archive)\b/.test(bodyClass) &&
+    // Listado / categoría de catálogo (WooCommerce product_cat, MyBooking
+    // service_type, u otras taxonomías term-* en archive — no necesariamente "tienda").
+    if (/\b(tax-product_cat|tax-service_type|post-type-archive-product|woocommerce-shop|archive)\b/.test(bodyClass) &&
         !/\bsingle-product\b/.test(bodyClass)) {
-      // "archive" solo cuenta como categoría si además hay marcas de WooCommerce
-      if (/\b(tax-product_cat|post-type-archive-product|woocommerce-shop|woocommerce-page)\b/.test(bodyClass) ||
+      if (/\b(tax-product_cat|tax-service_type|post-type-archive-product|woocommerce-shop|woocommerce-page)\b/.test(bodyClass) ||
           /\bterm-/.test(bodyClass)) {
         return 'category';
       }
