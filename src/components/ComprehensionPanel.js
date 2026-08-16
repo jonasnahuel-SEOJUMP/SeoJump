@@ -1,9 +1,11 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { getComprehensionMap, verifyComprehensionFaqStructure } from '../lib/actions';
 import { getStoredPlatform } from '../lib/cmsGuide';
 import { PH_EVENTS, trackEvent } from '../lib/posthog';
+import { AEO_SCHEMA_EXPLAIN_BLOG_HREF } from '../lib/aeoSchemaPolicy';
 import {
   getSchemaPasteGuide,
   getStoredSchemaInstallMethod,
@@ -232,7 +234,16 @@ export default function ComprehensionPanel({
         <p className="text-sm font-bold text-slate-400 leading-relaxed">
           Primero: qué tan clara y útil es la página para un humano (y para una IA). Después, solo si el
           tipo de URL lo justifica, datos estructurados técnicos. No es magia ni “pegá este script”: es
-          reducir ambigüedad — tipo de página, temas, preguntas, autor y empresa.
+          reducir ambigüedad — tipo de página, temas, preguntas, autor y empresa.{' '}
+          <Link
+            href={AEO_SCHEMA_EXPLAIN_BLOG_HREF}
+            onClick={playClick}
+            className="text-cyan-300 underline underline-offset-2 hover:text-cyan-200"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            ¿Qué es Schema y cuándo lo usamos?
+          </Link>
         </p>
       </div>
 

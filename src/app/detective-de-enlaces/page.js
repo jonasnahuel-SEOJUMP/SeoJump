@@ -17,6 +17,7 @@ import {
   aeoEndsAtVisibleContent,
   aeoNextStepCopy,
   pageTypeLabel,
+  AEO_SCHEMA_EXPLAIN_BLOG_HREF,
 } from "../../lib/aeoSchemaPolicy";
 
 const SPY_LOADING_MESSAGES = [
@@ -1595,7 +1596,7 @@ export default function DetectiveDeEnlaces() {
                       {(spyResult.ownPageType || spyResult.rivalPageType) && (() => {
                         const next = aeoNextStepCopy(spyResult.ownPageType);
                         return (
-                        <div className="rounded-xl border border-slate-700/80 bg-slate-950/50 p-3 space-y-1">
+                        <div className="rounded-xl border border-slate-700/80 bg-slate-950/50 p-3 space-y-2">
                           <p className="text-[11px] font-black text-slate-300 uppercase tracking-wider">
                             Lógica SEO Jump · {pageTypeLabel(spyResult.ownPageType)}
                           </p>
@@ -1603,11 +1604,23 @@ export default function DetectiveDeEnlaces() {
                             {next.contentFirst}{" "}
                             <span className="text-emerald-300/90">{next.schemaLater}</span>
                           </p>
+                          <p className="text-[11px] font-bold text-slate-500 leading-snug">
+                            ¿Qué es “Schema” y por qué a veces dice “no requerido”?{" "}
+                            <Link
+                              href={AEO_SCHEMA_EXPLAIN_BLOG_HREF}
+                              onClick={playClick}
+                              className="text-cyan-300 underline underline-offset-2 hover:text-cyan-200"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              Explicación simple en el blog →
+                            </Link>
+                          </p>
                         </div>
                         );
                       })()}
                       <p className="text-[11px] font-bold text-slate-500 leading-snug">
-                        Este panel es un snapshot del último espionaje. Si acabás de agregar FAQ o Schema, tocá{" "}
+                        Este panel es un snapshot del último espionaje. Si acabás de agregar preguntas o el código técnico, tocá{" "}
                         <span className="text-slate-300">“Espiar otro competidor”</span> y volvé a espiar la misma URL
                         (o usá <span className="text-slate-300">Verificar en mi web</span> en la misión) para actualizarlo.
                       </p>

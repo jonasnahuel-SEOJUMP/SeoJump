@@ -21,6 +21,10 @@ export const AEO_PAGE_TYPE_LABELS: Record<AeoPageType, string> = {
   unknown: 'página',
 };
 
+/** Blog en lenguaje simple: qué es Schema, cuándo SEO Jump lo genera y cuándo no. */
+export const AEO_SCHEMA_EXPLAIN_BLOG_HREF =
+  '/blog/schema-no-hace-magia-mapa-comprension-ia';
+
 /**
  * ¿SEO Jump debe ofrecer FAQPage Schema como siguiente paso automático?
  *
