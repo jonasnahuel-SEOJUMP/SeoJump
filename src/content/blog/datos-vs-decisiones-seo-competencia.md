@@ -1,5 +1,5 @@
 ---
-title: "Semrush vende datos. Vos necesitás decisiones"
+title: "Semrush vende datos. Usted necesita decisiones"
 description: "El error más común al mirar herramientas SEO: comprar más números. Para un dueño de negocio, vale más saber qué 3 cosas hace mejor tu rival — y qué cambiar hoy — que un dashboard de 8.000 keywords."
 date: "2026-07-22"
 dateModified: "2026-07-22"
@@ -20,7 +20,7 @@ Entonces abre Semrush, Ahrefs o similar y ve:
 
 Cierra la pestaña. Sigue sin saber **qué cambiar en su web esta semana**.
 
-Eso no es un fallo tuyo. Es un **desajuste de producto**: esas suites venden **datos**. Vos, si tenés un negocio real (no una agencia de SEO), necesitás **decisiones**.
+Eso no es un fallo suyo. Es un **desajuste de producto**: esas suites venden **datos**. Usted, si tiene un negocio real (no una agencia de SEO), necesita **decisiones**.
 
 ## Dos herramientas. Dos trabajos distintos
 
@@ -37,16 +37,16 @@ Te dice:
 
 Eso es Semrush (y Ahrefs, y buena parte del mercado “pro”).
 
-Sirve si vivís de interpretar paneles: agencias, consultores, equipos de marketing con presupuesto. **No está mal.** Está mal **para el trabajo que vos tenés**.
+Sirve si vivís de interpretar paneles: agencias, consultores, equipos de marketing con presupuesto. **No está mal.** Está mal **para el trabajo que usted tiene**.
 
 ### Herramienta B — vende decisiones
 
 Te dice:
 
-Tu rival hace estas tres cosas mejor que vos.
+Tu rival hace estas tres cosas mejor que usted.
 
 - Tiene un **H1 más claro** para la búsqueda que importa.  
-- **Responde estas cuatro preguntas** que vos no.  
+- **Responde estas cuatro preguntas** que usted no.  
 - Tiene **Schema FAQ** (lo que Google y las IA pueden leer para citarte).
 
 **Hacé esto.**  
@@ -58,7 +58,7 @@ No porque “los datos no importen”. Sino porque el cuello de botella casi nun
 
 [Probar el Espía de la Competencia gratis →](/espia-competencia)
 
-## ¿Qué estás vendiendo vos, de verdad?
+## ¿Qué está vendiendo usted, de verdad?
 
 Si vendés cursos online, turnos de consultorio, habitaciones, productos de una tienda o servicios locales, tu cliente no te elige porque tengas un Domain Rating lindo.
 
@@ -99,7 +99,7 @@ Las suites grandes **pueden** acercarse a “contenido vs contenido” a escala.
 
 1. Leer **tu** página y la del rival en vivo.  
 2. Listar **qué preguntas responde cada uno**.  
-3. Decirte si el rival tiene **Schema FAQ** y vos no.  
+3. Decirte si el rival tiene **Schema FAQ** y usted no.  
 4. Convertirlo en **brechas accionables** (no en otro gráfico).
 
 Eso es exactamente el trabajo de la **Herramienta B**.
@@ -114,8 +114,8 @@ Supongamos que tenés una página de un servicio o producto y tu rival rankea un
 **Herramienta B** te dice, por ejemplo:
 
 1. Su H1 nombra el servicio + la intención de búsqueda; el tuyo empieza por el nombre de marca.  
-2. Él responde: *“¿Cuánto tarda?”*, *“¿Para quién es?”*, *“¿Qué incluye el precio?”*, *“¿Hay garantía?”* — vos no.  
-3. Él tiene Schema FAQ; vos no.
+2. Él responde: *“¿Cuánto tarda?”*, *“¿Para quién es?”*, *“¿Qué incluye el precio?”*, *“¿Hay garantía?”* — usted no.  
+3. Él tiene Schema FAQ; usted no.
 
 **Decisión:** esta semana agregás esas cuatro preguntas con respuestas cortas, alineás el H1, y (si aplica) pegás el bloque Schema. Mañana, otra misión.
 

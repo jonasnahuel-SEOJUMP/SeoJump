@@ -7,7 +7,7 @@ readTime: "5 min"
 author: "SeoJump"
 ---
 
-El mundo del SEO (Posicionamiento en Buscadores) está lleno de palabras raras: *impresiones, CTR, link building, canibalización*. En **SEOJump** creemos que vos no tenés por qué ser un experto técnico para conseguir más clientes en Google.
+El mundo del SEO (Posicionamiento en Buscadores) está lleno de palabras raras: *impresiones, CTR, link building, canibalización*. En **SEOJump** creemos que usted no tiene por qué ser un experto técnico para conseguir más clientes en Google.
 
 Por eso, diseñamos nuestra aplicación para hablarte en tu idioma: el idioma de los negocios. Acá te dejamos nuestro diccionario oficial para que sepas exactamente qué significa cada métrica de la app y qué impacto tiene en tus ventas reales.
 

@@ -36,7 +36,7 @@ En WordPress es muy habitual esto:
 - Un **producto** de WooCommerce se edita con el **Editor clásico** (pestañas Visual / Texto o Código).
 - La **página de inicio** se armó con el **Editor de bloques (Gutenberg)** o con un **maquetador** (Elementor, Divi, Flatsome / UX Builder, shortcodes tipo `[ux_banner]`).
 
-Si SEO Jump te muestra instrucciones del editor clásico y vos estás en la home, **no vas a encontrar esas pestañas**. No es que “falló el código”: estás mirando el editor equivocado.
+Si SEO Jump te muestra instrucciones del editor clásico y usted está en la home, **no vas a encontrar esas pestañas**. No es que “falló el código”: estás mirando el editor equivocado.
 
 En el Mapa de comprensión ahora hay **pestañas** para elegir el editor correcto antes de copiar.
 

@@ -35,7 +35,7 @@ Son **suites profesionales de SEO**: plataformas que concentran datos, gráficos
 
 Ambas son herramientas **pensadas para quien vive del SEO**: agencias, consultores, equipos de marketing con presupuesto, ecommerce con catálogos grandes o negocios que ya facturan lo suficiente como para que 200 €/mes sea un gasto razonable.
 
-## La pregunta real: ¿qué necesitás vos?
+## La pregunta real: ¿qué necesita usted?
 
 Antes de mirar precios, separá dos cosas:
 
@@ -113,7 +113,7 @@ Seamos justos: **sí valen la pena** en estos casos:
 4. **Necesitás analizar backlinks y competencia** de forma profunda (link building, content gap, estrategia de autoridad).
 5. **Tenés un ecommerce grande** con cientos o miles de URLs donde una auditoría manual es inviable.
 
-Un consultor con 15 clientes que paga Semrush y Ahrefs no está loco: **le ahorra horas de trabajo facturable**. El error es pensar que **vos**, con dos webs chicas, necesitás el mismo arsenal el día uno.
+Un consultor con 15 clientes que paga Semrush y Ahrefs no está loco: **le ahorra horas de trabajo facturable**. El error es pensar que **usted**, con dos webs chicas, necesita el mismo arsenal el día uno.
 
 ## Semrush vs Ahrefs vs SEO Jump (honesto)
 
@@ -124,7 +124,7 @@ Un consultor con 15 clientes que paga Semrush y Ahrefs no está loco: **le ahorr
 | Keyword research masivo | ✅ | ❌ | Parcial (desde tus datos GSC) |
 | Backlinks / link building | ✅ | Muy limitado | ❌ |
 | Comparar tu web vs un rival (título, H1, brechas) | ✅ (suite completa) | Manual (mirar Google) | ✅ [Espía de la Competencia](/detective-de-enlaces?view=spy) |
-| "Qué cambio hoy en mi web" | Tenés que interpretar vos | Tenés que interpretar vos | ✅ Misiones guiadas |
+| "Qué cambio hoy en mi web" | Hay que interpretarlo usted | Hay que interpretarlo usted | ✅ Misiones guiadas |
 | Search Console integrado | Importás / conectás | Manual | ✅ Nativo |
 | Curva de aprendizaje | Alta | Media-alta | Baja |
 
@@ -162,13 +162,13 @@ Mucha gente cae en estos:
 Es pagar un microscopio sin poner la muestra en el portaobjetos.
 
 **❌ Creer que Semrush "posiciona" tu web**
-No posiciona nada. Te da datos. Los cambios los hacés vos (o tu herramienta de ejecución).
+No posiciona nada. Te da datos. Los cambios los hace usted (o tu herramienta de ejecución).
 
 **❌ Optimizar keywords de marca con sitio nuevo**
 Nadie busca tu nombre todavía. Leé [marca vs intención](/blog/marca-vs-intencion-busqueda).
 
 **❌ Compararse con agencias que llevan 20 años**
-Ellos pagan 400 €/mes porque **les renta**. Vos estás en otra etapa.
+Ellos pagan 400 €/mes porque **les renta**. Usted está en otra etapa.
 
 **❌ No hacer nada porque "el SEO es difícil"**
 El SEO **completo** es complejo. Cambiar un título con datos reales de Search Console **no lo es**.

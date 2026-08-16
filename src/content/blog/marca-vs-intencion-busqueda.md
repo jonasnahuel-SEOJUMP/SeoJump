@@ -27,14 +27,14 @@ La **keyword de marca** es tu nombre, el nombre de tu producto o el de tu tienda
 
 ## 🎯 Keyword de intención: lo que te trae clientes nuevos
 
-La **keyword de intención** describe **qué necesita la persona**, sin saber quién sos vos.
+La **keyword de intención** describe **qué necesita la persona**, sin saber quién es usted.
 
 - "pintura de retoque para autos"
 - "abogado laboral Córdoba"
 - "veterinaria 24 horas"
 - "curso de Excel online"
 
-**¿Por qué importa?** Porque ahí está el cliente que **todavía no te conoce** pero **ya tiene la necesidad** que vos resolvés. Ese es el tráfico que convierte en ventas.
+**¿Por qué importa?** Porque ahí está el cliente que **todavía no te conoce** pero **ya tiene la necesidad** que usted resuelve. Ese es el tráfico que convierte en ventas.
 
 Un consultor SEO serio siempre te va a decir lo mismo: **no persigas lo que ya tenés; atacá lo que te falta**.
 
@@ -65,7 +65,7 @@ Un buen consultor SEO no te pregunta *"¿para qué palabra ya rankeás?"*. Te pr
 - **¿En qué posición estás para esa búsqueda?**
 - **¿Cuánta gente la busca al mes?**
 
-SEOJump hace eso por vos: cruza los datos de tu Search Console, identifica las búsquedas con **más demanda** y **mejor oportunidad de subir**, y te arma una misión concreta. No te pide optimizar tu marca. Te pide atacar la **intención de búsqueda**.
+SEOJump hace eso por usted: cruza los datos de tu Search Console, identifica las búsquedas con **más demanda** y **mejor oportunidad de subir**, y te arma una misión concreta. No te pide optimizar tu marca. Te pide atacar la **intención de búsqueda**.
 
 Funciona igual si vendés pintura, si sos contador, si tenés un gimnasio o una veterinaria. La lógica es la misma: **demanda real + posición alcanzable = oportunidad de venta**.
 
@@ -77,7 +77,7 @@ Antes de cambiar cualquier título en tu web, preguntate:
 2. **¿Incluye la palabra que la gente busca sin conocerme?**
 3. **¿Mi marca está, pero no reemplaza la descripción del producto?**
 
-Si la respuesta a la primera es "no", estás optimizando para vos, no para tu cliente.
+Si la respuesta a la primera es "no", está optimizando para usted, no para su cliente.
 
 **Fórmula que funciona en casi cualquier rubro:**
 

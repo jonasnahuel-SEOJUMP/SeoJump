@@ -23,7 +23,7 @@ Solo puede haber **un H1 por página**, y tiene que contener la palabra clave ex
 ### 🏁 Escaneá tu código en segundos
 ¿No sabés si tu "cartel" está bien puesto? Un error de código tan simple como este te está costando ventas todos los días.
 
-No pagues auditorías carísimas para que te arreglen un texto. **Empoderate y hacelo vos mismo.** Pasá por los boxes de [SEOJUMP](/), escribí tu palabra clave, y dejá que el Búho te audite la estrategia paso a paso. Poné a punto tu página en 5 minutos y adueñate de tu SEO.
+No pagues auditorías carísimas para que te arreglen un texto. **Empodérese y hágalo usted mismo.** Pasá por los boxes de [SEOJUMP](/), escribí tu palabra clave, y dejá que el Búho te audite la estrategia paso a paso. Poné a punto tu página en 5 minutos y adueñate de tu SEO.
 
 ¿Querés profundizar? Leé también sobre [palabras clave que realmente convierten](/blog/palabras-clave-ventas) y cómo [elegir la keyword correcta en lugar de la de tu marca](/blog/marca-vs-intencion-busqueda).
 
@@ -42,4 +42,4 @@ Podés mejorar o bajar posición dependiendo del cambio. Si la página ya tiene 
 No hace falta que sea exacta. Google entiende variaciones y sinónimos. Pero la palabra clave principal sí debería estar presente en el H1, idealmente cerca del principio del texto.
 
 **¿Cómo sé cuál es la keyword correcta para mi H1?**
-La keyword correcta es la que busca tu cliente cuando tiene el problema que vos resolvés. No es tu nombre de marca. Es la frase que alguien escribe en Google antes de comprar lo que ofrecés. [SEO Jump](/) lee tu Search Console y te dice exactamente cuál es esa keyword para cada página tuya.
+La keyword correcta es la que busca tu cliente cuando tiene el problema que usted resuelve. No es tu nombre de marca. Es la frase que alguien escribe en Google antes de comprar lo que ofrecés. [SEO Jump](/) lee tu Search Console y te dice exactamente cuál es esa keyword para cada página tuya.

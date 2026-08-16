@@ -7,7 +7,7 @@ readTime: "4 min"
 author: "SeoJump"
 ---
 
-Si tenés un negocio a la calle, una peluquería o un showroom de estética vehicular, hay una realidad innegable: no te sirve de nada que te encuentre alguien en Japón. Vos necesitás que el cliente que está a cinco cuadras con la billetera en la mano te elija a vos y no a tu competencia.
+Si tenés un negocio a la calle, una peluquería o un showroom de estética vehicular, hay una realidad innegable: no te sirve de nada que te encuentre alguien en Japón. Usted necesita que el cliente que está a cinco cuadras con la billetera en la mano lo elija a usted y no a su competencia.
 
 Eso es el **SEO Local**.
 

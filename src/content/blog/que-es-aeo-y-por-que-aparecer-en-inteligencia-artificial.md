@@ -123,7 +123,7 @@ Al usar SEO Jump, obtenés tres beneficios directos:
 
 - **Ahorro masivo de tiempo:** Recibís el *insight* (la oportunidad) ya detectada y procesada. Solo tenés que copiar y pegar. Lo que te llevaría horas de análisis aburrido, la plataforma te lo entrega servido en segundos.
 - **Retorno económico inmediato:** Las *Oportunidades de Venta* (Quick Wins) que te mostramos son páginas que ya están casi en el Top 3. Al aplicar el cambio, lográs un empujón rápido en el ranking, atrayendo más clics y, en consecuencia, más clientes reales, sin haber gastado un peso extra en publicidad.
-- **Inversión inteligente:** Convertís tu propio tiempo (esos minutos libres en el día) en un motor de ventas constante a largo plazo. Tu web se vuelve un activo que trabaja por vos 24/7.
+- **Inversión inteligente:** Convertís tu propio tiempo (esos minutos libres en el día) en un motor de ventas constante a largo plazo. Tu web se vuelve un activo que trabaja para usted 24/7.
 
 Para complementar tu estrategia AEO, también leé sobre [cómo SEO, AEO y GEO trabajan juntos](/blog/cuando-cliente-pregunta-ia-te-encuentra) y cómo [explotar la zona de ataque en Google Search Console](/blog/zona-de-ataque-posicion-google).
 
