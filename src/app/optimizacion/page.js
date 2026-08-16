@@ -218,7 +218,7 @@ function SmartWpLocation({ pageUrl, pageType, playClick }) {
 
   let icon, label, path, color;
   if (kind === 'category') {
-    icon = '🗂️'; label = 'Categoría de tienda'; color = 'text-purple-300';
+    icon = '🗂️'; label = 'Categoría / listado'; color = 'text-purple-300';
     path = <><strong className="text-white">Productos</strong> → <strong className="text-purple-300">Categorías</strong></>;
   } else if (kind === 'product') {
     icon = '🛍️'; label = 'Producto de WooCommerce'; color = 'text-amber-300';

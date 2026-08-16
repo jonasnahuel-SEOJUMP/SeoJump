@@ -14,7 +14,7 @@ export type AeoPageType = ComprehensionPageType;
 
 export const AEO_PAGE_TYPE_LABELS: Record<AeoPageType, string> = {
   product: 'producto',
-  category: 'categoría',
+  category: 'categoría / listado',
   post: 'entrada / artículo',
   page: 'página',
   home: 'inicio (home)',
@@ -52,18 +52,25 @@ export function pageTypeLabel(pageType: string | null | undefined): string {
 
 /**
  * Refina el tipo con señales Schema ya detectadas (CollectionPage → categoría).
+ *
+ * Importante: un listado/categoría a menudo embebe Product (o ItemList de
+ * productos) para cada ítem. Eso NO convierte la URL en ficha de producto.
+ * CollectionPage / ItemList ganan sobre Product suelto.
  */
 export function refinePageTypeWithSchema(
   pageType: string | null | undefined,
   schemaTypes: string[] | null | undefined
 ): AeoPageType {
   const types = (schemaTypes || []).map((s) => String(s).toLowerCase());
-  if (types.includes('product')) return 'product';
-  if (types.includes('collectionpage') || types.includes('itemlist')) {
-    // Si la URL ya decía producto, no pisar; si no, categoría/listado.
-    if (String(pageType || '') === 'product') return 'product';
+  const hasListingSignal =
+    types.includes('collectionpage') || types.includes('itemlist') || types.includes('offercatalog');
+  const htmlSaysProduct = String(pageType || '') === 'product';
+
+  // Listado / catálogo: aunque haya Product embebido, sigue siendo categoría.
+  if (hasListingSignal && !htmlSaysProduct) {
     return 'category';
   }
+  if (types.includes('product') || htmlSaysProduct) return 'product';
   if (types.includes('article') || types.includes('blogposting')) return 'post';
   const t = String(pageType || 'unknown').toLowerCase();
   if (t in AEO_PAGE_TYPE_LABELS) return t as AeoPageType;

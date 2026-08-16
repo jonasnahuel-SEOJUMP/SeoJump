@@ -35,9 +35,19 @@ describe('aeoSchemaPolicy', () => {
     expect(refinePageTypeWithSchema('product', ['Product'])).toBe('product');
   });
 
+  it('Product embebido en listado no convierte la URL en ficha de producto', () => {
+    expect(refinePageTypeWithSchema('category', ['CollectionPage', 'Product', 'Offer'])).toBe(
+      'category'
+    );
+    expect(refinePageTypeWithSchema('unknown', ['OfferCatalog', 'Product'])).toBe('category');
+    expect(refinePageTypeWithSchema('unknown', ['ItemList', 'Product'])).toBe('category');
+    // Si el HTML ya dijo ficha de producto, no pisar con el listado embebido.
+    expect(refinePageTypeWithSchema('product', ['CollectionPage', 'Product'])).toBe('product');
+  });
+
   it('copy de categoría no empuja FAQ Schema', () => {
     const c = aeoNextStepCopy('category');
-    expect(c.contentFirst).toMatch(/categoría/i);
+    expect(c.contentFirst).toMatch(/categor[ií]a/i);
     expect(c.schemaLater).toMatch(/no hace falta FAQPage/i);
   });
 });

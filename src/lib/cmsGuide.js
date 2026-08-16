@@ -70,7 +70,7 @@ export function detectPageType(pageUrl, pageTypeHint = '') {
 
   // 1º: tipo confirmado desde el HTML (más confiable que la URL).
   const hintMap = {
-    category: { id: 'category', label: 'Categoría de tienda', badgeColor: 'bg-purple-500/20 text-purple-200 border border-purple-400/30', searchHint: slug },
+    category: { id: 'category', label: 'Categoría / listado', badgeColor: 'bg-purple-500/20 text-purple-200 border border-purple-400/30', searchHint: slug },
     product: { id: 'product', label: 'Ficha de producto', badgeColor: 'bg-blue-500/20 text-sky-200 border border-blue-400/30', searchHint: slug },
     post: { id: 'post', label: 'Entrada de blog', badgeColor: 'bg-orange-500/20 text-orange-200 border border-orange-400/30', searchHint: slug },
     home: { id: 'home', label: 'Página de inicio', badgeColor: 'bg-emerald-500/20 text-emerald-200 border border-emerald-400/30', searchHint: 'inicio' },
@@ -84,7 +84,7 @@ export function detectPageType(pageUrl, pageTypeHint = '') {
       (lower.includes('/categoria/') && !lower.includes('/producto/'))) {
     return {
       id: 'category',
-      label: 'Categoría de tienda',
+      label: 'Categoría / listado',
       badgeColor: 'bg-purple-500/20 text-purple-200 border border-purple-400/30',
       searchHint: slug,
     };
