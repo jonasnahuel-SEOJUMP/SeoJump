@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest';
-import { extractSpyAeoSignals, enrichSpyGaps, isProductSchemaGap } from './spySnapshot';
+import {
+  extractSpyAeoSignals,
+  enrichSpyGaps,
+  isProductSchemaGap,
+  brandLabelFromUrl,
+  collectCompetitorBrandTokens,
+  textContainsCompetitorBrand,
+  stripCompetitorBrandFromText,
+  sanitizeSpyGapsCompetitorBrand,
+} from './spySnapshot';
 
 const HTML_WITH_FAQ = `
 <html><head>
@@ -501,5 +510,71 @@ describe('enrichSpyGaps', () => {
     expect(enriched[0].alreadySatisfied).toBe(true);
     expect(enriched[0].isSchemaGap).toBeFalsy();
     expect(enriched[0].schemaCode).toBeUndefined();
+  });
+});
+
+describe('competitor brand guard (Espía)', () => {
+  it('deriva etiqueta de marca desde el hostname', () => {
+    expect(brandLabelFromUrl('https://www.nautal.com/menorca')).toBe('Nautal');
+    expect(brandLabelFromUrl('https://alquileresyates.com.ar/')).toBe('Alquileresyates');
+  });
+
+  it('toma tokens del hostname y del sufijo de título (no del título entero)', () => {
+    const tokens = collectCompetitorBrandTokens(
+      'https://www.nautal.com/alquiler',
+      'Alquiler de Yates en Menorca - Nautal',
+      'Alquiler de Yates en Menorca'
+    );
+    expect(tokens).toContain('nautal');
+    expect(tokens.some((t) => /alquiler de yates/i.test(t))).toBe(false);
+  });
+
+  it('detecta contaminación si el título del usuario ya trae la marca rival', () => {
+    const tokens = collectCompetitorBrandTokens('https://nautal.com');
+    expect(
+      textContainsCompetitorBrand(
+        'Alquiler de yates en Menorca - Yates de lujo con patrón - Nautal',
+        tokens
+      )
+    ).toBe(true);
+    expect(textContainsCompetitorBrand('Alquiler de yates en Menorca | MiFlota', tokens)).toBe(
+      false
+    );
+  });
+
+  it('reemplaza Nautal por la marca propia en la sugerencia (caso real del bug)', () => {
+    const bad =
+      "Acortá tu título a algo como 'Alquiler de yates en Menorca - Yates de lujo | Nautal' para que sea más directo y competitivo.";
+    const fixed = stripCompetitorBrandFromText(bad, ['nautal'], 'MiFlota');
+    expect(fixed.toLowerCase()).not.toContain('nautal');
+    expect(fixed).toContain('MiFlota');
+    expect(fixed).toMatch(/Alquiler de yates en Menorca/i);
+  });
+
+  it('sanitiza gaps de Título SEO y no deja pasar la marca rival', () => {
+    const gaps = sanitizeSpyGapsCompetitorBrand(
+      [
+        {
+          area: 'Título SEO',
+          problem: 'El título del competidor es más conciso.',
+          suggestion:
+            "Acortá tu título a algo como 'Alquiler de yates en Menorca - Yates de lujo | Nautal'.",
+          verifyKind: 'honor',
+          requiresLiveVerify: false,
+        },
+      ],
+      { competitorTokens: ['nautal'], ownBrandLabel: 'SailMenorca' }
+    );
+    expect(gaps[0].suggestion.toLowerCase()).not.toContain('nautal');
+    expect(gaps[0].suggestion).toMatch(/SailMenorca/);
+  });
+
+  it('sin marca propia, elimina el sufijo del competidor', () => {
+    const fixed = stripCompetitorBrandFromText(
+      'Alquiler de yates en Menorca | Nautal',
+      ['nautal']
+    );
+    expect(fixed.toLowerCase()).not.toContain('nautal');
+    expect(fixed).toBe('Alquiler de yates en Menorca');
   });
 });

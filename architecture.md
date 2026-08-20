@@ -63,6 +63,11 @@ que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando d
   1. La que el usuario pega a mano (campo "Tu página equivalente").
   2. Auto-detección vía Search Console: la página propia que ya rankea para ese tema (`findOwnPageForKeyword`).
   3. La home, solo como último recurso (y ahí se marca `pageTypeMismatch` para avisar al usuario).
+- **Nunca sugerir la marca del competidor** en título/H1/copy del usuario. La marca rival se deriva del
+  hostname del rival (`brandLabelFromUrl` / `collectCompetitorBrandTokens` en `spySnapshot.ts`). Si el
+  título scrapado del usuario ya trae esa marca (contaminación o marketplace), se trata como error y se
+  pide quitarla. Defensa en dos capas: reglas en el prompt a Gemini + post-proceso
+  (`sanitizeSpyGapsCompetitorBrand`) que limpia suggestion/problem/verdict.
 
 ---
 

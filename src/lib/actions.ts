@@ -26,7 +26,16 @@ import {
   isUiNavigationHeading,
   isUiNoiseText,
 } from './scraping'
-import { buildCompetitorSnapshot, enrichSpyGaps, type SpyGapEnriched } from './spySnapshot'
+import {
+  buildCompetitorSnapshot,
+  enrichSpyGaps,
+  brandLabelFromUrl,
+  collectCompetitorBrandTokens,
+  textContainsCompetitorBrand,
+  stripCompetitorBrandFromText,
+  sanitizeSpyGapsCompetitorBrand,
+  type SpyGapEnriched,
+} from './spySnapshot'
 import {
   shouldAutoOfferFaqSchema,
   refinePageTypeWithSchema,
@@ -3361,6 +3370,22 @@ export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, g
     return { success: false, error: 'GEMINI_API_KEY no configurada en el servidor.' };
   }
 
+  // Marcas: el hostname del rival es la fuente de verdad. Si el título scrapado
+  // del usuario ya trae esa marca (contaminación / marketplace), NO es su marca.
+  const competitorBrandLabel = brandLabelFromUrl(rivalUrl);
+  const ownBrandLabel = brandLabelFromUrl(effectiveOwnUrl || ownUrl);
+  const competitorBrandTokens = collectCompetitorBrandTokens(
+    rivalUrl,
+    rivalSnapshot.title,
+    rivalSnapshot.h1
+  );
+  const ownTitleContaminated =
+    !!ownSnapshot &&
+    textContainsCompetitorBrand(
+      `${ownSnapshot.title || ''} ${ownSnapshot.h1 || ''}`,
+      competitorBrandTokens
+    );
+
   const systemInstructions = `Sos un consultor SEO + AEO senior que ayuda a dueños de PyMES (sin conocimientos técnicos) a entender qué hace mejor su competencia y cómo superarla. Hablás en español rioplatense, claro y directo, sin jerga.
 
 Principio de SEO Jump (importante):
@@ -3396,7 +3421,13 @@ Reglas:
 - Si el rival tiene Schema Product y el usuario (en un PRODUCTO) no, podés incluir gap "Schema AEO" de Product con acción clara.
 - Si el usuario ya está mejor, devolvé menos gaps y un verdict positivo.
 - No inventes datos que no estén en la info provista. Si no tenés la web del usuario, basá las sugerencias en buenas prácticas vs el competidor.
-- Las sugerencias deben ser accionables y específicas (ej: "Cambiá tu H1 a 'X'" o "Agregá la pregunta '¿Cuánto dura el efecto?' con una respuesta de 2-3 frases"), nunca genéricas como "mejorá tu SEO" ni "pegá este script en WordPress".`;
+- Las sugerencias deben ser accionables y específicas (ej: "Cambiá tu H1 a 'X'" o "Agregá la pregunta '¿Cuánto dura el efecto?' con una respuesta de 2-3 frases"), nunca genéricas como "mejorá tu SEO" ni "pegá este script en WordPress".
+- MARCAS (regla dura, sin excepciones):
+  * Marca del COMPETIDOR = "${competitorBrandLabel || '(derivada de su dominio)'}" (tokens: ${competitorBrandTokens.join(', ') || 'dominio rival'}).
+  * Marca del USUARIO = "${ownBrandLabel || '(su dominio / su nombre comercial)'}".
+  * PROHIBIDO ABSOLUTO sugerir, copiar o recomendar la marca del COMPETIDOR en el título SEO, H1, meta o cualquier ejemplo de copy del USUARIO.
+  * Si proponés un título de ejemplo, usá la marca del USUARIO (o omitila si no entra en ~60 caracteres). Nunca pongas "${competitorBrandLabel || 'la marca rival'}".
+  * Si el título actual del USUARIO ya contiene la marca del COMPETIDOR, eso es contaminación (error o rastro de marketplace): pedile que la QUITE y use su propia marca. NO la trates como marca propia ni la "mejores" dejándola.`;
 
   const mismatchNote = pageTypeMismatch
     ? `
@@ -3413,10 +3444,17 @@ ATENCIÓN — DESAJUSTE DE PÁGINAS: La web del USUARIO que recibís es su PÁGI
     pageType: s.pageType || 'unknown',
   });
 
+  const contaminationNote = ownTitleContaminated
+    ? `
+⚠️ CONTAMINACIÓN DE MARCA: el título/H1 scrapado del USUARIO contiene la marca del COMPETIDOR ("${competitorBrandLabel}"). Eso NO es la marca del usuario. En gaps de Título/H1 pedile explícitamente que quite "${competitorBrandLabel}" y, si suma marca, use "${ownBrandLabel || 'su propia marca'}".`
+    : '';
+
   const userPrompt = `Tema/keyword en juego: "${effectiveKeyword || 'no especificada'}"
 Tipo de página del USUARIO: ${ownSnapshot?.pageType || (pageTypeMismatch ? 'home' : 'unknown')}
 Tipo de página del COMPETIDOR: ${rivalSnapshot.pageType || 'unknown'}
-${mismatchNote}
+Marca COMPETIDOR (PROHIBIDA en sugerencias del usuario): "${competitorBrandLabel}"
+Marca USUARIO (única permitida en ejemplos de título): "${ownBrandLabel || 'la marca del usuario'}"
+${mismatchNote}${contaminationNote}
 WEB DEL USUARIO (${pageTypeMismatch ? 'PÁGINA DE INICIO / HOME' : effectiveOwnUrl || 'no disponible'}):
 ${ownSnapshot ? JSON.stringify(packSnapshot(ownSnapshot), null, 2) : '(no disponible — analizá solo al competidor y sugerí cómo competirle)'}
 
@@ -3424,12 +3462,15 @@ WEB DEL COMPETIDOR (${rivalUrl}):
 ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
 
   const cacheKey = buildGeminiCacheKey([
-    'competitor_spy_v3_aeo',
+    'competitor_spy_v4_brand_guard',
     userEmail || 'dev@localhost',
     rivalUrl,
     effectiveOwnUrl,
     effectiveKeyword,
     pageTypeMismatch ? 'mismatch' : 'match',
+    competitorBrandLabel,
+    ownBrandLabel,
+    ownTitleContaminated ? 'contaminated' : 'clean',
     JSON.stringify(rivalSnapshot.headings.slice(0, 8)),
     JSON.stringify((rivalSnapshot.faqQuestions || []).slice(0, 6)),
     rivalSnapshot.title,
@@ -3477,7 +3518,18 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
       gaps = enrichSpyGaps(rawGaps, ownSnapshot, rivalSnapshot, {
         ownPageType: ownSnapshot?.pageType || (pageTypeMismatch ? 'home' : null),
       });
+      // Red de seguridad: aunque la IA ignore la regla, no devolvemos la marca rival
+      // en sugerencias de título/copy del usuario.
+      gaps = sanitizeSpyGapsCompetitorBrand(gaps, {
+        competitorTokens: competitorBrandTokens,
+        ownBrandLabel: ownBrandLabel || undefined,
+      });
     }
+    verdict = stripCompetitorBrandFromText(
+      verdict,
+      competitorBrandTokens,
+      ownBrandLabel || undefined
+    );
   } catch (err) {
     console.error('[spyCompetitor] Error parseando respuesta IA:', err);
     return { success: false, error: 'Error al interpretar el análisis de la IA. Intentá de nuevo.' };

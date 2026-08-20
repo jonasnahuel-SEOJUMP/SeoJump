@@ -453,3 +453,160 @@ export function enrichSpyGaps(
     .sort((a, b) => rank(a.g) - rank(b.g) || a.i - b.i)
     .map(({ g }) => g);
 }
+
+// ── Marca del competidor en sugerencias (nunca filtrar al título del usuario) ─
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+/** Etiqueta legible de marca desde el hostname (nautal.com → Nautal). */
+export function brandLabelFromUrl(url: string): string {
+  try {
+    const host = new URL(url.startsWith('http') ? url : `https://${url}`).hostname.replace(
+      /^www\./i,
+      ''
+    );
+    const slug = (host.split('.')[0] || '').trim();
+    if (!slug || slug.length < 2) return '';
+    // mi-tienda → Mi-tienda (suficiente para un ejemplo de título)
+    return slug.charAt(0).toUpperCase() + slug.slice(1);
+  } catch {
+    return '';
+  }
+}
+
+/**
+ * Tokens de la marca del COMPETIDOR (hostname + sufijo de título/H1 si hay
+ * separador). Nunca tomar el título entero como marca.
+ */
+export function collectCompetitorBrandTokens(
+  rivalUrl: string,
+  ...titleSources: Array<string | undefined | null>
+): string[] {
+  const tokens = new Set<string>();
+
+  try {
+    const host = new URL(
+      rivalUrl.startsWith('http') ? rivalUrl : `https://${rivalUrl}`
+    ).hostname.replace(/^www\./i, '');
+    const slug = (host.split('.')[0] || '').toLowerCase();
+    if (slug.length >= 3) {
+      tokens.add(slug);
+      slug.split(/[-_]/).forEach((t) => {
+        if (t && t.length >= 3) tokens.add(t);
+      });
+    }
+  } catch {
+    /* ignore */
+  }
+
+  for (const src of titleSources) {
+    const text = (src || '').trim();
+    if (!text) continue;
+    // Solo segmentos finales tras | o " - " (marca al final del title)
+    const parts = text.split(/\s*[|–—]\s*|\s+-\s+/);
+    if (parts.length < 2) continue;
+    const last = (parts[parts.length - 1] || '').trim();
+    if (last.length >= 3 && last.length <= 40) {
+      tokens.add(last.toLowerCase());
+      const firstWord = last.split(/\s+/)[0];
+      if (firstWord && firstWord.length >= 3) tokens.add(firstWord.toLowerCase());
+    }
+  }
+
+  return [...tokens];
+}
+
+/** ¿El texto del usuario ya está contaminado con la marca del rival? */
+export function textContainsCompetitorBrand(
+  text: string,
+  competitorTokens: string[]
+): boolean {
+  if (!text || !competitorTokens.length) return false;
+  const lower = text.toLowerCase();
+  return competitorTokens.some((t) => {
+    if (!t || t.length < 3) return false;
+    return new RegExp(`\\b${escapeRegExp(t)}\\b`, 'i').test(lower);
+  });
+}
+
+/**
+ * Quita o reemplaza la marca del competidor en un texto de sugerencia/veredicto.
+ * Si hay marca propia, la usa; si no, elimina el segmento de marca.
+ */
+export function stripCompetitorBrandFromText(
+  text: string,
+  competitorTokens: string[],
+  ownBrandLabel?: string
+): string {
+  if (!text || !competitorTokens.length) return text;
+
+  const own = (ownBrandLabel || '').trim();
+  const ownLower = own.toLowerCase();
+  // No tocar tokens que coincidan con la marca propia (edge case raro).
+  const tokens = [...competitorTokens]
+    .filter((t) => t && t.length >= 3 && t.toLowerCase() !== ownLower)
+    .sort((a, b) => b.length - a.length);
+
+  let out = text;
+  for (const token of tokens) {
+    const esc = escapeRegExp(token);
+    // "… | Nautal" / "… - Nautal" al final o en medio
+    const sepRe = new RegExp(`(\\s*[|\\u2013\\u2014-]\\s*)${esc}\\b`, 'gi');
+    if (own) {
+      out = out.replace(sepRe, `$1${own}`);
+    } else {
+      out = out.replace(sepRe, '');
+    }
+    // Token suelto (ej. dentro de comillas o en prosa)
+    const bareRe = new RegExp(`\\b${esc}\\b`, 'gi');
+    if (own) {
+      out = out.replace(bareRe, own);
+    } else {
+      out = out.replace(bareRe, '');
+    }
+  }
+
+  return out
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([|.,;:!?)])/g, '$1')
+    .replace(/([(\[])\s+/g, '$1')
+    // Guion al final del character class (no como rango) para no comer letras.
+    .replace(/\s*[|–—-]\s*$/g, '')
+    .replace(/^\s*[|–—-]\s*/g, '')
+    .trim();
+}
+
+/**
+ * Post-proceso duro: las sugerencias del Espía NUNCA deben recomendar la marca
+ * del competidor en el título/H1/copy del usuario.
+ */
+export function sanitizeSpyGapsCompetitorBrand(
+  gaps: SpyGapEnriched[],
+  opts: {
+    competitorTokens: string[];
+    ownBrandLabel?: string;
+  }
+): SpyGapEnriched[] {
+  const tokens = opts.competitorTokens || [];
+  if (!tokens.length) return gaps;
+  const own = opts.ownBrandLabel || '';
+
+  return gaps.map((g) => {
+    const problem = stripCompetitorBrandFromText(g.problem || '', tokens, own);
+    let suggestion = stripCompetitorBrandFromText(g.suggestion || '', tokens, own);
+
+    // Si era un gap de Título y aún se “cuela” la marca rival, reforzá el copy.
+    const stillHasRival =
+      textContainsCompetitorBrand(suggestion, tokens) ||
+      textContainsCompetitorBrand(problem, tokens);
+    if (stillHasRival && /t[ií]tulo/i.test(g.area || '')) {
+      suggestion = own
+        ? `Acortá tu título enfocándolo en la keyword principal y cerralo con tu marca («${own}»), nunca con la del competidor.`
+        : 'Acortá tu título enfocándolo en la keyword principal. No uses la marca del competidor; usá la tuya o omitila si no entra en 60 caracteres.';
+    }
+
+    return { ...g, problem, suggestion };
+  });
+}
