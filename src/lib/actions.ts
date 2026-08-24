@@ -246,28 +246,28 @@ const buildMissionTypes = (goldKeyword?: string) => [
     title: 'El Guardián del Título',
     descriptionTemplate: (path: string) =>
       goldKeyword
-        ? `Esta página (${path}) tiene pocas visitas. Reescribí su H1 incluyendo «${goldKeyword}» para que Google sepa exactamente de qué trata.`
-        : `Esta página (${path}) tiene pocas visitas. Revisá y mejorá su etiqueta H1 para que Google la entienda mejor.`,
+        ? `Esta página (${path}) tiene pocas visitas. Mejorá su título SEO incluyendo «${goldKeyword}» para que Google sepa exactamente de qué trata.`
+        : `Esta página (${path}) tiene pocas visitas. Mejorá su título SEO (el que Google muestra) para que la entienda mejor.`,
     xp: 50,
     icon: 'H1',
     color: 'green',
     pistas: {
       classic: [
         `Andá a tu panel de WordPress → Páginas (o Entradas) → hacé clic en Editar en la página que aparece arriba.`,
-        `Buscá el título grande que está arriba del contenido (es el H1 por defecto en la mayoría de los temas).`,
+        `Bajá hasta Yoast SEO o Rank Math → Apariencia en buscadores → Título SEO. Ese es el texto que Google muestra (no es el H1 visible ni la URL).`,
         goldKeyword
           ? `Reemplazalo por un texto que incluya «${goldKeyword}» de forma natural. Ejemplo: «${goldKeyword} – [Tu marca]».`
           : `Reemplazalo por un texto claro y descriptivo que le diga a Google de qué trata la página.`,
-        `Hacé clic en el botón azul Actualizar (arriba a la derecha) para guardar.`,
+        `Hacé clic en el botón azul Actualizar (arriba a la derecha) para guardar. No hace falta cambiar el H1 del hero ni el slug.`,
       ],
       visual: [
-        `Abrí la página con tu constructor visual (Elementor, UX Builder o Divi) → hacé clic en Editar con [tu constructor].`,
-        `Hacé clic en el elemento de texto que es el título principal de la página.`,
-        `En el panel de la derecha (o en la barra de opciones del elemento), buscá la opción Etiqueta HTML y asegurate de que diga H1.`,
+        `Abrí la página en WordPress (o con tu constructor) y bajá hasta el recuadro de Yoast SEO / Rank Math.`,
+        `En Apariencia en buscadores editá el Título SEO (lo que Google muestra en los resultados).`,
+        `No hace falta tocar el título grande visible (H1) del constructor ni la URL de la página.`,
         goldKeyword
-          ? `Cambiá el texto por uno que incluya «${goldKeyword}». Luego hacé clic en Aplicar (Apply).`
-          : `Cambiá el texto por uno claro y descriptivo. Luego hacé clic en Aplicar (Apply).`,
-        `Hacé clic en Guardar / Publicar (botón verde o azul) para que el cambio quede en vivo.`,
+          ? `Escribí un título SEO que incluya «${goldKeyword}». Luego guardá / Actualizar.`
+          : `Escribí un título SEO claro y descriptivo. Luego guardá / Actualizar.`,
+        `Si usás caché (WP Rocket, LiteSpeed), borrá caché antes de verificar acá.`,
       ],
       cacheWarning: true,
       videoUrl: undefined, // TODO: agregar link de Loom cuando esté listo
@@ -837,7 +837,7 @@ export async function verifyMission(pageUrl: string, type: string, userInput: st
       if (missingRatio > 0.5) {
         return {
           success: false,
-          message: `Tu ${type} no incluye palabras clave importantes de «${goldKeyword}» (falta: ${missingWords.slice(0, 3).join(', ')}). Incorporalas para que Google entienda de qué trata tu página.`,
+          message: `Tu ${type === 'H1' ? 'título SEO' : type} no incluye palabras clave importantes de «${goldKeyword}» (falta: ${missingWords.slice(0, 3).join(', ')}). Incorporalas para que Google entienda de qué trata tu página.`,
         }
       }
     }
@@ -860,7 +860,7 @@ export async function verifyMission(pageUrl: string, type: string, userInput: st
       success: false,
       liveValue: null,
       message: type === 'H1'
-        ? 'No encontramos ningún H1 en tu página. ¡Eso también es un problema SEO!'
+        ? 'No encontramos el título SEO (<title>) en tu página. Revisá Yoast/Rank Math o el <head>.'
         : type === 'META'
         ? 'Tu página no tiene Meta Descripción. ¡Hay que agregarla!'
         : 'No encontramos imágenes con texto ALT en tu página.',
@@ -1666,7 +1666,7 @@ function buildQuickWinsFallback(opportunities: any[]): any[] {
       position: opp.position,
       currentTitle: opp.currentTitle || '',
       suggestedTitle,
-      explanation: `Esta página está en posición ${pos} con ${opp.impressions || 0} impresiones. Un título más claro y comercial puede empujarla al Top 3.`,
+      explanation: `Esta página está en posición ${pos} con ${opp.impressions || 0} impresiones. Un título SEO más claro y comercial puede mejorar la relevancia y el CTR, y darte una oportunidad de ganar posiciones.`,
       pageType: opp.pageType || '',
       source: 'fallback',
     };
@@ -1940,13 +1940,13 @@ async function _getQuickWinsCore(
 
     const systemInstructions = `
 Actúas como un Consultor de Ventas y Estratega Digital entusiasmado y experto en optimización web (SEO). Tu tono debe ser profesional y directo, como un consultor que acaba de encontrar una excelente noticia para el usuario.
-Analizarás un conjunto de 3 oportunidades de páginas web que están cerca del éxito, posicionando en Google en el rango de posiciones 8 a 15 (cerca del Top 3).
+Analizarás un conjunto de 3 oportunidades de páginas web que están cerca del éxito, posicionando en Google en el rango de posiciones 8 a 15 (zona de ataque: ya visibles, con margen de mejora).
 
 Tu única misión es:
 1. Evaluar si la intención de búsqueda de la palabra clave ("keyword") coincide con el título o contenido actual de la página.
 2. Generar un "Action Plan" de 15 segundos para cada una de las 3 oportunidades:
-   - "suggestedTitle": Un nuevo título comercial, atractivo y persuasivo que actúe como un "Contenido ganador" para convencer tanto a Google como a los usuarios y subir al Top 3.
-   - "explanation": Breve diagnóstico de por qué Google no lo está posicionando mejor y qué lograrán con el cambio.
+   - "suggestedTitle": Un nuevo TÍTULO SEO (<title>) comercial, atractivo y persuasivo. NO es el H1 visible de la página: es el texto que Google muestra en los resultados.
+   - "explanation": Breve diagnóstico honesto: por qué el título actual no captura bien la intención y cómo el nuevo título puede mejorar relevancia/CTR y dar una oportunidad de ganar posiciones. NUNCA prometas "salto al Top 3", "garantizado" ni resultados automáticos de ranking.
 
 ██████████████████████████████████████████████████████████████
 ⚠️  REGLA ABSOLUTA #1 — ARQUITECTURA WEB — MÁXIMA PRIORIDAD ⚠️
@@ -1960,7 +1960,8 @@ Si la URL es la HOME/PORTADA:
   ✅ DEBES: sugerir un título que represente la MARCA GLOBAL o la CATEGORÍA DEL NEGOCIO.
      Ejemplos correctos: "${domainName.split('.')[0]} | Tienda de Car Detailing en Argentina", "${businessNiche.split('|')[0].trim()} | Envíos a Todo el País"
   ❌ TIENES PROHIBIDO ABSOLUTO: usar la goldKeyword "${cleanGoldKeyword}" como tema central del título de la Home si es un producto específico (ej: 'limpia llantas', 'pulidora', 'shampoo', 'cera', cualquier artículo concreto).
-  ❌ TIENES PROHIBIDO ABSOLUTO: sugerir que el H1 de la Home sea el nombre de un producto individual.
+          ❌ TIENES PROHIBIDO ABSOLUTO: sugerir que el título SEO de la Home sea el nombre de un producto individual.
+          ℹ️ Recordá: suggestedTitle es el <title> SEO (Yoast/Rank Math), NO el H1 visible del hero. El usuario no necesita cambiar el H1 ni la URL.
   🔒 VIOLACIÓN DE ESTA REGLA = Respuesta inválida. Un título de Home con producto específico rompe la arquitectura web del usuario y será rechazado.
 
 Si la URL es una PÁGINA INTERNA (producto, servicio, blog):
@@ -2037,7 +2038,8 @@ El título actual ("currentTitle") suele contener palabras que el dueño puso po
 Reglas de lenguaje:
 - NUNCA uses tecnicismos: "canibalización", "backlinks", "DA", "PA", "search intent", "enlazado interno", "thin content".
 - TIENES PROHIBIDO usar la palabra "Socio" o "Socia". Háblale al usuario de forma directa y respetuosa, con un tono más serio pero motivador.
-- Usa lenguaje comercial: "Más clics", "Salto de posición", "Contenido ganador", "Atraer más clientes", "Google está listo para mostrarte más", "Oro puro", "Tráfico valioso".
+- Usa lenguaje comercial pero HONESTO: "Más clics", "Mejor CTR", "Oportunidad de ganar posiciones", "Contenido más claro", "Atraer más clientes", "Tráfico valioso".
+- PROHIBIDO: "salto al Top 3", "Top 3 garantizado", "subirás al Top 3", "posición garantizada", o cualquier promesa de ranking automático. Un mejor título ayuda; no garantiza posición.
 
 Devuelve la respuesta ESTRICTAMENTE en formato JSON con el siguiente esquema de array, sin bloques de código markdown ni explicaciones adicionales:
 [
@@ -2048,8 +2050,8 @@ Devuelve la respuesta ESTRICTAMENTE en formato JSON con el siguiente esquema de 
     "clicks": número de clics actuales,
     "impressions": número de impresiones actuales,
     "intentMatches": true o false (si la intención de la palabra clave coincide razonablemente con el título/contenido),
-    "suggestedTitle": "Título sugerido para subir al Top 3 (Contenido ganador)",
-    "explanation": "Explicación entusiasta y comercial de por qué no está en el Top 3 y cómo este título ganará clics"
+    "suggestedTitle": "Título SEO sugerido (<title>, no el H1 visible)",
+    "explanation": "Explicación motivadora pero responsable: cómo este título SEO puede mejorar relevancia/CTR y dar chance de ganar posiciones (sin prometer Top 3)"
   }
 ]
 `;
@@ -2289,7 +2291,7 @@ export async function verifyQuickWin(pageUrl: string, suggestedTitle: string) {
     return {
       success: true,
       liveTitle: decodedLiveTitle,
-      message: `¡Contenido ganador detectado! Tu título en vivo ahora dice: "${decodedLiveTitle}". ¡Salto de posición garantizado!`,
+      message: `¡Cambio detectado! Tu título SEO en vivo ahora dice: "${decodedLiveTitle}". Bien: eso puede mejorar el CTR y darte una oportunidad de ganar posiciones.`,
     };
   } else {
     return {

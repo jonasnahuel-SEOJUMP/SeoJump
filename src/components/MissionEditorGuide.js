@@ -274,7 +274,7 @@ export default function MissionEditorGuide({
                   </div>
                   {pageType.id === 'home' && (
                     <p className="text-[11px] text-emerald-200/80 leading-snug">
-                      Esta es la portada: el título debe hablar de todo el negocio (mayorista/catálogo), no de un solo producto.
+                      Esta es la portada: el título SEO debe hablar de todo el negocio (mayorista/catálogo), no de un solo producto. No hace falta cambiar el H1 visible del hero ni la URL.
                     </p>
                   )}
                 </>
