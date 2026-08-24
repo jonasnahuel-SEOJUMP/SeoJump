@@ -266,8 +266,9 @@ function SmartWpLocation({ pageUrl, pageType, playClick }) {
           <ol className="text-xs text-slate-300 space-y-1 list-decimal list-inside">
             <li>Buscá la entrada usando la ruta indicada arriba.</li>
             <li>Abrí el editor y bajá hasta <strong className="text-white">Yoast SEO</strong> o <strong className="text-white">Rank Math</strong>.</li>
-            <li>En <strong className="text-amber-300">"Título SEO"</strong> pegá el título sugerido.</li>
-            <li>Hacé clic en <strong className="text-white">Actualizar</strong> y esperá 1-2 días.</li>
+            <li>En <strong className="text-amber-300">Apariencia en buscadores → Título SEO</strong> pegá el título sugerido.</li>
+            <li>No hace falta tocar el H1 visible ni el slug/URL de la página.</li>
+            <li>Hacé clic en <strong className="text-white">Actualizar</strong>. Google puede tardar días o semanas en reflejar el cambio.</li>
           </ol>
           {/* Tabs otras plataformas */}
           <details className="mt-1">
@@ -1457,7 +1458,7 @@ export default function Optimizacion() {
                                   🔒
                                 </div>
                                 <div className="flex-1 text-center md:text-left">
-                                  <h3 className="text-xl md:text-2xl font-black text-slate-500 dark:text-slate-400 mb-2 blur-[1px] group-hover:blur-none transition-all">🚀 Subir posición para: «Oportunidad Oculta»</h3>
+                                  <h3 className="text-xl md:text-2xl font-black text-slate-500 dark:text-slate-400 mb-2 blur-[1px] group-hover:blur-none transition-all">🚀 Oportunidad para: «Oportunidad Oculta»</h3>
                                   <p className="text-sm md:text-base font-bold text-slate-400 dark:text-slate-500 mb-4">[Desbloquear con SEO Jump Pro]</p>
                                   <button className="btn-3d !text-sm sm:!text-base !py-2 !px-4 btn-yellow font-black">
                                     DESBLOQUEAR {quickWins.length - 2} OPORTUNIDADES AEO
@@ -1486,12 +1487,12 @@ export default function Optimizacion() {
                             
                             <div className="space-y-4 text-left w-full">
                               <h3 className="text-xl md:text-2xl font-black text-white flex items-center gap-2">
-                                🚀 Subir posición para: <span className="text-amber-400 font-black">«{qw.keyword}»</span>
+                                🚀 Oportunidad para: <span className="text-amber-400 font-black">«{qw.keyword}»</span>
                               </h3>
                               
                               <div className="bg-slate-900/60 rounded-2xl p-5 border border-slate-700/50 space-y-3">
                                 <p className="text-slate-200 text-base md:text-lg leading-relaxed">
-                                  <span className="text-yellow-400 font-black">El Insight:</span> Estás en posición <strong className="text-white font-bold">{qw.position?.toFixed(0)}</strong>. {qw.explanation} Cambiá el título de tu página para captar el clic.
+                                  <span className="text-yellow-400 font-black">El Insight:</span> Estás en posición <strong className="text-white font-bold">{qw.position?.toFixed(0)}</strong>. {qw.explanation} Mejorá el <strong className="text-white">título SEO</strong> (el que Google muestra en los resultados) para captar más clics. No hace falta cambiar el título grande visible (H1) ni la URL.
                                 </p>
 
                                 {/* Título Sugerido con botón copiar */}
@@ -1518,7 +1519,7 @@ export default function Optimizacion() {
                                 <SmartWpLocation pageUrl={qw.page} pageType={qw.pageType} playClick={playClick} />
 
                                 <p className="text-xs text-slate-300 bg-slate-950/40 p-3 rounded-xl border border-slate-800 leading-normal mt-2">
-                                  🔒 <strong className="text-purple-300">Aclaración técnica:</strong> Cambiar el título o H1 no modifica la dirección del enlace (URL). **No perderás la antigüedad ni la autoridad de tu página**. Solo optimiza el texto para hacerlo más atractivo en las búsquedas.
+                                  🔒 <strong className="text-purple-300">Aclaración técnica:</strong> Podés cambiar el <strong className="text-white">título SEO</strong> (&lt;title&gt;) en Yoast o Rank Math sin modificar la URL ni el H1 visible. <strong className="text-white">No perderás la antigüedad ni la autoridad de tu página</strong>. Solo optimizás el texto que Google muestra en las búsquedas.
                                 </p>
                                 <div className="text-xs md:text-sm text-slate-400 font-bold italic flex items-center gap-2 pt-1">
                                   <span>🔗 URL:</span>

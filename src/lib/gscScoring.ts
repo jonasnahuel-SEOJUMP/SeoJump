@@ -38,7 +38,7 @@ export function cleanGscKeyword(raw: string): string {
 
 /**
  * Peso por "zona de ataque" (striking distance). Un SEO prioriza posiciones
- * 4-20: ya están en el radar de Google y un empujón las sube al Top 3.
+ * 4-20: ya están en el radar de Google; un empujón (título SEO / CTR) puede ayudar a ganar posiciones.
  * Posición 1-3 ya se ganó (poco para mejorar); >40 está demasiado lejos.
  */
 export function positionOpportunityWeight(position: number): number {

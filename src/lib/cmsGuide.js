@@ -143,16 +143,14 @@ export function getPlainMissionLabels(missionType, pageTypeId = '') {
     case 'H1':
       return {
         shortTitle: isCategory
-          ? 'Título que Google muestra para esta categoría'
-          : 'Título principal de la página',
-        fieldName: isCategory
-          ? 'Título SEO en Yoast / Rank Math (Apariencia en buscadores)'
-          : 'Título grande (el que ve el visitante primero)',
+          ? 'Título SEO que Google muestra para esta categoría'
+          : 'Título SEO (el que Google muestra)',
+        fieldName: 'Título SEO en Yoast / Rank Math (Apariencia en buscadores)',
         googleName: 'Título en Google',
         action: isCategory
           ? 'Mejorá el título SEO de esta categoría de tienda'
-          : 'Cambiá el título grande de esta página',
-        verifyLabel: 'Pegá acá el título que pusiste en tu web',
+          : 'Mejorá el título SEO de esta página',
+        verifyLabel: 'Pegá acá el título SEO que pusiste en tu web',
       };
     case 'META':
       return {
@@ -301,8 +299,10 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
     steps.push('WordPress → **Páginas** → buscá tu **Página de inicio** (o la que configuraste como portada).');
     steps.push('Hacé clic en **Editar** (o **Editar con Elementor** si usás constructor visual).');
     if (missionType === 'H1') {
-      fieldLabel = 'Título de la página o bloque de encabezado principal';
-      steps.push('Cambiá el **título grande** de la portada (nombre de la página o bloque H1).');
+      fieldLabel = 'Título SEO en Yoast / Rank Math (Apariencia en buscadores)';
+      yoastTitleSteps();
+      commonMistakes.push('No hace falta cambiar el H1 visible del hero ni el slug/URL: solo el **Título SEO**.');
+      commonMistakes.push('El título SEO es lo que Google muestra en los resultados; el H1 grande es lo que ve el visitante en la página.');
     } else if (missionType === 'META') {
       fieldLabel = 'Meta descripción en Yoast / Rank Math';
       yoastMetaSteps();
@@ -550,8 +550,8 @@ export function getOwlExplanation(missionType, keyword, pageTypeId = '') {
   switch (missionType) {
     case 'H1':
       return isCategory
-        ? 'En una categoría de tienda, Google suele mostrar el Título SEO de Yoast (abajo en el editor), no solo el nombre de la categoría. Copiá la sugerencia en Apariencia en buscadores → Título SEO.'
-        : 'El título principal es lo primero que lee Google y tu visitante. Tiene que ser claro, incluir tu palabra clave y decir de qué trata la página.';
+        ? 'En una categoría de tienda, Google suele mostrar el Título SEO de Yoast (abajo en el editor), no solo el nombre de la categoría. Copiá la sugerencia en Apariencia en buscadores → Título SEO. No hace falta cambiar la URL.'
+        : 'Estás editando el título SEO (<title>): el texto que Google muestra en los resultados. No es lo mismo que el H1 visible de la página. Pegalo en Yoast/Rank Math → Apariencia en buscadores → Título SEO. No hace falta tocar el H1 ni la URL.';
     case 'META':
       return 'El texto debajo del título en Google es como el cartel de tu local en la vereda. Un buen texto convence a la gente de entrar a tu web en vez de seguir de largo.';
     case 'ALT':
