@@ -90,7 +90,7 @@ export default function LandingPage({ onRegister, playClick, variant = "default"
               ¿Las IA entienden tu página?
             </h2>
             <p className="text-slate-400 font-semibold text-base md:text-lg max-w-xl mx-auto">
-              Pegá tu URL: primero miramos si el contenido responde bien; el Schema técnico solo si el tipo de página lo justifica.
+              Pegá tu URL: primero miramos si el contenido responde bien; lo técnico extra solo cuando la página lo necesita.
             </p>
           </div>
           <PublicComprehension onRegister={onRegister} playClick={playClick} />
@@ -105,7 +105,7 @@ export default function LandingPage({ onRegister, playClick, variant = "default"
           </h2>
           <p className="text-slate-400 text-base md:text-lg font-medium leading-relaxed">
             Sin informes de 50 páginas. Sin jerga. Espías al rival, cerrás la brecha con una misión,
-            y también trabajás para aparecer en ChatGPT y Gemini (AEO).
+            y también trabajás para que te citen cuando alguien le pregunta a ChatGPT o Gemini.
           </p>
         </div>
       </section>
