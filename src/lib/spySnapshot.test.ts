@@ -3,6 +3,7 @@ import {
   extractSpyAeoSignals,
   enrichSpyGaps,
   isProductSchemaGap,
+  isSpySnapshotReadable,
   brandLabelFromUrl,
   collectCompetitorBrandTokens,
   textContainsCompetitorBrand,
@@ -39,6 +40,67 @@ const HTML_FAQ_NO_SCHEMA = `
   <h2>¿Cuánto tarda una entrega estándar?</h2>
   <p>Entre 24 y 72 horas hábiles según el destino y el tipo de carga.</p>
 </body></html>`;
+
+describe('isSpySnapshotReadable', () => {
+  it('false si null o todo vacío', () => {
+    expect(isSpySnapshotReadable(null)).toBe(false);
+    expect(
+      isSpySnapshotReadable({
+        title: '',
+        h1: '',
+        headings: [],
+        scrapedAt: new Date().toISOString(),
+        faqQuestions: [],
+        schemaTypes: [],
+      })
+    ).toBe(false);
+  });
+
+  it('true si hay título, H1, headings, FAQ o Schema', () => {
+    expect(
+      isSpySnapshotReadable({
+        title: 'Mi tienda',
+        h1: '',
+        headings: [],
+        scrapedAt: new Date().toISOString(),
+      })
+    ).toBe(true);
+    expect(
+      isSpySnapshotReadable({
+        title: '',
+        h1: 'Hola',
+        headings: [],
+        scrapedAt: new Date().toISOString(),
+      })
+    ).toBe(true);
+    expect(
+      isSpySnapshotReadable({
+        title: '',
+        h1: '',
+        headings: ['Tema'],
+        scrapedAt: new Date().toISOString(),
+      })
+    ).toBe(true);
+    expect(
+      isSpySnapshotReadable({
+        title: '',
+        h1: '',
+        headings: [],
+        scrapedAt: new Date().toISOString(),
+        faqQuestions: ['¿Envíos?'],
+      })
+    ).toBe(true);
+    expect(
+      isSpySnapshotReadable({
+        title: '',
+        h1: '',
+        headings: [],
+        scrapedAt: new Date().toISOString(),
+        schemaTypes: ['Organization'],
+      })
+    ).toBe(true);
+  });
+});
 
 describe('extractSpyAeoSignals', () => {
   it('detecta preguntas FAQ y Schema FAQPage', () => {

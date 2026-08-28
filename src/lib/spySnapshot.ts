@@ -92,6 +92,25 @@ function extractH1(html: string): string {
   return m ? decodeHtmlEntities(m[1].replace(/<[^>]+>/g, '').trim()) : '';
 }
 
+/** True si el snapshot tiene al menos una señal on-page / AEO legible. */
+export function isSpySnapshotReadable(snap: CompetitorSnapshot | null | undefined): boolean {
+  if (!snap) return false;
+  return !!(
+    snap.title ||
+    snap.h1 ||
+    (snap.headings?.length ?? 0) > 0 ||
+    (snap.faqQuestions?.length ?? 0) > 0 ||
+    (snap.schemaTypes?.length ?? 0) > 0
+  );
+}
+
+export type BuildCompetitorSnapshotResult = {
+  snapshot: CompetitorSnapshot;
+  /** false = el fetch falló (403/timeout/bloqueo). Distinto de “página sin título”. */
+  fetchOk: boolean;
+  fetchError?: string;
+};
+
 function extractHeadings(html: string, max = 8): string[] {
   const cleaned = html
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, ' ')
@@ -114,8 +133,11 @@ function extractHeadings(html: string, max = 8): string[] {
 /**
  * Scrapea un sitio y arma el snapshot completo del Espía
  * (título, H1, headings + FAQ + Schema) con un solo fetch.
+ * Distingue fetch fallido (fetchOk: false) de página leída sin título.
  */
-export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSnapshot> {
+export async function buildCompetitorSnapshotDetailed(
+  url: string
+): Promise<BuildCompetitorSnapshotResult> {
   const empty: CompetitorSnapshot = {
     title: '',
     h1: '',
@@ -127,7 +149,9 @@ export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSn
     schemaTypes: [],
   };
 
-  if (!url?.trim()) return empty;
+  if (!url?.trim()) {
+    return { snapshot: empty, fetchOk: false, fetchError: 'URL vacía' };
+  }
 
   let targetUrl = url.trim();
   if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
@@ -141,7 +165,17 @@ export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSn
   if (!page.ok || !page.html) {
     page = await fetchPage(targetUrl, { timeoutMs: 10000 });
   }
-  if (!page.ok || !page.html) return empty;
+  if (!page.ok || !page.html) {
+    const statusHint =
+      page.status && page.status >= 400
+        ? ` (Error ${page.status})`
+        : '';
+    return {
+      snapshot: empty,
+      fetchOk: false,
+      fetchError: `No pudimos leer la página${statusHint}. Puede estar bloqueando bots o caída.`,
+    };
+  }
 
   const aeo = extractSpyAeoSignals(page.html);
   const pageType = refinePageTypeWithSchema(
@@ -149,16 +183,25 @@ export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSn
     aeo.schemaTypes
   );
   return {
-    title: extractTitle(page.html),
-    h1: extractH1(page.html),
-    headings: extractHeadings(page.html),
-    scrapedAt: new Date().toISOString(),
-    faqQuestions: aeo.faqQuestions,
-    faqPairs: aeo.faqPairs,
-    hasFaqSchema: aeo.hasFaqSchema,
-    schemaTypes: aeo.schemaTypes,
-    pageType,
+    snapshot: {
+      title: extractTitle(page.html),
+      h1: extractH1(page.html),
+      headings: extractHeadings(page.html),
+      scrapedAt: new Date().toISOString(),
+      faqQuestions: aeo.faqQuestions,
+      faqPairs: aeo.faqPairs,
+      hasFaqSchema: aeo.hasFaqSchema,
+      schemaTypes: aeo.schemaTypes,
+      pageType,
+    },
+    fetchOk: true,
   };
+}
+
+/** Compat: solo el snapshot (sin metadata de fetch). */
+export async function buildCompetitorSnapshot(url: string): Promise<CompetitorSnapshot> {
+  const { snapshot } = await buildCompetitorSnapshotDetailed(url);
+  return snapshot;
 }
 
 function normQ(q: string): string {
@@ -253,14 +296,7 @@ export function enrichSpyGaps(
 
   // ¿Pudimos leer la página propia? Si el snapshot vino vacío (fetch fallido),
   // no sabemos si ya tiene el Schema: no debemos afirmar "no lo tenés".
-  const ownReadable = !!(
-    own &&
-    (own.title ||
-      own.h1 ||
-      (own.headings?.length ?? 0) > 0 ||
-      (own.faqQuestions?.length ?? 0) > 0 ||
-      (own.schemaTypes?.length ?? 0) > 0)
-  );
+  const ownReadable = isSpySnapshotReadable(own);
   const OWN_UNREADABLE_NOTE =
     'Ojo: no pudimos leer tu página al espiar, así que no confirmamos si ya tenés este Schema. ' +
     'Cuando toques generar/verificar lo chequeamos en vivo; si tu plataforma o plugin ya lo genera, ' +
