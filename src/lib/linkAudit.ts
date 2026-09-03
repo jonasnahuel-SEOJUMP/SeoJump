@@ -191,7 +191,8 @@ export async function crawlSiteLinks(siteUrl: string) {
     if (visited.has(normalizedUrl)) continue;
     visited.add(normalizedUrl);
 
-    const result = await fetchPage(url);
+    // Sin headless: el crawl toca varias URLs y no puede pagar 10–15s por página.
+    const result = await fetchPage(url, { browserFallback: false });
     if (!result.ok) continue;
 
     const links = extractLinksFromHtml(result.html, url);
