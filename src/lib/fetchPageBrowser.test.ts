@@ -89,7 +89,10 @@ describe('fetchPageHtmlWithBrowser', () => {
 
     const res = await fetchPageHtmlWithBrowser('http://127.0.0.1/');
     expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.message).toMatch(/internas|privadas/i);
+    expect(res).toMatchObject({
+      ok: false,
+      message: expect.stringMatching(/internas|privadas/i),
+    });
     expect(mockLaunch).not.toHaveBeenCalled();
   });
 

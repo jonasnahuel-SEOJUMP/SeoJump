@@ -12,7 +12,7 @@ import { assertSafePublicUrl } from './urlSafety.js';
 export type BrowserFetchOpts = {
   timeoutMs?: number;
   /** Inyectable en tests (mock de DNS). */
-  dnsApi?: import('node:dns/promises');
+  dnsApi?: typeof import('node:dns/promises');
 };
 
 export type BrowserFetchResult =
@@ -46,8 +46,13 @@ export async function fetchPageHtmlWithBrowser(
     chromium.setGraphicsMode = false;
 
     const executablePath = await chromium.executablePath();
+    // puppeteer-core ≥22: defaultArgs es async.
+    const launchArgs = await puppeteer.defaultArgs({
+      args: chromium.args,
+      headless: 'shell',
+    });
     browser = await puppeteer.launch({
-      args: puppeteer.defaultArgs({ args: chromium.args, headless: 'shell' }),
+      args: launchArgs,
       defaultViewport: {
         width: 1280,
         height: 720,
@@ -55,7 +60,7 @@ export async function fetchPageHtmlWithBrowser(
       },
       executablePath,
       headless: 'shell',
-      ignoreHTTPSErrors: true,
+      acceptInsecureCerts: true,
     });
 
     const page = await browser.newPage();
