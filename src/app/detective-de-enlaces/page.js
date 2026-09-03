@@ -1465,7 +1465,8 @@ export default function DetectiveDeEnlaces() {
                     </button>
                     {(ownComparisonUrl.trim() || siteUrl) && (
                       <p className="text-xs text-slate-500 font-bold">
-                        Comparando contra: <span className="text-slate-400">{ownComparisonUrl.trim() || siteUrl}</span>
+                        Tu página en esta comparación:{" "}
+                        <span className="text-slate-400">{ownComparisonUrl.trim() || siteUrl}</span>
                       </p>
                     )}
                   </div>
@@ -1568,17 +1569,63 @@ export default function DetectiveDeEnlaces() {
                   )}
 
                   {/* Comparación rápida título/H1 */}
-                  {spyResult.you && (
+                  {(spyResult.you || spyResult.competitor) && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                       <div className="card-3d bg-slate-800/60 border-slate-700 p-4 space-y-2">
                         <p className="text-xs font-black text-emerald-400 uppercase">🟢 Usted</p>
-                        <p className="text-xs text-slate-500 font-bold">Título: <span className="text-slate-300">{spyResult.you.title || "(vacío)"}</span></p>
-                        <p className="text-xs text-slate-500 font-bold">H1: <span className="text-slate-300">{spyResult.you.h1 || "(vacío)"}</span></p>
+                        {spyResult.you?.unreadable || spyResult.ownUnreadable ? (
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-amber-300">
+                              No pudimos leer tu página
+                            </p>
+                            <p className="text-[11px] text-slate-400 font-bold leading-relaxed">
+                              {spyResult.you?.fetchError ||
+                                "Tu hosting o firewall está bloqueando al Espía (a veces responde 403). El título que ves en el navegador puede existir igual: acá no pudimos abrirlo para compararlo."}
+                            </p>
+                            {(spyResult.comparedAgainst || ownComparisonUrl || siteUrl) && (
+                              <p className="text-[11px] text-slate-500 font-bold break-all">
+                                Intentamos:{" "}
+                                <span className="text-slate-400">
+                                  {spyResult.comparedAgainst || ownComparisonUrl.trim() || siteUrl}
+                                </span>
+                              </p>
+                            )}
+                          </div>
+                        ) : spyResult.you ? (
+                          <>
+                            <p className="text-xs text-slate-500 font-bold">
+                              Título:{" "}
+                              <span className="text-slate-300">
+                                {spyResult.you.title || "(vacío)"}
+                              </span>
+                            </p>
+                            <p className="text-xs text-slate-500 font-bold">
+                              H1:{" "}
+                              <span className="text-slate-300">
+                                {spyResult.you.h1 || "(vacío)"}
+                              </span>
+                            </p>
+                          </>
+                        ) : (
+                          <p className="text-xs text-slate-500 font-bold">
+                            Sin URL propia para comparar.
+                          </p>
+                        )}
                       </div>
                       <div className="card-3d bg-slate-800/60 border-slate-700 p-4 space-y-2">
                         <p className="text-xs font-black text-purple-400 uppercase">🕵️ Competidor</p>
-                        <p className="text-xs text-slate-500 font-bold">Título: <span className="text-slate-300">{spyResult.competitor.title || "(vacío)"}</span></p>
-                        <p className="text-xs text-slate-500 font-bold">H1: <span className="text-slate-300">{spyResult.competitor.h1 || "(vacío)"}</span></p>
+                        <p className="text-xs text-slate-500 font-bold">
+                          Título:{" "}
+                          <span className="text-slate-300">
+                            {spyResult.competitor?.title || "(vacío)"}
+                          </span>
+                        </p>
+                        <p className="text-xs text-slate-500 font-bold">
+                          H1:{" "}
+                          <span className="text-slate-300">
+                            {spyResult.competitor?.h1 || "(vacío)"}
+                          </span>
+                        </p>
                       </div>
                     </div>
                   )}

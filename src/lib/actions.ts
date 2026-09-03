@@ -27,7 +27,8 @@ import {
   isUiNoiseText,
 } from './scraping'
 import {
-  buildCompetitorSnapshot,
+  buildCompetitorSnapshotDetailed,
+  isSpySnapshotReadable,
   enrichSpyGaps,
   brandLabelFromUrl,
   collectCompetitorBrandTokens,
@@ -3301,14 +3302,19 @@ export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, g
   // ── Scrape del rival ────────────────────────────────────────────────────────
   let rivalSnapshot: CompetitorSnapshot;
   try {
-    rivalSnapshot = await buildCompetitorSnapshot(rivalUrl);
+    const rivalBuilt = await buildCompetitorSnapshotDetailed(rivalUrl);
+    rivalSnapshot = rivalBuilt.snapshot;
+    if (!rivalBuilt.fetchOk || !isSpySnapshotReadable(rivalSnapshot)) {
+      return {
+        success: false,
+        error:
+          rivalBuilt.fetchError ||
+          'La web del competidor no devolvió contenido legible (puede bloquear bots o estar caída).',
+      };
+    }
   } catch (err) {
     console.error('[spyCompetitor] Error scraping rival:', err);
     return { success: false, error: 'No pudimos leer la web del competidor. Verificá que la URL sea pública y esté online.' };
-  }
-
-  if (!rivalSnapshot.title && !rivalSnapshot.h1 && rivalSnapshot.headings.length === 0) {
-    return { success: false, error: 'La web del competidor no devolvió contenido legible (puede bloquear bots o estar caída).' };
   }
 
   // ── Keyword/tema en juego (del usuario o derivado del rival) ────────────────
@@ -3339,13 +3345,22 @@ export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, g
 
   // ── Snapshot propio (para comparar) ─────────────────────────────────────────
   let ownSnapshot: CompetitorSnapshot | null = null;
+  let ownFetchOk = false;
+  let ownFetchError: string | undefined;
   if (effectiveOwnUrl) {
     try {
-      ownSnapshot = await buildCompetitorSnapshot(effectiveOwnUrl);
+      const ownBuilt = await buildCompetitorSnapshotDetailed(effectiveOwnUrl);
+      ownSnapshot = ownBuilt.snapshot;
+      ownFetchOk = ownBuilt.fetchOk;
+      ownFetchError = ownBuilt.fetchError;
     } catch {
       ownSnapshot = null;
+      ownFetchOk = false;
+      ownFetchError = 'No pudimos leer tu página.';
     }
   }
+  // Fetch fallido ≠ título vacío: la UI debe decir "no pudimos leer", no "(vacío)".
+  const ownUnreadable = !!(effectiveOwnUrl && (!ownFetchOk || !isSpySnapshotReadable(ownSnapshot)));
 
   // Desajuste real: caímos a la home porque no hubo URL manual NI auto-match,
   // pero el rival es una página específica. Ahí la IA no debe penalizar generalidad.
@@ -3452,20 +3467,25 @@ ATENCIÓN — DESAJUSTE DE PÁGINAS: La web del USUARIO que recibís es su PÁGI
 ⚠️ CONTAMINACIÓN DE MARCA: el título/H1 scrapado del USUARIO contiene la marca del COMPETIDOR ("${competitorBrandLabel}"). Eso NO es la marca del usuario. En gaps de Título/H1 pedile explícitamente que quite "${competitorBrandLabel}" y, si suma marca, use "${ownBrandLabel || 'su propia marca'}".`
     : '';
 
+  const ownUnreadableNote = ownUnreadable
+    ? `
+⚠️ PÁGINA DEL USUARIO ILEGIBLE: no pudimos descargar el HTML de la web del USUARIO (bloqueo 403, firewall o caída). NO digas que "no tiene título" ni "tiene el título vacío": eso no lo sabemos. En el veredicto aclará que no pudimos leer su página y basá las sugerencias en lo que hace bien el competidor, sin afirmar qué le falta al usuario en on-page.`
+    : '';
+
   const userPrompt = `Tema/keyword en juego: "${effectiveKeyword || 'no especificada'}"
 Tipo de página del USUARIO: ${ownSnapshot?.pageType || (pageTypeMismatch ? 'home' : 'unknown')}
 Tipo de página del COMPETIDOR: ${rivalSnapshot.pageType || 'unknown'}
 Marca COMPETIDOR (PROHIBIDA en sugerencias del usuario): "${competitorBrandLabel}"
 Marca USUARIO (única permitida en ejemplos de título): "${ownBrandLabel || 'la marca del usuario'}"
-${mismatchNote}${contaminationNote}
-WEB DEL USUARIO (${pageTypeMismatch ? 'PÁGINA DE INICIO / HOME' : effectiveOwnUrl || 'no disponible'}):
-${ownSnapshot ? JSON.stringify(packSnapshot(ownSnapshot), null, 2) : '(no disponible — analizá solo al competidor y sugerí cómo competirle)'}
+${mismatchNote}${contaminationNote}${ownUnreadableNote}
+WEB DEL USUARIO (${ownUnreadable ? 'NO LEGIBLE — fetch fallido' : pageTypeMismatch ? 'PÁGINA DE INICIO / HOME' : effectiveOwnUrl || 'no disponible'}):
+${ownSnapshot && !ownUnreadable ? JSON.stringify(packSnapshot(ownSnapshot), null, 2) : '(no disponible — no afirmes que le falta título/H1; analizá al competidor y sugerí buenas prácticas)'}
 
 WEB DEL COMPETIDOR (${rivalUrl}):
 ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
 
   const cacheKey = buildGeminiCacheKey([
-    'competitor_spy_v4_brand_guard',
+    'competitor_spy_v5_own_unreadable',
     userEmail || 'dev@localhost',
     rivalUrl,
     effectiveOwnUrl,
@@ -3474,6 +3494,7 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
     competitorBrandLabel,
     ownBrandLabel,
     ownTitleContaminated ? 'contaminated' : 'clean',
+    ownUnreadable ? 'own_unreadable' : 'own_ok',
     JSON.stringify(rivalSnapshot.headings.slice(0, 8)),
     JSON.stringify((rivalSnapshot.faqQuestions || []).slice(0, 6)),
     rivalSnapshot.title,
@@ -3528,11 +3549,9 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
         ownBrandLabel: ownBrandLabel || undefined,
       });
     }
-    verdict = stripCompetitorBrandFromText(
-      verdict,
-      competitorBrandTokens,
-      ownBrandLabel || undefined
-    );
+    // No reescribir el veredicto con la marca del usuario: si dice
+    // "el competidor X gana", reemplazar X por la marca propia confunde
+    // (parece que "Afdistribuidora" es el rival cuando es el usuario).
   } catch (err) {
     console.error('[spyCompetitor] Error parseando respuesta IA:', err);
     return { success: false, error: 'Error al interpretar el análisis de la IA. Intentá de nuevo.' };
@@ -3573,9 +3592,22 @@ ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
             faqQuestions: ownSnapshot.faqQuestions || [],
             hasFaqSchema: !!ownSnapshot.hasFaqSchema,
             schemaTypes: ownSnapshot.schemaTypes || [],
+            unreadable: ownUnreadable,
+            fetchError: ownUnreadable ? ownFetchError : undefined,
           }
-        : null,
+        : effectiveOwnUrl
+          ? {
+              title: '',
+              h1: '',
+              faqQuestions: [],
+              hasFaqSchema: false,
+              schemaTypes: [],
+              unreadable: true,
+              fetchError: ownFetchError || 'No pudimos leer tu página.',
+            }
+          : null,
       comparedAgainst: effectiveOwnUrl || null,
+      ownUnreadable,
       pageTypeMismatch,
       ownPageType: ownSnapshot?.pageType || (pageTypeMismatch ? 'home' : null),
       rivalPageType: rivalSnapshot.pageType || null,
