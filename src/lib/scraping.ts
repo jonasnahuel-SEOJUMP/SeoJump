@@ -6,6 +6,7 @@
 
 import { decodeHtmlEntities } from './textUtils'
 import { fetchHtmlSafe, fetchWithSsrfGuard } from './safeHttp.js'
+import { fetchPageHtml } from './fetchPage.js'
 
 /**
  * Detecta el tipo real de página desde el HTML (huellas de WooCommerce/WordPress
@@ -143,26 +144,22 @@ export function extractTitleFromHtml(html: string): string {
   return match ? match[1].replace(/<[^>]+>/g, '').trim() : "";
 }
 
+/**
+ * Descarga HTML de una URL pública.
+ * Usa el mismo camino que fetchPageHtml (rápido + respaldo headless).
+ * Para crawls masivos (Detective de enlaces) pasá browserFallback: false.
+ */
 export async function fetchPage(
   url: string,
-  opts: { timeoutMs?: number } = {}
+  opts: { timeoutMs?: number; browserFallback?: boolean } = {}
 ): Promise<{ html: string; ok: boolean; status: number }> {
   const timeoutMs = opts.timeoutMs ?? 5000;
-  const result = await fetchWithSsrfGuard(url, {
+  const result = await fetchPageHtml(url, {
     timeoutMs,
-    method: 'GET',
-    cacheBuster: true,
+    browserFallback: opts.browserFallback !== false,
   });
   if (result.ok === false) return { html: '', ok: false, status: 0 };
-  try {
-    if (!result.response.ok) {
-      return { html: '', ok: false, status: result.response.status };
-    }
-    const html = await result.response.text();
-    return { html, ok: true, status: result.response.status };
-  } catch {
-    return { html: '', ok: false, status: 0 };
-  }
+  return { html: result.html, ok: true, status: 200 };
 }
 
 export async function checkLinkStatus(url: string): Promise<number> {
