@@ -11,6 +11,7 @@ import {
   shouldAutoOfferFaqSchema,
   shouldAutoOfferProductSchema,
 } from './aeoSchemaPolicy';
+import { isRootHomeUrl } from './urlHome';
 
 export type ComprehensionPageType =
   | 'product'
@@ -119,10 +120,11 @@ function extractH1(html: string): string {
 }
 
 export function pageTypeFromUrl(pageUrl: string): ComprehensionPageType {
+  // Regla fija compartida con linkAudit / scraping / Espía.
+  if (isRootHomeUrl(pageUrl)) return 'home';
   try {
     const lower = pageUrl.toLowerCase();
     const path = new URL(lower.startsWith('http') ? lower : `https://${lower}`).pathname;
-    if (path === '/' || path === '') return 'home';
     if (/categoria-producto|product-category|\/categorias?\//.test(path)) return 'category';
     if (/\/producto\/|\/product\//.test(path)) return 'product';
     if (/\/blog\/|\/noticia|\/articulo/.test(path)) return 'post';
@@ -132,7 +134,13 @@ export function pageTypeFromUrl(pageUrl: string): ComprehensionPageType {
   return 'unknown';
 }
 
+/**
+ * Clasifica el tipo de página. La HOME es regla determinística por URL
+ * (isRootHomeUrl): nunca se deja al HTML ni a la IA — muchos themes WP
+ * ponen "blog" en el body class de la portada y eso la marcaba como "post".
+ */
 export function resolvePageType(html: string, pageUrl: string): ComprehensionPageType {
+  if (isRootHomeUrl(pageUrl)) return 'home';
   const fromHtml = detectPageTypeFromHtml(html) as ComprehensionPageType | '';
   if (fromHtml && fromHtml in PAGE_TYPE_LABELS) return fromHtml;
   return pageTypeFromUrl(pageUrl);

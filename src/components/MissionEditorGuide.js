@@ -12,6 +12,7 @@ import {
 import { isMissionChangeFullyApplied, getMissionSuggestionAddon } from "../lib/textUtils";
 import { getSmartMissionSuggestion } from "../lib/actions";
 import WpApplyButton from "./WpApplyButton";
+import MissionWarning from "./MissionWarning";
 
 function CopyButton({ text, label, playClick, variant = "green", className = "" }) {
   const [copied, setCopied] = useState(false);
@@ -260,6 +261,9 @@ export default function MissionEditorGuide({
                     <p className="text-[11px] text-slate-400 leading-snug">
                       Sugerencia automática — si la IA de Google está conectada verás el sello «Generada con IA» arriba.
                     </p>
+                  )}
+                  {(missionType === "H1" || mission?.type === "H1") && (
+                    <MissionWarning type="h1-change" />
                   )}
                   <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-start">
                     <CopyButton text={suggested} label="📋 Copiar sugerencia" playClick={playClick} variant="green" />

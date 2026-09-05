@@ -7,6 +7,7 @@
 import { decodeHtmlEntities } from './textUtils'
 import { fetchHtmlSafe, fetchWithSsrfGuard } from './safeHttp.js'
 import { fetchPageHtml } from './fetchPage.js'
+import { isRootHomeUrl } from './urlHome'
 
 /**
  * Detecta el tipo real de página desde el HTML (huellas de WooCommerce/WordPress
@@ -78,8 +79,11 @@ export async function scrapeMetadata(siteUrl: string): Promise<{ title: string; 
       result.h1 = decodeHtmlEntities(h1Match[1].replace(/<[^>]+>/g, '').trim());
     }
 
-    // Detectar tipo de página desde el HTML (huellas de WooCommerce/WordPress)
-    result.pageType = detectPageTypeFromHtml(html);
+    // Home = regla fija por URL (misma fuente de verdad que resolvePageType /
+    // isHomePage). El body class de WP a menudo dice "blog" en la portada.
+    result.pageType = isRootHomeUrl(siteUrl)
+      ? 'home'
+      : detectPageTypeFromHtml(html);
   } catch (error) {
     console.error("Error scraping metadata:", error);
   }

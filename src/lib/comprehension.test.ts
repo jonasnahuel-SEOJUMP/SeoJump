@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   analyzeComprehension,
+  resolvePageType,
+  pageTypeFromUrl,
   buildFaqJsonLd,
   buildFaqVisibleHtml,
   extractExistingStructuredData,
@@ -331,5 +333,26 @@ describe('analyzeComprehension', () => {
       </body></html>`;
     const map = analyzeComprehension(html, 'https://example.com/producto/x');
     expect(map.offer).toBeNull();
+  });
+});
+
+
+describe('resolvePageType — home es regla fija por URL', () => {
+  const blogBodyHtml = `<html><body class="blog home logged-in">
+    <h1>Mi Marca</h1><p>Portada</p></body></html>`;
+
+  it('URL raíz con body class "blog" nunca se clasifica como post', () => {
+    expect(resolvePageType(blogBodyHtml, 'https://ejemplo.com/')).toBe('home');
+    expect(resolvePageType(blogBodyHtml, 'https://ejemplo.com')).toBe('home');
+  });
+
+  it('pageTypeFromUrl también marca la raíz como home', () => {
+    expect(pageTypeFromUrl('https://ejemplo.com/')).toBe('home');
+    expect(pageTypeFromUrl('ejemplo.com')).toBe('home');
+  });
+
+  it('un post real con /blog/ sigue siendo post', () => {
+    const html = `<html><body class="single-post"><h1>Artículo</h1></body></html>`;
+    expect(resolvePageType(html, 'https://ejemplo.com/blog/mi-nota')).toBe('post');
   });
 });

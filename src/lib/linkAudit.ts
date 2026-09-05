@@ -11,17 +11,26 @@ import {
   checkLinkStatus,
   detectPageTypeFromHtml,
 } from './scraping'
+import { isRootHomeUrl } from './urlHome'
 
-/** Returns true if the URL is the root / home page of the domain. */
+// Re-export: una sola fuente de verdad para "¿es la raíz del dominio?"
+export { isRootHomeUrl } from './urlHome'
+
+/**
+ * True si pageUrl es la home del sitio (mismo host + path raíz, o path igual al del siteUrl).
+ * La detección de "path raíz" usa isRootHomeUrl (compartida con comprehension / scraping / Espía).
+ */
 export function isHomePage(pageUrl: string, siteUrl: string): boolean {
   try {
     const page = new URL(pageUrl.startsWith('http') ? pageUrl : `https://${pageUrl}`);
     const site = new URL(siteUrl.startsWith('http') ? siteUrl : `https://${siteUrl}`);
     const normHost = (h: string) => h.replace(/^www\./i, '').toLowerCase();
     if (normHost(page.hostname) !== normHost(site.hostname)) return false;
+    // Raíz del dominio → home siempre (misma regla que resolvePageType / Espía).
+    if (isRootHomeUrl(pageUrl)) return true;
     const pagePath = page.pathname.replace(/\/+$/, '') || '/';
     const sitePath = site.pathname.replace(/\/+$/, '') || '/';
-    return pagePath === '/' || pagePath === sitePath;
+    return pagePath === sitePath;
   } catch {
     const norm = (u: string) =>
       u

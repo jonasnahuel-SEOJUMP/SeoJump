@@ -11,6 +11,7 @@ import UpgradeModal from "../../components/UpgradeModal";
 import AiCreditsBadge from "../../components/AiCreditsBadge";
 import PlatformSelector from "../../components/PlatformSelector";
 import MissionEditorGuide from "../../components/MissionEditorGuide";
+import MissionWarning from "../../components/MissionWarning";
 import { getStoredPlatform, detectPageType, getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getCurrentValueFromPreview } from "../../lib/cmsGuide";
 import { isMissionChangeFullyApplied } from "../../lib/textUtils";
 import { useSubscription } from "../../hooks/useSubscription";
@@ -1532,6 +1533,9 @@ export default function Optimizacion() {
                                 </div>
                               )}
                               
+                              {!isCompleted && (
+                                <MissionWarning type="h1-change" className="mt-2" />
+                              )}
                               {!isCompleted && (
                                 <div className="pt-2 flex flex-col sm:flex-row gap-3">
                                   <button

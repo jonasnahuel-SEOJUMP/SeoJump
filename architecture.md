@@ -33,6 +33,7 @@ helpers puros NO viven ahí: están en módulos sin `"use server"` y se importan
 | `actions.ts` | Server actions (lo que llaman los componentes cliente) | Sí |
 | `scraping.ts` | Primitivas de fetch/parseo de HTML: `fetchPage`, `scrapeMetadata`, `scrapeHeadingSections`, `buildCompetitorSnapshot`, extracción de title/links/headings | No |
 | `linkAudit.ts` | Clasificación de URLs (home/hub/contenido), filtros de recomendaciones de enlaces, `crawlSiteLinks` | No |
+| `urlHome.ts` | Fuente de verdad única: `isRootHomeUrl(url)` (path `/` sin segmentos). La usan `isHomePage`, `resolvePageType`, `scrapeMetadata` y el Espía. Home **nunca** se infiere solo por HTML/IA. | No |
 | `google.js` | Integración con Search Console (datos y diagnóstico de conexión) | No |
 | `supabase.ts` | Acceso a Supabase y tipos de datos | No |
 | `aiCredits.ts` | Lógica de créditos IA (consumo, límites, caché de Gemini) | No |
@@ -70,6 +71,10 @@ que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando d
   (`sanitizeSpyGapsCompetitorBrand`) que limpia suggestion/problem/verdict.
 
 ---
+
+- **Home = regla fija por URL** (`isRootHomeUrl` en `urlHome.ts`). Si la URL es la raíz del dominio, el tipo es `home` aunque el HTML diga `blog`/`post`.
+- **Protección de marca en HOME (H1 y `<title>`):** en portada no se sugiere reemplazar el nombre de marca por keywords genéricas. El prompt compartido vive en `homeBrandPrompt.ts` (`homeBrandProtectionInstructions`) y se inyecta en Espía, misiones H1/título y Quick Wins. Hay tests que fallan si alguien saca esa instrucción del prompt.
+- **UI:** antes de confirmar un cambio de H1/título, `MissionWarning` avisa el riesgo de ranking temporal.
 
 ## 5. Detective de Enlaces / Traspaso de Fuerza
 
