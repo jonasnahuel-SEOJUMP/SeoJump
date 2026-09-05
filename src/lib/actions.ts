@@ -72,6 +72,7 @@ import {
 import { detectSchemaInstallHints } from './schemaPasteGuide'
 import {
   isHomePage,
+  isRootHomeUrl,
   isCatalogHubPage,
   isContentPage,
   isValidLinkSourcePage,
@@ -79,6 +80,10 @@ import {
   filterAnchorTextRecs,
   crawlSiteLinks,
 } from './linkAudit'
+import {
+  buildTitleH1PromptPageRules,
+  homeBrandProtectionInstructions,
+} from './homeBrandPrompt'
 import {
   readGeminiApiKey,
   parseTitleSuggestionFromGemini,
@@ -570,20 +575,8 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
     // específico. Pedirle al usuario que ponga "limpia llantas" en el H1
     // de su home es un error SEO. La home se optimiza por Quick Wins
     // con keywords institucionales (ej: "tienda de car detailing").
-    const isHomeUrl = (url: string): boolean => {
-      try {
-        const page = new URL(url);
-        const site = new URL(
-          cleanSiteUrl.startsWith('http') ? cleanSiteUrl : `https://${cleanSiteUrl}`
-        );
-        return (
-          page.hostname === site.hostname &&
-          (page.pathname === '/' || page.pathname === '')
-        );
-      } catch {
-        return false;
-      }
-    };
+    // Misma fuente de verdad que resolvePageType / Espía (isHomePage → isRootHomeUrl).
+    const isHomeUrl = (url: string): boolean => isHomePage(url, cleanSiteUrl);
 
     let missionRows = sortedRows.filter(row => !isHomeUrl(row.keys[0]));
 
@@ -1141,7 +1134,7 @@ export async function getSmartMissionSuggestion(params: {
   const isTitle = missionType === 'H1';
 
   const cacheKey = buildGeminiCacheKey([
-    'title_suggestion_v9_cat',
+    'title_suggestion_v10_home_brand',
     email || 'anon',
     pageUrl,
     missionType,
@@ -1250,7 +1243,12 @@ export async function getSmartMissionSuggestion(params: {
     ? `\nMARCAS QUE EL DUEÑO DECLARÓ QUE VENDE/DISTRIBUYE (fuente confiable, priorizá estas):\n  ${brands}\n  → Esto confirma que el negocio es MULTIMARCA. Podés usar estas marcas en el título/meta si son relevantes para esta página, SIEMPRE que no estén ya cubiertas en el slug o en el otro campo (regla de complementariedad).`
     : '';
 
-  const prompt = `
+    const homeBrandRules = buildTitleH1PromptPageRules({
+    pageType: isHubPage ? 'home' : pageType,
+    isHubPage: isHubPage,
+  });
+
+const prompt = `
 Actuás como un consultor SEO experto que optimiza una página para un dueño de negocio NO técnico que va a confiar a ciegas en tu recomendación. Tu respuesta tiene que ser segura, lista para copiar y pegar. Tenés que RELACIONAR TODAS las variables de abajo antes de decidir, como haría un consultor humano real.
 
 NEGOCIO Y PÁGINA:
@@ -1264,7 +1262,7 @@ ${isCategoryPage ? `- ⚠️ ES CATEGORÍA: el título DEBE conservar la categor
 
 CONTEXTO DEL NEGOCIO (de la portada del sitio — sirve para entender el rubro y si es mono o multimarca):
 ${businessContext ? `  ${businessContext}` : '  (no disponible — deducí el perfil desde el contenido de la página)'}
-${brandsBlock}
+${brandsBlock}${homeBrandRules ? `\n\n${homeBrandRules}` : ''}
 QUÉ VENDE REALMENTE ESTA PÁGINA (basate en esto para entender el producto puntual):
 ${pageSells}
 ${siblingFields ? `\nQUÉ CUBREN YA LOS OTROS CAMPOS DE ESTA PÁGINA (título, meta y slug trabajan en equipo — NO repitas lo que ya está dicho acá):\n${siblingFields}` : ''}
@@ -1958,12 +1956,14 @@ Antes de generar cualquier "suggestedTitle", IDENTIFICA el tipo de página por s
 - PÁGINA INTERNA: URL tiene ruta propia (ej: ${domainName}/productos/pulidora, ${domainName}/servicios)
 
 Si la URL es la HOME/PORTADA:
-  ✅ DEBES: sugerir un título que represente la MARCA GLOBAL o la CATEGORÍA DEL NEGOCIO.
+  ✅ DEBES: sugerir un título que represente la MARCA GLOBAL o la CATEGORÍA DEL NEGOCIO, PRESERVANDO el nombre de marca en el <title> (y nunca pidiendo reemplazar el H1 de marca por keywords genéricas).
      Ejemplos correctos: "${domainName.split('.')[0]} | Tienda de Car Detailing en Argentina", "${businessNiche.split('|')[0].trim()} | Envíos a Todo el País"
+  ${homeBrandProtectionInstructions('home')}
   ❌ TIENES PROHIBIDO ABSOLUTO: usar la goldKeyword "${cleanGoldKeyword}" como tema central del título de la Home si es un producto específico (ej: 'limpia llantas', 'pulidora', 'shampoo', 'cera', cualquier artículo concreto).
           ❌ TIENES PROHIBIDO ABSOLUTO: sugerir que el título de la Home sea el nombre de un producto individual.
+          ❌ TIENES PROHIBIDO ABSOLUTO: borrar/reemplazar el nombre de la empresa en el <title> o en el H1 de la home por keywords genéricas del rubro.
           ℹ️ Interno (NO lo digas al usuario): suggestedTitle va al campo Título SEO de Yoast/Rank Math.
-  🔒 VIOLACIÓN DE ESTA REGLA = Respuesta inválida. Un título de Home con producto específico rompe la arquitectura web del usuario y será rechazado.
+  🔒 VIOLACIÓN DE ESTA REGLA = Respuesta inválida. Un título de Home con producto específico (o sin la marca) rompe la arquitectura web del usuario y será rechazado.
 
 Si la URL es una PÁGINA INTERNA (producto, servicio, blog):
   ✅ PUEDES y DEBES: usar la goldKeyword y términos específicos libremente.
@@ -3253,9 +3253,8 @@ export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, g
     }
   }
   // Helpers de clasificación de URL (home vs página específica).
-  const isHomeUrl = (u: string): boolean => {
-    try { return new URL(u).pathname.replace(/\/+$/, '') === ''; } catch { return false; }
-  };
+  // Misma fuente de verdad que resolvePageType / scrapeMetadata / Quick Wins.
+  const isHomeUrl = (u: string): boolean => isRootHomeUrl(u);
   const isSpecificUrl = (u: string): boolean => {
     try { return new URL(u).pathname.replace(/\/+$/, '').split('/').filter(Boolean).length >= 1; } catch { return false; }
   };
@@ -3404,7 +3403,11 @@ export async function spyCompetitor(competitorUrl: string, ownSiteUrl: string, g
       competitorBrandTokens
     );
 
-  const systemInstructions = `Sos un consultor SEO + AEO senior que ayuda a dueños de PyMES (sin conocimientos técnicos) a entender qué hace mejor su competencia y cómo superarla. Hablás en español rioplatense, claro y directo, sin jerga.
+    const spyHomeBrandRules = homeBrandProtectionInstructions(
+    ownSnapshot?.pageType || (pageTypeMismatch ? 'home' : '')
+  );
+
+const systemInstructions = `Sos un consultor SEO + AEO senior que ayuda a dueños de PyMES (sin conocimientos técnicos) a entender qué hace mejor su competencia y cómo superarla. Hablás en español rioplatense, claro y directo, sin jerga.
 
 Principio de SEO Jump (importante):
 1) Primero ayudás a crear información útil y estructurada para humanos e IA (preguntas que el usuario realmente se hace).
@@ -3445,7 +3448,8 @@ Reglas:
   * Marca del USUARIO = "${ownBrandLabel || '(su dominio / su nombre comercial)'}".
   * PROHIBIDO ABSOLUTO sugerir, copiar o recomendar la marca del COMPETIDOR en el título SEO, H1, meta o cualquier ejemplo de copy del USUARIO.
   * Si proponés un título de ejemplo, usá la marca del USUARIO (o omitila si no entra en ~60 caracteres). Nunca pongas "${competitorBrandLabel || 'la marca rival'}".
-  * Si el título actual del USUARIO ya contiene la marca del COMPETIDOR, eso es contaminación (error o rastro de marketplace): pedile que la QUITE y use su propia marca. NO la trates como marca propia ni la "mejores" dejándola.`;
+  * Si el título actual del USUARIO ya contiene la marca del COMPETIDOR, eso es contaminación (error o rastro de marketplace): pedile que la QUITE y use su propia marca. NO la trates como marca propia ni la "mejores" dejándola.
+${spyHomeBrandRules ? `\n${spyHomeBrandRules}` : ''}`;
 
   const mismatchNote = pageTypeMismatch
     ? `
@@ -3485,7 +3489,7 @@ WEB DEL COMPETIDOR (${rivalUrl}):
 ${JSON.stringify(packSnapshot(rivalSnapshot), null, 2)}`;
 
   const cacheKey = buildGeminiCacheKey([
-    'competitor_spy_v5_own_unreadable',
+    'competitor_spy_v6_home_brand',
     userEmail || 'dev@localhost',
     rivalUrl,
     effectiveOwnUrl,

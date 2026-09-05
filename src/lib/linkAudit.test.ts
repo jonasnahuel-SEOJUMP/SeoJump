@@ -8,12 +8,20 @@ import {
   isEcommerceButtonAnchor,
   isGenericAnchor,
   isHomePage,
+  isRootHomeUrl,
   isValidLinkSourcePage,
 } from './linkAudit';
 
 const SITE = 'https://www.55detailshop.com.ar';
 
 describe('isHomePage', () => {
+  it('alineado con isRootHomeUrl (fuente de verdad única)', () => {
+    expect(isRootHomeUrl(`${SITE}/`)).toBe(true);
+    expect(isHomePage(`${SITE}/`, SITE)).toBe(isRootHomeUrl(`${SITE}/`));
+    expect(isHomePage(`${SITE}/blog/x`, SITE)).toBe(false);
+    expect(isRootHomeUrl(`${SITE}/blog/x`)).toBe(false);
+  });
+
   it('detecta la home con y sin barra final', () => {
     expect(isHomePage(`${SITE}/`, SITE)).toBe(true);
     expect(isHomePage(SITE, `${SITE}/`)).toBe(true);

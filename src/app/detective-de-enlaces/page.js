@@ -8,6 +8,7 @@ import { useAudio } from "../../hooks/useAudio";
 import { useTheme } from "../../hooks/useTheme";
 import { auditSiteLinks, requestGoogleIndexing, checkIsAdmin, spyCompetitor, verifySpyGap } from "../../lib/actions";
 import UpgradeModal from "../../components/UpgradeModal";
+import MissionWarning, { isH1OrTitleChange } from "../../components/MissionWarning";
 import SchemaPasteGuideBox from "../../components/SchemaPasteGuideBox";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../../lib/progression";
 import Header from "../../components/Header";
@@ -2005,6 +2006,9 @@ export default function DetectiveDeEnlaces() {
                             </div>
                           )}
 
+                          {!resolved && isH1OrTitleChange(gap.area) && (
+                            <MissionWarning type="h1-change" />
+                          )}
                           {completed ? (
                             <button disabled className="w-full py-3 rounded-xl border border-green-500/35 bg-green-950/20 text-green-400 font-black cursor-not-allowed text-base">
                               ✅ Aplicado (+15 XP)
