@@ -430,6 +430,22 @@ h1, h2, h3, h4, h5, h6 {
   backdrop-filter: blur(12px) !important;
 }
 
+/* Notification dropdown: opaque panel so content stays readable above the dashboard */
+.notification-dropdown-panel {
+  background: #0f172a !important; /* slate-900 */
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  backdrop-filter: none !important;
+  color: #e2e8f0;
+}
+.notification-dropdown-panel__header,
+.notification-dropdown-panel__footer {
+  background: rgba(2, 6, 23, 0.85) !important; /* near slate-950 */
+  backdrop-filter: none !important;
+}
+.notification-dropdown-panel__item--unread {
+  background: rgba(30, 58, 138, 0.25) !important;
+}
+
 /* Light / Cosmic Glow Backlights */
 .bg-glow-purple {
   background: radial-gradient(circle at 50% 50%, rgba(139, 92, 246, 0.12) 0%, transparent 70%);
