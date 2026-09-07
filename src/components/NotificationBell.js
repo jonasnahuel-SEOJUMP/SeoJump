@@ -4,14 +4,29 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useAudio } from "../hooks/useAudio";
 
-const DROPDOWN_WIDTH = 320; // ~w-80
+const DROPDOWN_WIDTH = 320;
 const DROPDOWN_GAP = 12;
+
+function getDropdownCoords(buttonEl) {
+  if (!buttonEl || typeof window === "undefined") {
+    return { top: 0, left: 8, width: DROPDOWN_WIDTH };
+  }
+  const rect = buttonEl.getBoundingClientRect();
+  const width = Math.min(DROPDOWN_WIDTH, window.innerWidth - 16);
+  let left = rect.right - width;
+  left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
+  return {
+    top: rect.bottom + DROPDOWN_GAP,
+    left,
+    width,
+  };
+}
 
 export default function NotificationBell() {
   const [notifications, setNotifications] = useState([]);
   const [isOpen, setIsOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  const [coords, setCoords] = useState({ top: 0, left: 0 });
+  const [coords, setCoords] = useState({ top: 0, left: 8, width: DROPDOWN_WIDTH });
   const { playClick } = useAudio();
   const containerRef = useRef(null);
   const buttonRef = useRef(null);
@@ -31,17 +46,8 @@ export default function NotificationBell() {
   };
 
   const updatePosition = useCallback(() => {
-    const btn = buttonRef.current;
-    if (!btn) return;
-
-    const rect = btn.getBoundingClientRect();
-    const width = Math.min(DROPDOWN_WIDTH, window.innerWidth - 16);
-    // Align to the right edge of the bell, but keep the panel on-screen
-    let left = rect.right - width;
-    left = Math.max(8, Math.min(left, window.innerWidth - width - 8));
-    const top = rect.bottom + DROPDOWN_GAP;
-
-    setCoords({ top, left, width });
+    if (!buttonRef.current) return;
+    setCoords(getDropdownCoords(buttonRef.current));
   }, []);
 
   useEffect(() => {
@@ -58,8 +64,10 @@ export default function NotificationBell() {
     if (!isOpen) return;
 
     updatePosition();
+    // Second pass after layout/paint in case the first read was stale
+    const raf = window.requestAnimationFrame(() => updatePosition());
 
-    const handleOutsideClick = (e) => {
+    const handleOutsidePointer = (e) => {
       const inButton = containerRef.current?.contains(e.target);
       const inDropdown = dropdownRef.current?.contains(e.target);
       if (!inButton && !inDropdown) {
@@ -68,30 +76,42 @@ export default function NotificationBell() {
     };
 
     const handleReposition = () => updatePosition();
+    const handleKey = (e) => {
+      if (e.key === "Escape") setIsOpen(false);
+    };
 
-    // Use capture so we don't fight the toggle click on the same tick
+    // Defer so the opening click does not immediately close the panel
     const t = window.setTimeout(() => {
-      document.addEventListener("click", handleOutsideClick);
+      document.addEventListener("pointerdown", handleOutsidePointer);
     }, 0);
     window.addEventListener("resize", handleReposition);
     window.addEventListener("scroll", handleReposition, true);
+    document.addEventListener("keydown", handleKey);
 
     return () => {
+      window.cancelAnimationFrame(raf);
       window.clearTimeout(t);
-      document.removeEventListener("click", handleOutsideClick);
+      document.removeEventListener("pointerdown", handleOutsidePointer);
       window.removeEventListener("resize", handleReposition);
       window.removeEventListener("scroll", handleReposition, true);
+      document.removeEventListener("keydown", handleKey);
     };
   }, [isOpen, updatePosition]);
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
-  const handleToggle = () => {
+  const handleToggle = (e) => {
+    e.stopPropagation();
     if (playClick) playClick();
-    setIsOpen((open) => {
-      if (!open) updatePosition();
-      return !open;
-    });
+
+    if (isOpen) {
+      setIsOpen(false);
+      return;
+    }
+
+    // Compute position BEFORE opening so the first paint is correct
+    setCoords(getDropdownCoords(buttonRef.current));
+    setIsOpen(true);
   };
 
   const markAllAsRead = () => {
@@ -116,14 +136,20 @@ export default function NotificationBell() {
             ref={dropdownRef}
             role="menu"
             aria-label="Notificaciones"
-            className="notification-dropdown-panel fixed z-[200] border-2 border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl overflow-hidden font-fredoka animate-in fade-in duration-200"
+            className="notification-dropdown-panel font-fredoka animate-in fade-in duration-200"
             style={{
+              position: "fixed",
               top: coords.top,
               left: coords.left,
               width: coords.width || DROPDOWN_WIDTH,
+              zIndex: 9999,
+              borderWidth: 2,
+              borderStyle: "solid",
+              borderRadius: 16,
+              boxShadow: "0 16px 40px rgba(0,0,0,0.45)",
+              overflow: "hidden",
             }}
           >
-            {/* Header */}
             <div className="notification-dropdown-panel__header flex items-center justify-between gap-3 p-4 border-b border-white/10">
               <span className="font-black text-sm text-slate-100 flex items-center gap-1.5">
                 <span>🔔</span> Notificaciones
@@ -139,7 +165,6 @@ export default function NotificationBell() {
               )}
             </div>
 
-            {/* List */}
             <div className="max-h-64 overflow-y-auto divide-y divide-white/10">
               {notifications.length > 0 ? (
                 notifications.map((notif) => (
@@ -173,7 +198,6 @@ export default function NotificationBell() {
               )}
             </div>
 
-            {/* Footer */}
             {notifications.length > 0 && (
               <div className="notification-dropdown-panel__footer p-2 border-t border-white/10 text-center">
                 <button
@@ -191,7 +215,7 @@ export default function NotificationBell() {
       : null;
 
   return (
-    <div className="relative notification-bell-container" ref={containerRef}>
+    <div className="relative notification-bell-container flex-shrink-0" ref={containerRef}>
       <button
         ref={buttonRef}
         type="button"
