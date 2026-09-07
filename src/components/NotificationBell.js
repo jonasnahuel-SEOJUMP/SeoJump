@@ -31,6 +31,7 @@ export default function NotificationBell() {
   const containerRef = useRef(null);
   const buttonRef = useRef(null);
   const dropdownRef = useRef(null);
+  const ignoreOutsideUntilRef = useRef(0);
 
   const reloadNotifications = () => {
     const raw = localStorage.getItem("seojump_notifications");
@@ -68,6 +69,7 @@ export default function NotificationBell() {
     const raf = window.requestAnimationFrame(() => updatePosition());
 
     const handleOutsidePointer = (e) => {
+      if (Date.now() < ignoreOutsideUntilRef.current) return;
       const inButton = containerRef.current?.contains(e.target);
       const inDropdown = dropdownRef.current?.contains(e.target);
       if (!inButton && !inDropdown) {
@@ -80,17 +82,13 @@ export default function NotificationBell() {
       if (e.key === "Escape") setIsOpen(false);
     };
 
-    // Defer so the opening click does not immediately close the panel
-    const t = window.setTimeout(() => {
-      document.addEventListener("pointerdown", handleOutsidePointer);
-    }, 0);
+    document.addEventListener("pointerdown", handleOutsidePointer);
     window.addEventListener("resize", handleReposition);
     window.addEventListener("scroll", handleReposition, true);
     document.addEventListener("keydown", handleKey);
 
     return () => {
       window.cancelAnimationFrame(raf);
-      window.clearTimeout(t);
       document.removeEventListener("pointerdown", handleOutsidePointer);
       window.removeEventListener("resize", handleReposition);
       window.removeEventListener("scroll", handleReposition, true);
@@ -101,6 +99,7 @@ export default function NotificationBell() {
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const handleToggle = (e) => {
+    e.preventDefault();
     e.stopPropagation();
     if (playClick) playClick();
 
@@ -109,7 +108,8 @@ export default function NotificationBell() {
       return;
     }
 
-    // Compute position BEFORE opening so the first paint is correct
+    // Ignore the opening pointer gesture so the panel does not close instantly
+    ignoreOutsideUntilRef.current = Date.now() + 400;
     setCoords(getDropdownCoords(buttonRef.current));
     setIsOpen(true);
   };
