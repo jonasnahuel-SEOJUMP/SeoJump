@@ -1314,8 +1314,8 @@ export default function HomeApp() {
                                        </div>
                                      ) : (
                                        <div className="flex flex-wrap gap-4 mt-3 text-sm lg:text-base font-bold text-slate-550 dark:text-slate-400">
-                                         <span>👆 {mission.clicks} oportunidades de venta</span>
-                                         <span>👁️ {mission.impressions} dinero sobre la mesa</span>
+                                         <span>👆 {mission.clicks} clics</span>
+                                         <span>👁️ {mission.impressions} veces que apareciste en Google</span>
                                          <span>📊 Pos. {mission.position?.toFixed(1)}</span>
                                        </div>
                                      )}
@@ -1475,11 +1475,11 @@ export default function HomeApp() {
                   <div className="grid grid-cols-3 gap-2 md:gap-4 min-w-0 w-full">
                     <div className="bg-white dark:bg-slate-800 rounded-2xl p-2 md:p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm min-w-0">
                       <div className="text-xl md:text-3xl lg:text-4xl font-black text-duo-blue">{selectedMission.clicks}</div>
-                      <div className="text-[10px] md:text-sm lg:text-base font-bold text-slate-555 dark:text-slate-400 leading-tight">Oportunidades de Venta</div>
+                      <div className="text-[10px] md:text-sm lg:text-base font-bold text-slate-555 dark:text-slate-400 leading-tight">Clics</div>
                     </div>
                     <div className="bg-white dark:bg-slate-800 rounded-2xl p-2 md:p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm min-w-0">
                       <div className="text-xl md:text-3xl lg:text-4xl font-black text-duo-yellow">{selectedMission.impressions}</div>
-                      <div className="text-[10px] md:text-sm lg:text-base font-bold text-slate-555 dark:text-slate-400 leading-tight">Dinero sobre la mesa</div>
+                      <div className="text-[10px] md:text-sm lg:text-base font-bold text-slate-555 dark:text-slate-400 leading-tight">Veces en Google</div>
                     </div>
                     <div className="bg-white dark:bg-slate-800 rounded-2xl p-2 md:p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm min-w-0">
                       <div className="text-xl md:text-3xl lg:text-4xl font-black text-duo-green">#{selectedMission.position?.toFixed(0)}</div>
@@ -1623,11 +1623,11 @@ export default function HomeApp() {
                  
                  <div className="space-y-4">
                    <div className="bg-slate-900 rounded-xl p-4 border-2 border-slate-700 shadow-inner">
-                     <p className="text-xs md:text-sm text-slate-400 uppercase font-black tracking-wider mb-1">Oportunidades de Venta</p>
+                     <p className="text-xs md:text-sm text-slate-400 uppercase font-black tracking-wider mb-1">Clics</p>
                      <p className="text-3xl lg:text-4xl font-black text-duo-blue">{missions.reduce((acc, m) => acc + (m.clicks||0), 0).toLocaleString()}+</p>
                    </div>
                    <div className="bg-slate-900 rounded-xl p-4 border-2 border-slate-700 shadow-inner">
-                     <p className="text-xs md:text-sm text-slate-400 uppercase font-black tracking-wider mb-1">Dinero sobre la mesa</p>
+                     <p className="text-xs md:text-sm text-slate-400 uppercase font-black tracking-wider mb-1">Veces en Google</p>
                      <p className="text-3xl lg:text-4xl font-black text-duo-yellow">{missions.reduce((acc, m) => acc + (m.impressions||0), 0).toLocaleString()}</p>
                    </div>
                    <div className="bg-slate-900 rounded-xl p-4 border-2 border-slate-700 shadow-inner">
