@@ -84,6 +84,7 @@ import {
   buildTitleH1PromptPageRules,
   homeBrandProtectionInstructions,
 } from './homeBrandPrompt'
+import { shouldDiscardAiMissionCopy } from './missionSafety'
 import {
   readGeminiApiKey,
   parseTitleSuggestionFromGemini,
@@ -259,16 +260,16 @@ const buildMissionTypes = (goldKeyword?: string) => [
     color: 'green',
     pistas: {
       classic: [
-        `WordPress → Páginas (o Entradas) → Editar la página de arriba.`,
-        `Bajá hasta Yoast SEO o Rank Math → Título SEO.`,
+        `Abrí la página en WordPress (Producto, Categoría, Entrada o Página según corresponda).`,
+        `Bajá hasta Rank Math o Yoast SEO → Título SEO. No toques Nombre ni Slug.`,
         goldKeyword
-          ? `Pegá un título que incluya «${goldKeyword}». Ejemplo: «${goldKeyword} – [Tu marca]».`
-          : `Pegá un título claro que diga de qué trata la página.`,
+          ? `Pegá un Título SEO que incluya «${goldKeyword}». Ejemplo: «${goldKeyword} – [Tu marca]».`
+          : `Pegá un Título SEO claro que diga de qué trata la página.`,
         `Tocá Actualizar y volvé acá para verificar.`,
       ],
       visual: [
-        `Abrí la página en WordPress y bajá hasta Yoast SEO o Rank Math.`,
-        `En Título SEO pegá el texto recomendado.`,
+        `Abrí la página en WordPress y bajá hasta Rank Math o Yoast SEO.`,
+        `En Título SEO pegá el texto recomendado. No toques Nombre, Slug ni enlace permanente.`,
         goldKeyword
           ? `Asegurate de que incluya «${goldKeyword}».`
           : `Que quede claro de qué trata la página.`,
@@ -1173,6 +1174,10 @@ export async function getSmartMissionSuggestion(params: {
               'Ajustamos la sugerencia: esta página representa todo el negocio (mayorista/catálogo), no un solo producto.';
           }
         }
+        if (shouldDiscardAiMissionCopy({ suggestedTitle, reason })) {
+          console.warn('[getSmartMissionSuggestion] cache descartado: texto pedía tocar slug/URL/Nombre');
+          return { success: false, fallback: true as const };
+        }
         return {
           success: true as const,
           suggestedTitle,
@@ -1353,6 +1358,11 @@ Devolvé ESTRICTAMENTE este JSON, sin markdown ni texto extra:
         reason =
           'Esta página representa todo el negocio (distribuidora/mayorista/catálogo). El título debe hablar del rubro entero, no de un solo producto como shampoo o cera.';
       }
+    }
+
+    if (shouldDiscardAiMissionCopy({ suggestedTitle, reason })) {
+      console.warn('[getSmartMissionSuggestion] IA descartada: texto pedía tocar slug/URL/Nombre');
+      return { success: false, fallback: true as const, credits: result.credits };
     }
 
     return {

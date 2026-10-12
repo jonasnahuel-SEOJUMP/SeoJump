@@ -102,7 +102,17 @@ que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando d
 
 ---
 
-## 7. Flujo de deploy
+## 7. Seguridad de misiones (título / slug)
+
+- Las misiones de tipo `H1` significan **Título SEO** (Rank Math / Yoast), no el Nombre de producto/categoría ni el H1 visual.
+- **Nunca** guiar a editar slug, permalink, URL o Nombre en WooCommerce (rompe URLs y canales como Merchant Center).
+- Validador post-generación: `missionSafety.js` (`shouldDiscardAiMissionCopy` / `missionTextInstructsUnsafeUrlEdit`).
+- Guía CMS: `cmsGuide.js` → `getEditWhereGuide` + `slugWarnings`.
+- Si WordPress está conectado (`wpConnector`), el camino preferido es **Aplicar automáticamente** (`seo_title` / `meta`); no toca slug. Pulido de UX de ese flujo: PR4.
+
+---
+
+## 8. Flujo de deploy
 
 1. Commit en `main`.
 2. Push a `origin/main` → Vercel buildea y deploya automáticamente.

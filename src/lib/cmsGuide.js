@@ -1,9 +1,14 @@
 /**
  * Guía práctica: dónde editar en el CMS, sin jerga SEO.
  * Paquete 1 (lenguaje claro) + 2 (dónde edito) + 3 (antes/después).
+ *
+ * Regla dura (PR1): las misiones de título (tipo H1) SOLO editan el
+ * Título SEO de Rank Math / Yoast. Nunca el Nombre, slug, permalink ni URL.
+ * Ver missionSafety.js.
  */
 
 import { decodeHtmlEntities } from './textUtils';
+import { getSlugWarnings } from './missionSafety';
 
 export const CMS_PLATFORMS = [
   { id: 'wp_woo', label: 'WordPress + Tienda (WooCommerce)', icon: '🛒' },
@@ -139,18 +144,23 @@ export function detectPageType(pageUrl, pageTypeHint = '') {
 /** Nombres en lenguaje humano (paquete 1) */
 export function getPlainMissionLabels(missionType, pageTypeId = '') {
   const isCategory = pageTypeId === 'category';
+  const isProduct = pageTypeId === 'product';
   switch (missionType) {
     case 'H1':
       return {
         shortTitle: isCategory
-          ? 'Título de esta categoría'
-          : 'Título de la página',
-        fieldName: 'Título SEO (Yoast / Rank Math)',
+          ? 'Título SEO de esta categoría'
+          : isProduct
+            ? 'Título SEO de este producto'
+            : 'Título SEO de esta página',
+        fieldName: 'Título SEO (Rank Math / Yoast)',
         googleName: 'Título en Google',
         action: isCategory
-          ? 'Cambiá el título de esta categoría'
-          : 'Cambiá el título de esta página',
-        verifyLabel: 'Pegá acá el título que pusiste en tu web',
+          ? 'Cambiá el Título SEO de esta categoría'
+          : isProduct
+            ? 'Cambiá el Título SEO de este producto'
+            : 'Cambiá el Título SEO de esta página',
+        verifyLabel: 'Pegá acá el Título SEO que pusiste en Rank Math o Yoast',
       };
     case 'META':
       return {
@@ -190,54 +200,108 @@ export function getPlainMissionLabels(missionType, pageTypeId = '') {
 /**
  * Ruta paso a paso: ¿dónde edito? (paquete 2)
  * pageTypeHint (opcional): tipo detectado desde el HTML real, tiene prioridad.
+ *
+ * Misiones H1 = solo Título SEO (Rank Math / Yoast). Nunca Nombre ni Slug.
  */
 export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', pageTypeHint = '') {
   const page = detectPageType(pageUrl, pageTypeHint);
   const labels = getPlainMissionLabels(missionType, page.id);
-  const search = page.searchHint ? `«${page.searchHint}»` : 'el nombre de esta página';
+  const search = page.searchHint ? `«${page.searchHint}»` : 'esta página';
   const steps = [];
   let adminHint = '';
   let fieldLabel = labels.fieldName;
   const commonMistakes = [];
   let scrollHint = '';
+  const slugWarnings =
+    missionType === 'H1' || missionType === 'META' ? getSlugWarnings(page.id) : [];
 
-  const yoastTitleSteps = () => {
-    scrollHint = 'Bajá en el editor hasta el recuadro de Yoast SEO o Rank Math (suele estar al final de la pantalla).';
-    steps.push('**Bajá** en la misma pantalla hasta el recuadro de **Yoast SEO** o **Rank Math** (al final del editor).');
-    steps.push('Abrí **Apariencia en buscadores** → editá el campo **Título SEO** y pegá la sugerencia de SEO Jump.');
+  const seoTitleSteps = () => {
+    scrollHint = 'Bajá en el editor hasta el recuadro de Rank Math o Yoast SEO (suele estar al final de la pantalla).';
+    steps.push('**Bajá** en la misma pantalla hasta el recuadro de **Rank Math** o **Yoast SEO** (al final del editor).');
+    steps.push('Abrí **Apariencia en buscadores** → editá solo el campo **Título SEO** y pegá la sugerencia de SEO Jump.');
     steps.push('La **Frase clave objetivo** de Yoast es opcional; lo importante para Google es el **Título SEO**.');
     commonMistakes.push('No confundas «Frase clave objetivo» con el título: el título va en **Apariencia en buscadores → Título SEO**.');
+    commonMistakes.push('No edites el campo **Nombre**, el **título del editor** de arriba, el **Slug** ni el **Enlace permanente**.');
   };
 
-  const yoastMetaSteps = () => {
-    scrollHint = 'Bajá hasta Yoast SEO o Rank Math → Apariencia en buscadores → Meta descripción.';
-    steps.push('**Bajá** hasta **Yoast SEO** o **Rank Math** → **Apariencia en buscadores**.');
+  const seoMetaSteps = () => {
+    scrollHint = 'Bajá hasta Rank Math o Yoast SEO → Apariencia en buscadores → Meta descripción.';
+    steps.push('**Bajá** hasta **Rank Math** o **Yoast SEO** → **Apariencia en buscadores**.');
     steps.push('Editá la **Meta descripción** (el texto que aparece debajo del título en Google).');
     commonMistakes.push('No pegues la descripción en el campo «Nombre» o «Descripción» de la categoría: va en el plugin SEO.');
+    commonMistakes.push('No toques el **Slug** ni el **Enlace permanente** mientras editás la meta.');
+  };
+
+  const pushAutoApplyHint = () => {
+    if (missionType === 'H1' || missionType === 'META') {
+      steps.push(
+        '💡 Si tenés WordPress conectado con SEO Jump, preferí **Aplicar automáticamente**: escribe solo el Título SEO / meta y **no toca** el slug.'
+      );
+      steps.push('Si preferís hacerlo a mano, seguí los pasos de abajo.');
+    }
   };
 
   if (platformId === 'tiendanube') {
     steps.push('Entrá al panel de Tiendanube → Productos o Páginas.');
     steps.push(`Buscá ${search} y abrí la edición.`);
-    steps.push(`Modificá el campo de ${labels.shortTitle.toLowerCase()}.`);
+    if (missionType === 'H1') {
+      fieldLabel = 'Título SEO / título para buscadores';
+      steps.push('Editá el campo de **título para buscadores / SEO** (no el nombre visible del producto si hay otro campo).');
+    } else {
+      steps.push(`Modificá el campo de ${labels.shortTitle.toLowerCase()}.`);
+    }
     steps.push('Guardá los cambios y esperá 1–2 minutos antes de verificar acá.');
-    return { steps, fieldLabel, platformLabel: 'Tiendanube', openPageUrl: pageUrl };
+    return {
+      steps,
+      fieldLabel,
+      platformLabel: 'Tiendanube',
+      openPageUrl: pageUrl,
+      pageTypeLabel: page.label,
+      commonMistakes,
+      slugWarnings,
+    };
   }
 
   if (platformId === 'shopify') {
     steps.push('Shopify Admin → Productos o Páginas online.');
     steps.push(`Buscá ${search}.`);
-    steps.push(`Editá ${labels.shortTitle.toLowerCase()} en el formulario.`);
+    if (missionType === 'H1') {
+      fieldLabel = 'Título de la página de resultados de búsqueda (SEO)';
+      steps.push('En la sección de **vista previa del motor de búsqueda / SEO**, editá el **título de la página**.');
+      steps.push('No cambies el identificador de la URL (handle) del producto o página.');
+    } else {
+      steps.push(`Editá ${labels.shortTitle.toLowerCase()} en el formulario.`);
+    }
     steps.push('Guardá y volvé acá para verificar.');
-    return { steps, fieldLabel, platformLabel: 'Shopify', openPageUrl: pageUrl };
+    return {
+      steps,
+      fieldLabel,
+      platformLabel: 'Shopify',
+      openPageUrl: pageUrl,
+      pageTypeLabel: page.label,
+      commonMistakes,
+      slugWarnings,
+    };
   }
 
   if (platformId === 'other') {
     steps.push('Entrá al panel donde editás tu web (WordPress, Tiendanube, etc.).');
     steps.push(`Buscá la página: ${pageUrl || 'la URL de arriba'}.`);
-    steps.push(`Cambiá el ${labels.shortTitle.toLowerCase()}.`);
+    if (missionType === 'H1') {
+      steps.push('Cambiá solo el **Título SEO** / título para Google de tu plugin SEO. No toques el slug ni la URL.');
+    } else {
+      steps.push(`Cambiá el ${labels.shortTitle.toLowerCase()}.`);
+    }
     steps.push('Guardá, abrí la página en el navegador y verificá acá.');
-    return { steps, fieldLabel, platformLabel: 'Tu plataforma', openPageUrl: pageUrl };
+    return {
+      steps,
+      fieldLabel,
+      platformLabel: 'Tu plataforma',
+      openPageUrl: pageUrl,
+      pageTypeLabel: page.label,
+      commonMistakes,
+      slugWarnings,
+    };
   }
 
   // WordPress (+ Woo)
@@ -246,17 +310,16 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
   if (page.id === 'product' && isWoo) {
     adminHint = 'wp-admin → Productos → Todos los productos';
     steps.push('⚠️ Esta misión es para un **producto individual**, no para una categoría.');
+    pushAutoApplyHint();
     steps.push('Entrá a tu WordPress → menú **Productos** → **Todos los productos**.');
     steps.push(`En el buscador escribí ${search} y hacé clic en **Editar**.`);
     if (missionType === 'H1') {
-      fieldLabel = 'Nombre del producto (el campo de arriba de todo)';
-      steps.push('El campo a cambiar es el **Nombre del producto**: la caja de texto **arriba de todo** del editor.');
-      steps.push('Borrá el nombre actual y pegá la sugerencia de SEO Jump.');
-      commonMistakes.push('No busques ningún recuadro de Yoast para esto: en productos, el título se cambia directamente en el **Nombre del producto** de arriba.');
-      commonMistakes.push('Solo si tu producto ya tiene un **Título SEO personalizado** en Yoast/Rank Math (poco común), actualizalo ahí también para que Google muestre el nuevo.');
+      fieldLabel = 'Título SEO en Rank Math / Yoast (Apariencia en buscadores)';
+      steps.push('⚠️ **No toques** el campo **Nombre del producto** (arriba): eso puede cambiar el slug y romper la URL, y también afecta Google Shopping / Merchant Center.');
+      seoTitleSteps();
     } else if (missionType === 'META') {
-      fieldLabel = 'Meta descripción en Yoast / Rank Math';
-      yoastMetaSteps();
+      fieldLabel = 'Meta descripción en Rank Math / Yoast';
+      seoMetaSteps();
     } else if (missionType === 'ALT') {
       fieldLabel = 'Texto alternativo de la imagen del producto';
       steps.push('En la columna derecha, clic en la **imagen del producto** → campo **Texto alternativo**.');
@@ -273,16 +336,17 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
     adminHint = 'wp-admin → Productos → Categorías';
     steps.push('🗂️ **Es una categoría de tienda** (el listado que agrupa varios productos), **no un producto suelto**.');
     steps.push('⚠️ **No vayas** a Productos → Todos los productos. Andá a **Productos → Categorías**.');
+    pushAutoApplyHint();
     steps.push(`Buscá la categoría ${search} → **Editar**.`);
     if (missionType === 'H1') {
-      fieldLabel = 'Título SEO en Yoast / Rank Math (Apariencia en buscadores)';
-      steps.push('Arriba podés ajustar el **Nombre** de la categoría (título visible en la página).');
-      yoastTitleSteps();
-      commonMistakes.push('En categorías, lo que Google muestra casi siempre es el **Título SEO** de Yoast, no solo el «Nombre».');
+      fieldLabel = 'Título SEO en Rank Math / Yoast (Apariencia en buscadores)';
+      steps.push('⚠️ **No toques** el campo **Nombre** de la categoría (arriba): está al lado del **Slug** y cambiarlo puede romper esta URL y las de las subcategorías.');
+      seoTitleSteps();
+      commonMistakes.push('En categorías, lo que Google muestra es el **Título SEO** del plugin, no el «Nombre».');
       commonMistakes.push('No confundas categoría con producto: categoría = sección del catálogo; producto = una ficha puntual.');
     } else if (missionType === 'META') {
-      fieldLabel = 'Meta descripción en Yoast / Rank Math';
-      yoastMetaSteps();
+      fieldLabel = 'Meta descripción en Rank Math / Yoast';
+      seoMetaSteps();
     } else if (missionType === 'AEO') {
       fieldLabel = 'Descripción de la categoría (texto visible)';
       steps.push('En la **Descripción** de la categoría, agregá un bloque de preguntas y respuestas que vea el visitante.');
@@ -296,36 +360,47 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
     }
   } else if (page.id === 'home') {
     adminHint = 'wp-admin → Páginas (o Ajustes → Lectura → Portada)';
+    pushAutoApplyHint();
     steps.push('WordPress → **Páginas** → buscá tu **Página de inicio** (o la que configuraste como portada).');
     steps.push('Hacé clic en **Editar** (o **Editar con Elementor** si usás constructor visual).');
     if (missionType === 'H1') {
-      fieldLabel = 'Título SEO (abajo, en Yoast o Rank Math)';
-      yoastTitleSteps();
-      commonMistakes.push('El campo correcto está **abajo** en Yoast o Rank Math → **Título SEO**. Pegá ahí la sugerencia y guardá.');
+      fieldLabel = 'Título SEO (abajo, en Rank Math o Yoast)';
+      steps.push('⚠️ **No cambies** el título de la página arriba del editor ni el **Slug** / enlace permanente.');
+      seoTitleSteps();
+      commonMistakes.push('El campo correcto está **abajo** en Rank Math o Yoast → **Título SEO**. Pegá ahí la sugerencia y guardá.');
     } else if (missionType === 'META') {
-      fieldLabel = 'Meta descripción en Yoast / Rank Math';
-      yoastMetaSteps();
+      fieldLabel = 'Meta descripción en Rank Math / Yoast';
+      seoMetaSteps();
     } else {
       steps.push(`Aplicá el cambio: ${labels.shortTitle}.`);
     }
   } else if (page.id === 'post') {
     adminHint = 'wp-admin → Entradas';
+    pushAutoApplyHint();
     steps.push('WordPress → **Entradas** → **Todas las entradas**.');
     steps.push(`Buscá ${search} → **Editar**.`);
-    steps.push(missionType === 'H1'
-      ? 'El **Título** de la entrada (arriba) es lo que tenés que cambiar.'
-      : `Editá ${labels.shortTitle.toLowerCase()} en el editor.`);
+    if (missionType === 'H1') {
+      fieldLabel = 'Título SEO en Rank Math / Yoast';
+      steps.push('⚠️ **No cambies** el título de la entrada (arriba) ni el **Slug**: eso puede cambiar la URL del post.');
+      seoTitleSteps();
+    } else if (missionType === 'META') {
+      fieldLabel = 'Meta descripción en Rank Math / Yoast';
+      seoMetaSteps();
+    } else {
+      steps.push(`Editá ${labels.shortTitle.toLowerCase()} en el editor.`);
+    }
   } else {
     adminHint = 'wp-admin → Páginas';
+    pushAutoApplyHint();
     steps.push('WordPress → **Páginas** → **Todas las páginas**.');
     steps.push(`Buscá ${search} → **Editar**.`);
     if (missionType === 'H1') {
-      fieldLabel = 'Título de la página + Título SEO (Yoast / Rank Math)';
-      steps.push('Cambiá el **Título** que aparece arriba del contenido.');
-      yoastTitleSteps();
+      fieldLabel = 'Título SEO en Rank Math / Yoast';
+      steps.push('⚠️ **No cambies** el título de la página (arriba del contenido) ni el **Slug** / enlace permanente.');
+      seoTitleSteps();
     } else if (missionType === 'META') {
-      fieldLabel = 'Meta descripción en Yoast / Rank Math';
-      yoastMetaSteps();
+      fieldLabel = 'Meta descripción en Rank Math / Yoast';
+      seoMetaSteps();
     } else if (missionType === 'ALT') {
       steps.push('Clic en una **imagen** del contenido → **Texto alternativo** en la barra lateral.');
     } else {
@@ -345,6 +420,7 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
     openPageUrl: pageUrl,
     commonMistakes,
     scrollHint,
+    slugWarnings,
   };
 }
 
@@ -549,8 +625,8 @@ export function getOwlExplanation(missionType, keyword, pageTypeId = '') {
   switch (missionType) {
     case 'H1':
       return isCategory
-        ? 'Copiá el título recomendado y pegalo abajo en Yoast o Rank Math → Título SEO. Guardá y listo.'
-        : 'Copiá el título que te dimos y pegalo en Yoast o Rank Math → Título SEO (abajo en el editor). Guardá y volvé a verificar.';
+        ? 'Copiá el Título SEO recomendado y pegalo en Rank Math o Yoast → Título SEO. No toques el Nombre ni el Slug. Guardá y listo.'
+        : 'Copiá el Título SEO que te dimos y pegalo en Rank Math o Yoast → Título SEO (abajo en el editor). No toques el Nombre ni el Slug. Guardá y volvé a verificar.';
     case 'META':
       return 'El texto debajo del título en Google es como el cartel de tu local en la vereda. Un buen texto convence a la gente de entrar a tu web en vez de seguir de largo.';
     case 'ALT':

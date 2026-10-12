@@ -265,8 +265,15 @@ export default function MissionEditorGuide({
                   {(missionType === "H1" || mission?.type === "H1") && (
                     <MissionWarning type="h1-change" />
                   )}
+                  {(missionType === "H1" || missionType === "META") &&
+                    (pageType.id === "product" ||
+                      pageType.id === "category" ||
+                      pageType.id === "post" ||
+                      pageType.id === "page" ||
+                      pageType.id === "home") && (
+                      <MissionWarning type="slug-danger" />
+                    )}
                   <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-start">
-                    <CopyButton text={suggested} label="📋 Copiar sugerencia" playClick={playClick} variant="green" />
                     {!isAeo && (
                       <WpApplyButton
                         missionType={missionType}
@@ -275,6 +282,12 @@ export default function MissionEditorGuide({
                         playClick={playClick}
                       />
                     )}
+                    <CopyButton
+                      text={suggested}
+                      label="📋 Copiar (alternativa manual)"
+                      playClick={playClick}
+                      variant="green"
+                    />
                   </div>
                   {pageType.id === 'home' && (
                     <p className="text-[11px] text-emerald-200/80 leading-snug">
@@ -307,6 +320,15 @@ export default function MissionEditorGuide({
 
         {whereOpen && (
           <div className="p-5 md:p-6 bg-slate-900 space-y-4 border-t border-slate-700/50">
+            {guide.slugWarnings?.length > 0 && (
+              <div className="p-4 rounded-xl bg-red-950/40 border-2 border-red-500/50 space-y-2">
+                {guide.slugWarnings.map((w, idx) => (
+                  <p key={idx} className="text-sm font-black text-red-200 leading-snug">
+                    {w}
+                  </p>
+                ))}
+              </div>
+            )}
             {guide.adminHint && (
               <p className="text-sm font-bold text-sky-300/90 bg-slate-800 rounded-lg px-3 py-2">
                 Panel: {guide.adminHint}
