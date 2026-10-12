@@ -8,8 +8,13 @@
 const WARNINGS = {
   "h1-change": {
     icon: "⚠️",
-    title: "Cuidado al cambiar título o H1",
-    body: "Cambiar el título/H1 de una página que ya está indexada puede afectar temporalmente su posición en Google mientras se reprocesa. Si esta página ya te trae tráfico, considerá monitorear el cambio en Search Console hasta confirmar que no cae.",
+    title: "Cuidado al cambiar el Título SEO",
+    body: "Cambiar el Título SEO de una página que ya está indexada puede afectar temporalmente su posición en Google mientras se reprocesa. Si esta página ya te trae tráfico, monitoreá el cambio en Search Console.",
+  },
+  "slug-danger": {
+    icon: "🚫",
+    title: "No toques el Slug / Enlace permanente",
+    body: "Cambiar el Slug cambia la dirección de la página y se pierde el posicionamiento. En categorías, también puede romper las URLs de las subcategorías. Editá solo el Título SEO en Rank Math o Yoast.",
   },
 };
 

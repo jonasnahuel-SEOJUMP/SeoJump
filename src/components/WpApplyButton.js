@@ -110,8 +110,11 @@ export default function WpApplyButton({
         }}
         className="btn-3d btn-blue !py-2.5 !px-5 !text-sm !normal-case !tracking-normal w-full sm:w-auto disabled:opacity-50"
       >
-        {applying ? "Aplicando…" : "🚀 Aplicar en mi web"}
+        {applying ? "Aplicando…" : "🚀 Aplicar automáticamente"}
       </button>
+      <p className="text-[11px] font-bold text-slate-400 leading-snug max-w-xs">
+        Solo escribe el Título SEO / meta. No toca el slug ni la URL.
+      </p>
       {message && (
         <p className={`text-xs font-bold ${message.ok ? "text-duo-green" : "text-amber-300"}`}>
           {message.text}
