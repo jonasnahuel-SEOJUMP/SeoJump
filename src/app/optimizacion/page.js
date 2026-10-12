@@ -1238,11 +1238,11 @@ export default function Optimizacion() {
             <h3 className="text-xl font-black text-yellow-400 text-center mb-4">Panel de Boxes</h3>
             <div className="space-y-3">
               <div className="bg-slate-900 rounded-xl p-3 border-2 border-slate-700">
-                <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Oportunidades de Venta</p>
+                <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Clics</p>
                 <p className="text-2xl font-black text-duo-blue">{missions.reduce((a,m) => a+(m.clicks||0), 0).toLocaleString()}+</p>
               </div>
               <div className="bg-slate-900 rounded-xl p-3 border-2 border-slate-700">
-                <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Dinero sobre la mesa</p>
+                <p className="text-xs text-slate-400 uppercase font-black tracking-wider mb-1">Veces en Google</p>
                 <p className="text-2xl font-black text-duo-yellow">{missions.reduce((a,m) => a+(m.impressions||0), 0).toLocaleString()}</p>
               </div>
               <div className="bg-slate-900 rounded-xl p-3 border-2 border-slate-700">
@@ -1305,7 +1305,7 @@ export default function Optimizacion() {
                         : "bg-slate-800/40 border-slate-700 text-slate-300 hover:border-slate-600 hover:text-white"
                     }`}
                   >
-                    🚀 Oportunidades de Venta (Quick Wins)
+                    🚀 Quick Wins
                   </button>
                   {prog?.p3?.unlocked ? (
                     <button
@@ -1393,7 +1393,7 @@ export default function Optimizacion() {
                         <div className="absolute inset-0 rounded-full border-4 border-amber-500/20 animate-pulse"></div>
                         <div className="absolute inset-0 rounded-full border-4 border-t-amber-500 border-r-amber-500/50 animate-spin"></div>
                       </div>
-                      <p className="text-slate-400 font-bold uppercase tracking-wider animate-pulse">Buscando oportunidades de venta...</p>
+                      <p className="text-slate-400 font-bold uppercase tracking-wider animate-pulse">Buscando Quick Wins...</p>
                     </div>
                   ) : quickWinsError ? (
                     <div className="text-center py-12 card-3d space-y-4">
@@ -1909,8 +1909,8 @@ export default function Optimizacion() {
                                   </div>
                                 ) : (
                                   <div className="flex flex-wrap gap-4 mt-3 text-sm font-bold text-slate-550 dark:text-slate-400">
-                                    <span>👆 {mission.clicks} oportunidades de venta</span>
-                                    <span>👁️ {mission.impressions} dinero sobre la mesa</span>
+                                    <span>👆 {mission.clicks} clics</span>
+                                    <span>👁️ {mission.impressions} veces que apareciste en Google</span>
                                     <span>📊 Pos. {mission.position?.toFixed(1)}</span>
                                   </div>
                                 )}
@@ -2009,8 +2009,8 @@ export default function Optimizacion() {
               {/* Stats */}
               <div className="grid grid-cols-3 gap-2 md:gap-4 min-w-0 w-full">
                 {[
-                  { label: "Oportunidades de Venta", value: selectedMission.clicks,              color: "text-duo-blue" },
-                  { label: "Dinero sobre la mesa",   value: selectedMission.impressions,          color: "text-duo-yellow" },
+                  { label: "Clics", value: selectedMission.clicks,              color: "text-duo-blue" },
+                  { label: "Veces en Google",   value: selectedMission.impressions,          color: "text-duo-yellow" },
                   { label: "Posición",               value: `#${selectedMission.position?.toFixed(0)}`, color: "text-duo-green" },
                 ].map(({ label, value, color }) => (
                   <div key={label} className="bg-white dark:bg-slate-800 rounded-2xl p-2 md:p-4 text-center border-2 border-gray-100 dark:border-slate-700 shadow-sm min-w-0">
