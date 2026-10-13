@@ -13,6 +13,7 @@ import PlatformSelector from "../../components/PlatformSelector";
 import MissionEditorGuide from "../../components/MissionEditorGuide";
 import MissionWarning from "../../components/MissionWarning";
 import { getStoredPlatform, detectPageType, getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getCurrentValueFromPreview } from "../../lib/cmsGuide";
+import { needsVerifyReadMode } from "../../lib/missionSafety";
 import { isMissionChangeFullyApplied } from "../../lib/textUtils";
 import { useSubscription } from "../../hooks/useSubscription";
 import { loadLocalCompletedIds, idsFromSupabaseMissions, filterPendingMissions, isMissionCompleted, isPageAlreadyWorked, buildAeoKey, isAeoCompleted, normQuickWinPage, isQuickWinCompleted, completedPagePathsFromSet, applyMissionCompletionToSet, shouldRefreshMissionsCache } from "../../lib/missionMemory";
@@ -2004,6 +2005,7 @@ export default function Optimizacion() {
                 pagePreview={pagePreview}
                 previewLoading={pagePreviewLoading}
                 playClick={playClick}
+                onRetryPreview={() => openMission(selectedMission)}
               />
 
               {/* Stats */}
@@ -2048,15 +2050,19 @@ export default function Optimizacion() {
               {/* Mission Input */}
               <div className="card-3d bg-white dark:bg-slate-800 space-y-6 p-4 md:p-8 min-w-0 w-full overflow-hidden">
                 <p className="font-bold text-slate-655 dark:text-slate-300 text-base md:text-lg lg:text-xl break-words">
-                  {getPlainMissionLabels(selectedMission.type).verifyLabel}
-                  {goldKeyword && (
+                  {selectedMission.mode === 'verify_read' || needsVerifyReadMode(selectedMission.type, pagePreview, pagePreviewLoading)
+                    ? 'Pegá acá el Título SEO actual que ves en tu web (Rank Math / Yoast)'
+                    : getPlainMissionLabels(selectedMission.type).verifyLabel}
+                  {!(selectedMission.mode === 'verify_read' || needsVerifyReadMode(selectedMission.type, pagePreview, pagePreviewLoading)) && goldKeyword && (
                     <> — debe incluir <span className="text-duo-blue font-black">«{goldKeyword}»</span></>
                   )}:
                 </p>
                 <input
                   type="text"
                   placeholder={
-                    getMissionDisplayPlain(selectedMission, goldKeyword, siteUrl).suggestedText
+                    selectedMission.mode === 'verify_read' || needsVerifyReadMode(selectedMission.type, pagePreview, pagePreviewLoading)
+                      ? 'Ej: Pulidoras de Última Generación… | Tu marca'
+                      : getMissionDisplayPlain(selectedMission, goldKeyword, siteUrl).suggestedText
                   }
                   value={h1Value}
                   onChange={(e) => setH1Value(e.target.value)}

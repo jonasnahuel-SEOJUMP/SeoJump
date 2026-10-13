@@ -578,6 +578,12 @@ export function buildSuggestedText(missionType, keyword, pageUrl, siteUrl, previ
   }
 
   if (missionType === 'H1') {
+    // Sin título/H1 leído en vivo no inventamos un reemplazo desde el slug.
+    const liveTitle = (preview && preview.title) || '';
+    const liveH1 = (preview && preview.h1) || '';
+    if (preview && !String(liveTitle || liveH1).trim()) {
+      return '';
+    }
     const core = deriveProductCore(preview, slug, kw, brand, cap);
     if (!core) return `${brand} — tu mejor opción online`;
     return composeWithBrand(core, brand, 60);
@@ -658,6 +664,17 @@ export function getMissionDisplayPlain(mission, goldKeyword, siteUrl) {
   const kw = (mission.keyword || goldKeyword || '').trim();
   const page = detectPageType(mission.page);
   const labels = getPlainMissionLabels(mission.type, page.id);
+
+  if (mission.mode === 'verify_read') {
+    return {
+      title: 'Verificar título actual',
+      description:
+        'No pudimos leer el título de esta página. Reintentá la lectura o pegá el título que ves hoy — no sugerimos un reemplazo a ciegas.',
+      objective: null,
+      pageTypeLabel: page.label,
+      suggestedText: '',
+    };
+  }
 
   let title = labels.shortTitle;
   let description = labels.action;

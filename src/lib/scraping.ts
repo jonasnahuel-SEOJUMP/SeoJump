@@ -47,33 +47,49 @@ export function detectPageTypeFromHtml(html: string): string {
   return '';
 }
 
+export type ScrapeMetadataResult = {
+  title: string;
+  description: string;
+  h1: string;
+  pageType?: string;
+  /** false si el fetch falló o el HTML no fue legible (incluso tras headless). */
+  fetchOk: boolean;
+};
+
 /**
- * Escanea metadatos Title, Description y H1 de forma rápida con timeout de 4 segundos.
+ * Escanea Title, Description y H1.
+ * Usa el mismo camino que verify/Espía: HTTP rápido + respaldo Chromium headless
+ * (Flatsome/UX Builder, Cloudflare, user-agent, etc.).
  */
-export async function scrapeMetadata(siteUrl: string): Promise<{ title: string; description: string; h1: string; pageType?: string }> {
-  const result: { title: string; description: string; h1: string; pageType?: string } = { title: "", description: "", h1: "", pageType: "" };
+export async function scrapeMetadata(siteUrl: string): Promise<ScrapeMetadataResult> {
+  const result: ScrapeMetadataResult = {
+    title: "",
+    description: "",
+    h1: "",
+    pageType: "",
+    fetchOk: false,
+  };
   if (!siteUrl) return result;
 
   try {
-    const fetched = await fetchHtmlSafe(siteUrl, { timeoutMs: 4000 });
+    // timeout más holgado: el fallback headless necesita margen.
+    const fetched = await fetchPageHtml(siteUrl, { timeoutMs: 9000 });
     if (fetched.ok === false) return result;
 
     const html = fetched.html;
+    result.fetchOk = true;
 
-    // Extract Title
     const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     if (titleMatch) {
       result.title = decodeHtmlEntities(titleMatch[1].replace(/<[^>]+>/g, '').trim());
     }
 
-    // Extract Meta Description
     const descMatch = html.match(/<meta\s+name=["']description["']\s+content=["']([^"']+)["']/i) ||
                       html.match(/<meta\s+content=["']([^"']+)["']\s+name=["']description["']/i);
     if (descMatch) {
       result.description = decodeHtmlEntities(descMatch[1].trim());
     }
 
-    // Extract H1
     const h1Match = html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i);
     if (h1Match) {
       result.h1 = decodeHtmlEntities(h1Match[1].replace(/<[^>]+>/g, '').trim());

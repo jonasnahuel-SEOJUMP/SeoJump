@@ -19,6 +19,7 @@ import { useAudio } from "../hooks/useAudio";
 import { useTheme } from "../hooks/useTheme";
 import { getPhaseProgress, syncStateWithServer, pullStateFromServer } from "../lib/progression";
 import { getMissionDisplayPlain, getPlainMissionLabels, getOwlExplanation, getStoredPlatform, getCurrentValueFromPreview } from "../lib/cmsGuide";
+import { needsVerifyReadMode } from "../lib/missionSafety";
 import { isMissionChangeFullyApplied } from "../lib/textUtils";
 import { pushSeoWinNotifications, shouldCheckSeoWins, markSeoWinsChecked } from "../lib/notifications";
 import AiCreditsBadge from "../components/AiCreditsBadge";
@@ -1469,6 +1470,7 @@ export default function HomeApp() {
                     pagePreview={pagePreview}
                     previewLoading={pagePreviewLoading}
                     playClick={playClick}
+                    onRetryPreview={() => openMission(selectedMission)}
                   />
 
                   {/* Search Console Data Card */}
@@ -1546,15 +1548,22 @@ export default function HomeApp() {
                   {/* Mission Input */}
                   <div className="card-3d bg-white dark:bg-slate-800 space-y-6 p-4 md:p-8 min-w-0 w-full overflow-hidden">
                     <p className="font-bold text-slate-650 dark:text-slate-300 text-base md:text-lg lg:text-xl break-words">
-                      {getPlainMissionLabels(selectedMission.type).verifyLabel}
-                      {(selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '')) && (
+                      {selectedMission.mode === 'verify_read' || needsVerifyReadMode(selectedMission.type, pagePreview, pagePreviewLoading)
+                        ? 'Pegá acá el Título SEO actual que ves en tu web (Rank Math / Yoast)'
+                        : getPlainMissionLabels(selectedMission.type).verifyLabel}
+                      {!(selectedMission.mode === 'verify_read' || needsVerifyReadMode(selectedMission.type, pagePreview, pagePreviewLoading)) &&
+                        (selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '')) && (
                         <> — debe incluir <span className="text-duo-blue font-black">«{selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '')}»</span></>
                       )}:
                     </p>
 
                     <input 
                       type="text"
-                      placeholder={getMissionDisplayPlain(selectedMission, selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '') || '', url).suggestedText.split('\n').find((l) => l.startsWith('¿Para') || (l.length > 25 && !l.startsWith('['))) || 'Pegá acá el texto que escribiste'}
+                      placeholder={
+                        selectedMission.mode === 'verify_read' || needsVerifyReadMode(selectedMission.type, pagePreview, pagePreviewLoading)
+                          ? 'Ej: Pulidoras de Última Generación… | Tu marca'
+                          : (getMissionDisplayPlain(selectedMission, selectedMission.keyword || (typeof window !== 'undefined' ? localStorage.getItem("gold-tu-busqueda") : '') || '', url).suggestedText.split('\n').find((l) => l.startsWith('¿Para') || (l.length > 25 && !l.startsWith('['))) || 'Pegá acá el texto que escribiste')
+                      }
                       value={h1Value}
                       onChange={(e) => setH1Value(e.target.value)}
                       className="w-full max-w-full p-4 md:p-5 text-base md:text-xl border-2 border-slate-200 dark:border-slate-600 rounded-xl focus:border-duo-green outline-none font-black text-slate-800 dark:text-slate-100 dark:bg-slate-700"

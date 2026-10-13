@@ -109,6 +109,7 @@ que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando d
 - Validador post-generación: `missionSafety.js` (`shouldDiscardAiMissionCopy` / `missionTextInstructsUnsafeUrlEdit`).
 - Guía CMS: `cmsGuide.js` → `getEditWhereGuide` + `slugWarnings`.
 - Si WordPress está conectado (`wpConnector`), el camino preferido es **Aplicar automáticamente** (`seo_title` / `meta`); no toca slug. Pulido de UX de ese flujo: PR4.
+- **Sin estado actual legible no hay misión de cambio** (`canSuggestMissionChange` / `needsVerifyReadMode` en `missionSafety.js`). `scrapeMetadata` usa HTTP + headless (`fetchPageHtml`). La UI entra en modo `verify_read` y nunca muestra «No detectamos texto» junto a una sugerencia de reemplazo.
 
 ---
 
