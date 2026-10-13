@@ -9,7 +9,8 @@
 
 import { decodeHtmlEntities } from './textUtils';
 import { getSlugWarnings, getNameFieldWarnings } from './missionSafety';
-import { fitSeoTitle } from './seoTitle';
+// seoTitleFit (no seoTitle): evita arrastrar linkAudit → scraping → puppeteer al client.
+import { fitSeoTitle } from './seoTitleFit';
 
 export const CMS_PLATFORMS = [
   { id: 'wp_woo', label: 'WordPress + Tienda (WooCommerce)', icon: '🛒' },
