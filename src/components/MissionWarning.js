@@ -16,6 +16,16 @@ const WARNINGS = {
     title: "No toques el Slug / Enlace permanente",
     body: "Cambiar el Slug cambia la dirección de la página y se pierde el posicionamiento. En categorías, también puede romper las URLs de las subcategorías. Editá solo el Título SEO en Rank Math o Yoast.",
   },
+  "name-category": {
+    icon: "🗂️",
+    title: "No cambies el Nombre de la categoría",
+    body: "El nombre de la categoría aparece en el menú, las migas de pan y los filtros de tu tienda. Editá solo el Título SEO en Rank Math o Yoast.",
+  },
+  "name-product": {
+    icon: "🛒",
+    title: "No cambies el Nombre del producto",
+    body: "El nombre del producto se usa como título en Google Shopping / Merchant Center. Cambiarlo puede afectar tus anuncios y fichas gratuitas. Editá solo el Título SEO.",
+  },
 };
 
 export default function MissionWarning({ type = "h1-change", className = "" }) {

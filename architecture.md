@@ -105,10 +105,13 @@ que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando d
 ## 7. Seguridad de misiones (título / slug)
 
 - Las misiones de tipo `H1` significan **Título SEO** (Rank Math / Yoast), no el Nombre de producto/categoría ni el H1 visual.
+- **Nombre / H1 visual en ecommerce: desactivado** (`isNameOrVisualH1MissionEnabled() === false`). En producto/categoría solo se generan misiones de Título SEO (`needsSeoTitleMission`).
 - **Nunca** guiar a editar slug, permalink, URL o Nombre en WooCommerce (rompe URLs y canales como Merchant Center).
 - Validador post-generación: `missionSafety.js` (`shouldDiscardAiMissionCopy` / `missionTextInstructsUnsafeUrlEdit`).
-- Guía CMS: `cmsGuide.js` → `getEditWhereGuide` + `slugWarnings`.
-- Si WordPress está conectado (`wpConnector`), el camino preferido es **Aplicar automáticamente** (`seo_title` / `meta`); no toca slug. Pulido de UX de ese flujo: PR4.
+- Guía CMS: `cmsGuide.js` → `getEditWhereGuide` + `slugWarnings` + `nameWarnings`.
+- Si WordPress está conectado (`wpConnector`), el camino preferido es **Aplicar automáticamente** (`seo_title` / `meta`); no toca Nombre ni slug.
+- Títulos de categoría sugeridos: cortos y limpios (sin `|`, sin marca forzada, sin «Mayorista y Minorista»).
+- `verifyMission` para tipo `H1` solo mira el `<title>` (Título SEO), no el H1 visual.
 - **Sin estado actual legible no hay misión de cambio** (`canSuggestMissionChange` / `needsVerifyReadMode` en `missionSafety.js`). `scrapeMetadata` usa HTTP + headless (`fetchPageHtml`). La UI entra en modo `verify_read` y nunca muestra «No detectamos texto» junto a una sugerencia de reemplazo.
 - **No generar «incluí X» si X ya está** en title, H1 o slug (`keywordAlreadyPresent` en `keywordUtils.js`). Se aplica al armar misiones GSC/starter/Quick Wins y en la UI.
 
