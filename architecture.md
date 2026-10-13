@@ -110,6 +110,7 @@ que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando d
 - Guía CMS: `cmsGuide.js` → `getEditWhereGuide` + `slugWarnings`.
 - Si WordPress está conectado (`wpConnector`), el camino preferido es **Aplicar automáticamente** (`seo_title` / `meta`); no toca slug. Pulido de UX de ese flujo: PR4.
 - **Sin estado actual legible no hay misión de cambio** (`canSuggestMissionChange` / `needsVerifyReadMode` en `missionSafety.js`). `scrapeMetadata` usa HTTP + headless (`fetchPageHtml`). La UI entra en modo `verify_read` y nunca muestra «No detectamos texto» junto a una sugerencia de reemplazo.
+- **No generar «incluí X» si X ya está** en title, H1 o slug (`keywordAlreadyPresent` en `keywordUtils.js`). Se aplica al armar misiones GSC/starter/Quick Wins y en la UI.
 
 ---
 

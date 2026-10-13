@@ -97,6 +97,7 @@ import {
   deriveBrandTokens,
   isMostlySiteBrand,
 } from './gscScoring'
+import { keywordAlreadyPresent } from './keywordUtils'
 import {
   extractFromHtml,
   normalize,
@@ -520,6 +521,42 @@ async function buildStarterMissions(
       return;
     }
 
+    // Keyword ya en title/H1/slug → no pedir «incluí X» (misión ya cumplida).
+    if (
+      effectiveKeyword &&
+      keywordAlreadyPresent(effectiveKeyword, {
+        title,
+        h1,
+        slugOrUrl: fullPageUrl,
+      })
+    ) {
+      const needsMetaOnly = !hasReadableMeta || description.length < 50;
+      if (!needsMetaOnly) return;
+      // Título OK; si falta meta, igual podemos crear META.
+      const MISSION_TYPES_META = buildMissionTypes(effectiveKeyword);
+      const metaDef = MISSION_TYPES_META.find((m) => m.type === 'META')!;
+      missions.push({
+        id: `meta-${pagePath}`,
+        title: metaDef.title,
+        description: metaDef.descriptionTemplate(displayPath),
+        xp: metaDef.xp,
+        page: fullPageUrl,
+        pagePath,
+        type: 'META',
+        icon: metaDef.icon,
+        color: metaDef.color,
+        pistas: metaDef.pistas,
+        keyword: effectiveKeyword,
+        clicks: null,
+        impressions: null,
+        ctr: null,
+        position: null,
+        opportunity: 1,
+        source: 'web',
+      });
+      return;
+    }
+
     const needsTitle = !title || title.length > 60 || !h1;
     const needsMeta = !hasReadableMeta || description.length < 50;
     if (!needsTitle && !needsMeta) return;
@@ -690,7 +727,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
 
     const brandTokens = deriveBrandTokens(cleanSiteUrl);
 
-    const buildMissionsFromGscRows = (inputRows: typeof missionRows): any[] => {
+    const buildMissionsFromGscRows = async (inputRows: typeof missionRows): Promise<any[]> => {
       const rowsByPage = new Map<string, typeof missionRows>();
       for (const row of inputRows) {
         const pagePath = normalizePagePath(row.keys[0]);
@@ -700,43 +737,123 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
         rowsByPage.set(pagePath, list);
       }
 
-      const built: any[] = [];
+      type Cand = {
+        row: (typeof missionRows)[0];
+        kw: string;
+        score: number;
+        isQuestion: boolean;
+      };
+
+      type Provisional = {
+        pagePath: string;
+        commercial: Cand[];
+        bestCommercial?: Cand;
+        bestQuestion?: Cand;
+        preferAeo: boolean;
+      };
+
+      const provisionals: Provisional[] = [];
 
       for (const [pagePath, pageRows] of rowsByPage) {
-        const candidates = pageRows
-          .map(r => {
+        const candidates: Cand[] = pageRows
+          .map((r) => {
             const kw = cleanGscKeyword(r.keys[1] || '');
             let score = opportunityScore(r);
             if (isMostlySiteBrand(kw, brandTokens)) score *= 0.25;
             return { row: r, kw, score, isQuestion: isQuestionQuery(kw) };
           })
-          .filter(c => c.kw.length > 0);
+          .filter((c) => c.kw.length > 0);
 
-        const commercial = candidates.filter(c => !c.isQuestion).sort((a, b) => b.score - a.score);
-        const questions  = candidates.filter(c => c.isQuestion).sort((a, b) => b.score - a.score);
+        const commercial = candidates.filter((c) => !c.isQuestion).sort((a, b) => b.score - a.score);
+        const questions = candidates.filter((c) => c.isQuestion).sort((a, b) => b.score - a.score);
         const bestCommercial = commercial[0];
-        const bestQuestion   = questions[0];
+        const bestQuestion = questions[0];
 
         const questionBias = cleanGoal === 'visitas' ? 1.3 : cleanGoal === 'vender' ? 0.77 : 1;
         const questionScoreAdj = bestQuestion ? bestQuestion.score * questionBias : 0;
-        let chosen: { row: typeof pageRows[0]; kw: string; score: number };
-        let missionType: 'H1' | 'AEO';
-        if (bestQuestion && (!bestCommercial || questionScoreAdj >= bestCommercial.score)) {
-          chosen = bestQuestion;
+        const preferAeo = Boolean(
+          bestQuestion && (!bestCommercial || questionScoreAdj >= bestCommercial.score)
+        );
+
+        provisionals.push({
+          pagePath,
+          commercial,
+          bestCommercial,
+          bestQuestion,
+          preferAeo,
+        });
+      }
+
+      // Scrape páginas H1 para no pedir «incluí X» si X ya está en title/H1/slug.
+      const h1Urls = new Set<string>();
+      for (const p of provisionals) {
+        if (p.preferAeo) continue;
+        for (const c of p.commercial.slice(0, 5)) {
+          h1Urls.add(c.row.keys[0]);
+        }
+        if (p.bestCommercial) h1Urls.add(p.bestCommercial.row.keys[0]);
+      }
+
+      const metaByUrl = new Map<string, { title: string; h1: string }>();
+      await Promise.all(
+        Array.from(h1Urls).map(async (url) => {
+          try {
+            const meta = await scrapeMetadata(url);
+            metaByUrl.set(url, { title: meta.title || '', h1: meta.h1 || '' });
+          } catch {
+            metaByUrl.set(url, { title: '', h1: '' });
+          }
+        })
+      );
+
+      const built: any[] = [];
+
+      for (const p of provisionals) {
+        let missionType: 'H1' | 'AEO' = 'H1';
+        let chosen: Cand | null = null;
+        let effectiveKeyword = '';
+        let fullPageUrl = '';
+
+        if (p.preferAeo && p.bestQuestion) {
           missionType = 'AEO';
-        } else if (bestCommercial) {
-          chosen = bestCommercial;
-          missionType = 'H1';
+          chosen = p.bestQuestion;
+          fullPageUrl = chosen.row.keys[0];
+          effectiveKeyword = chosen.kw;
         } else {
-          chosen = { row: pageRows[0], kw: '', score: 0 };
           missionType = 'H1';
+          const tryList = p.commercial.length
+            ? p.commercial.slice(0, 5)
+            : p.bestCommercial
+              ? [p.bestCommercial]
+              : [];
+
+          for (const cand of tryList) {
+            const url = cand.row.keys[0];
+            const kw = resolveKeyword(cand.kw, url, cleanGoldKeyword);
+            const meta = metaByUrl.get(url) || { title: '', h1: '' };
+            if (
+              kw &&
+              keywordAlreadyPresent(kw, {
+                title: meta.title,
+                h1: meta.h1,
+                slugOrUrl: url,
+              })
+            ) {
+              console.log(
+                `[getRealMissions] Skip H1: «${kw}» ya está en title/H1/slug de ${url}`
+              );
+              continue;
+            }
+            chosen = cand;
+            fullPageUrl = url;
+            effectiveKeyword = kw;
+            break;
+          }
+
+          if (!chosen) continue;
         }
 
-        const fullPageUrl = chosen.row.keys[0];
-        const effectiveKeyword = missionType === 'AEO'
-          ? chosen.kw
-          : resolveKeyword(chosen.kw, fullPageUrl, cleanGoldKeyword);
-
+        const pagePath = p.pagePath;
         let displayPath = pagePath;
         if (displayPath === '/') {
           displayPath = 'Página de Inicio (Portada)';
@@ -751,7 +868,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
         }
 
         const MISSION_TYPES = buildMissionTypes(effectiveKeyword);
-        const missionDef = MISSION_TYPES.find(m => m.type === missionType)!;
+        const missionDef = MISSION_TYPES.find((m) => m.type === missionType)!;
 
         built.push({
           id: `${missionDef.type.toLowerCase()}-${pagePath}`,
@@ -778,7 +895,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
       return built;
     };
 
-    let missions = buildMissionsFromGscRows(missionRows);
+    let missions = await buildMissionsFromGscRows(missionRows);
 
     // Si ya optimizaste el top de GSC, ampliar el pool (más filas, sin filtro de keyword)
     if (missions.length < 5 && session?.accessToken) {
@@ -804,7 +921,7 @@ export async function getRealMissions(siteUrl: string, goldKeyword?: string, goa
               merged.push(row);
             }
           }
-          missions = buildMissionsFromGscRows(merged);
+          missions = await buildMissionsFromGscRows(merged);
           console.log(
             `[getRealMissions] Pool ampliado: ${merged.length} filas GSC → ${missions.length} misiones nuevas`
           );
@@ -1913,17 +2030,34 @@ async function _getQuickWinsCore(
       )
     );
 
-    const opportunities: any[] = validCandidates.map((cand, i) => ({
-      page: cand.keys[0],
-      keyword: cand.keys[1],
-      clicks: cand.clicks || 0,
-      impressions: cand.impressions || 0,
-      position: cand.position,
-      currentTitle: candidateMetas[i].title || '',
-      currentDescription: candidateMetas[i].description || '',
-      currentH1: candidateMetas[i].h1 || '',
-      pageType: candidateMetas[i].pageType || '',
-    }));
+    const opportunities: any[] = validCandidates
+      .map((cand, i) => ({
+        page: cand.keys[0],
+        keyword: cand.keys[1],
+        clicks: cand.clicks || 0,
+        impressions: cand.impressions || 0,
+        position: cand.position,
+        currentTitle: candidateMetas[i].title || '',
+        currentDescription: candidateMetas[i].description || '',
+        currentH1: candidateMetas[i].h1 || '',
+        pageType: candidateMetas[i].pageType || '',
+      }))
+      .filter((opp) => {
+        if (
+          opp.keyword &&
+          keywordAlreadyPresent(opp.keyword, {
+            title: opp.currentTitle,
+            h1: opp.currentH1,
+            slugOrUrl: opp.page,
+          })
+        ) {
+          console.log(
+            `[QuickWins] Skip: «${opp.keyword}» ya está en title/H1/slug de ${opp.page}`
+          );
+          return false;
+        }
+        return true;
+      });
 
     if (opportunities.length < 3) {
       const niche = inferredNicho || 'general';

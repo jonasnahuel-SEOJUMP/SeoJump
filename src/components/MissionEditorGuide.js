@@ -11,6 +11,7 @@ import {
 } from "../lib/cmsGuide";
 import { isMissionChangeFullyApplied, getMissionSuggestionAddon } from "../lib/textUtils";
 import { needsVerifyReadMode } from "../lib/missionSafety";
+import { keywordAlreadyPresent } from "../lib/keywordUtils";
 import { getSmartMissionSuggestion } from "../lib/actions";
 import WpApplyButton from "./WpApplyButton";
 import MissionWarning from "./MissionWarning";
@@ -103,6 +104,20 @@ export default function MissionEditorGuide({
       setAiLoading(false);
       return;
     }
+    // Keyword ya cubierta en title/H1/slug: no generar otro título.
+    const kwCheck = (mission?.keyword || goldKeyword || '').trim();
+    if (
+      kwCheck &&
+      keywordAlreadyPresent(kwCheck, {
+        title: pagePreview?.title || '',
+        h1: pagePreview?.h1 || '',
+        description: pagePreview?.description || '',
+        slugOrUrl: missionPage,
+      })
+    ) {
+      setAiLoading(false);
+      return;
+    }
 
     // Contexto declarado por el dueño (persistido en el navegador).
     let declaredGoal = '';
@@ -166,17 +181,32 @@ export default function MissionEditorGuide({
   const kw = (mission.keyword || goldKeyword || '').trim();
   const current = getCurrentValueFromPreview(mission.type, pagePreview);
 
-  // Plantilla determinística — red de seguridad si la IA no responde.
-  const templateSuggested = verifyOnly
-    ? ''
-    : buildSuggestedText(mission.type, kw, mission.page, siteUrl, pagePreview);
+  const keywordAlreadyDone =
+    !previewLoading &&
+    !verifyOnly &&
+    (missionType === 'H1' || missionType === 'META') &&
+    Boolean(kw) &&
+    keywordAlreadyPresent(kw, {
+      title: pagePreview?.title || (missionType === 'H1' ? current : ''),
+      h1: pagePreview?.h1,
+      description: pagePreview?.description || (missionType === 'META' ? current : ''),
+      slugOrUrl: mission.page,
+    });
 
-  // Lo que se muestra: IA si está disponible, plantilla como respaldo.
-  const suggested = verifyOnly ? '' : (aiSuggestion || templateSuggested);
-  const alreadyApplied = !previewLoading && !verifyOnly && current && suggested && isMissionChangeFullyApplied(current, suggested);
-  const suggestionAddon = !previewLoading && !verifyOnly && current && suggested && !alreadyApplied
-    ? getMissionSuggestionAddon(current, suggested)
-    : null;
+  // Plantilla / IA: no inventar reemplazo si no hay lectura o la keyword ya está.
+  const templateSuggested =
+    verifyOnly || keywordAlreadyDone
+      ? ''
+      : buildSuggestedText(mission.type, kw, mission.page, siteUrl, pagePreview);
+  const suggested = verifyOnly || keywordAlreadyDone ? '' : (aiSuggestion || templateSuggested);
+
+  const alreadyApplied =
+    keywordAlreadyDone ||
+    (!previewLoading && !verifyOnly && current && suggested && isMissionChangeFullyApplied(current, suggested));
+  const suggestionAddon =
+    !previewLoading && !verifyOnly && !keywordAlreadyDone && current && suggested && !alreadyApplied
+      ? getMissionSuggestionAddon(current, suggested)
+      : null;
   const isAeo = mission.type === 'AEO';
   const beforeLabel = isAeo ? '¿Tenés preguntas y respuestas?' : 'Ahora Google ve';
   const beforeEmpty = isAeo
@@ -297,7 +327,9 @@ export default function MissionEditorGuide({
             <div className="p-4 rounded-xl bg-duo-green/15 border border-duo-green/40 flex gap-3 items-start">
               <span className="text-xl">✅</span>
               <p className="text-sm font-bold text-duo-green leading-snug">
-                Detectamos que tu web ya tiene este cambio aplicado. Pegá el texto en el campo de abajo y tocá <strong>Verificar</strong> para guardar el progreso.
+                {keywordAlreadyDone && kw
+                  ? <>La keyword «{kw}» ya aparece en el título, H1 o URL. No hace falta volver a incluirla. Pegá el texto actual abajo y tocá <strong>Verificar</strong> si querés marcar la misión.</>
+                  : <>Detectamos que tu web ya tiene este cambio aplicado. Pegá el texto en el campo de abajo y tocá <strong>Verificar</strong> para guardar el progreso.</>}
               </p>
             </div>
           )}
