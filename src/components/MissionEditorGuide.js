@@ -10,6 +10,7 @@ import {
   buildDesignerInstructions,
 } from "../lib/cmsGuide";
 import { isMissionChangeFullyApplied, getMissionSuggestionAddon } from "../lib/textUtils";
+import { needsVerifyReadMode } from "../lib/missionSafety";
 import { getSmartMissionSuggestion } from "../lib/actions";
 import WpApplyButton from "./WpApplyButton";
 import MissionWarning from "./MissionWarning";
@@ -55,6 +56,7 @@ export default function MissionEditorGuide({
   pagePreview,
   previewLoading,
   playClick,
+  onRetryPreview,
 }) {
   const [whereOpen, setWhereOpen] = useState(true);
 
@@ -68,6 +70,9 @@ export default function MissionEditorGuide({
   const missionPage = mission?.page;
   const kwForAi = (mission?.keyword || goldKeyword || '').trim();
   const currentForAi = mission ? getCurrentValueFromPreview(mission.type, pagePreview) : '';
+  const verifyOnly =
+    mission?.mode === 'verify_read' ||
+    needsVerifyReadMode(missionType, pagePreview, previewLoading);
 
   useEffect(() => {
     let cancelled = false;
@@ -87,6 +92,14 @@ export default function MissionEditorGuide({
     }
     // Esperar a tener el texto en vivo para darle contexto real a la IA.
     if (previewLoading) {
+      setAiLoading(false);
+      return;
+    }
+    // Sin estado actual legible: no pedir sugerencia de reemplazo.
+    if (
+      mission?.mode === 'verify_read' ||
+      needsVerifyReadMode(missionType, pagePreview, false)
+    ) {
       setAiLoading(false);
       return;
     }
@@ -143,7 +156,7 @@ export default function MissionEditorGuide({
       if (loadingTimeoutId) clearTimeout(loadingTimeoutId);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [missionId, missionType, missionPage, previewLoading]);
+  }, [missionId, missionType, missionPage, previewLoading, pagePreview?.title, pagePreview?.h1, pagePreview?.description, pagePreview?.fetchOk]);
 
   if (!mission) return null;
 
@@ -154,26 +167,40 @@ export default function MissionEditorGuide({
   const current = getCurrentValueFromPreview(mission.type, pagePreview);
 
   // Plantilla determinística — red de seguridad si la IA no responde.
-  const templateSuggested = buildSuggestedText(mission.type, kw, mission.page, siteUrl, pagePreview);
+  const templateSuggested = verifyOnly
+    ? ''
+    : buildSuggestedText(mission.type, kw, mission.page, siteUrl, pagePreview);
 
   // Lo que se muestra: IA si está disponible, plantilla como respaldo.
-  const suggested = aiSuggestion || templateSuggested;
-  const alreadyApplied = !previewLoading && current && isMissionChangeFullyApplied(current, suggested);
-  const suggestionAddon = !previewLoading && current && !alreadyApplied
+  const suggested = verifyOnly ? '' : (aiSuggestion || templateSuggested);
+  const alreadyApplied = !previewLoading && !verifyOnly && current && suggested && isMissionChangeFullyApplied(current, suggested);
+  const suggestionAddon = !previewLoading && !verifyOnly && current && suggested && !alreadyApplied
     ? getMissionSuggestionAddon(current, suggested)
     : null;
   const isAeo = mission.type === 'AEO';
   const beforeLabel = isAeo ? '¿Tenés preguntas y respuestas?' : 'Ahora Google ve';
   const beforeEmpty = isAeo
     ? '(Todavía no hay un bloque de preguntas y respuestas — hay que agregarlo al final de la página)'
-    : '(No detectamos texto — puede que el título esté en el constructor visual)';
-  const designerText = buildDesignerInstructions(
-    mission,
-    platformId,
-    siteUrl,
-    suggested,
-    pagePreview
-  );
+    : pagePreview?.fetchOk === false
+      ? '(No pudimos leer esta página — puede haber caché, protección anti-bots o un constructor visual)'
+      : '(No pudimos leer el título actual)';
+  const designerText = verifyOnly
+    ? [
+        `Hola! Necesito que me confirmes el título SEO actual de esta página:`,
+        ``,
+        `📄 Página: ${mission.page}`,
+        `📌 Tipo: ${pageType.label}`,
+        kw ? `🔑 Palabra clave: ${kw}` : '',
+        ``,
+        `No pude leer el título en vivo. ¿Me pegás el Título SEO que ves en Rank Math / Yoast?`,
+      ].filter(Boolean).join('\n')
+    : buildDesignerInstructions(
+        mission,
+        platformId,
+        siteUrl,
+        suggested,
+        pagePreview
+      );
 
   return (
     <div className="space-y-4 w-full min-w-0">
@@ -181,12 +208,17 @@ export default function MissionEditorGuide({
       <div className="card-3d p-5 md:p-6 bg-gradient-to-br from-duo-green/10 to-slate-900 border-2 border-duo-green/40 space-y-2">
         <p className="text-xs font-black text-duo-green uppercase tracking-wider">Tu tarea</p>
         <h3 className="text-xl md:text-2xl font-black text-white leading-tight">
-          {labels.action}
+          {verifyOnly ? 'Primero verificamos el título actual' : labels.action}
         </h3>
         <div className="flex flex-wrap gap-2 pt-1">
           <span className={`text-xs font-black px-2 py-1 rounded-md ${pageType.badgeColor}`}>
             {pageType.label}
           </span>
+          {verifyOnly && (
+            <span className="text-xs font-black px-2 py-1 rounded-md bg-amber-500/20 text-amber-200 border border-amber-400/40">
+              Sin lectura en vivo — no hay reemplazo
+            </span>
+          )}
           {pageType.id === 'category' && (
             <span className="text-xs font-black px-2 py-1 rounded-md bg-purple-500/20 text-purple-200 border border-purple-400/40">
               No es un producto — es una sección del catálogo
@@ -197,7 +229,7 @@ export default function MissionEditorGuide({
               Ficha de un producto puntual
             </span>
           )}
-          {kw && (
+          {kw && !verifyOnly && (
             <span className="text-xs font-black px-2 py-1 rounded-md bg-duo-blue/20 text-sky-200 border border-duo-blue/40">
               Incluí: «{kw}»
             </span>
@@ -205,14 +237,60 @@ export default function MissionEditorGuide({
         </div>
       </div>
 
-      {/* Antes → Después (paquete 3) */}
+      {/* Antes → Después (paquete 3) — o modo verificar si no hay lectura */}
       <div className="card-3d p-5 md:p-6 bg-slate-900 border-2 border-slate-700 space-y-4">
         <p className="text-xs font-black text-slate-400 uppercase tracking-wider">
-          📊 Antes y después
+          {verifyOnly ? '🔍 Lectura en vivo' : '📊 Antes y después'}
         </p>
 
         {previewLoading ? (
           <p className="text-slate-400 font-bold animate-pulse">Leyendo tu página en vivo...</p>
+        ) : verifyOnly ? (
+          <div className="space-y-4">
+            <div className="p-4 rounded-xl bg-amber-950/40 border-2 border-amber-500/40 space-y-2">
+              <p className="text-sm font-black text-amber-200 leading-snug">
+                No pudimos leer el título actual de esta página.
+              </p>
+              <p className="text-sm font-bold text-amber-100/90 leading-snug">
+                Por seguridad <strong>no sugerimos un reemplazo</strong> a ciegas (eso fue lo que rompió URLs en el pasado).
+                Abrí la página, copiá el Título SEO que ves hoy (Rank Math / Yoast), pegalo abajo y tocá Verificar — o reintentá la lectura.
+              </p>
+              <p className="text-xs font-bold text-slate-400 leading-snug">
+                {beforeEmpty}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {typeof onRetryPreview === 'function' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (playClick) playClick();
+                    onRetryPreview();
+                  }}
+                  className="btn-3d btn-blue !py-2.5 !px-5 !text-sm !normal-case !tracking-normal"
+                >
+                  🔄 Reintentar lectura
+                </button>
+              )}
+              {mission.page && (
+                <a
+                  href={mission.page}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => playClick && playClick()}
+                  className="btn-3d btn-green !py-2.5 !px-5 !text-sm !normal-case !tracking-normal"
+                >
+                  👁️ Abrir página pública
+                </a>
+              )}
+              <CopyButton
+                text={designerText}
+                label="📨 Pedir el título a mi diseñador"
+                playClick={playClick}
+                variant="amber"
+              />
+            </div>
+          </div>
         ) : (
           <>
           {alreadyApplied && (
@@ -302,7 +380,8 @@ export default function MissionEditorGuide({
         )}
       </div>
 
-      {/* ¿Dónde edito? (paquete 2) */}
+      {/* ¿Dónde edito? — solo si hay cambio seguro que proponer */}
+      {!verifyOnly && (
       <div className="card-3d overflow-hidden border-2 border-slate-600/60">
         <button
           type="button"
@@ -396,6 +475,7 @@ export default function MissionEditorGuide({
           </div>
         )}
       </div>
+      )}
     </div>
   );
 }

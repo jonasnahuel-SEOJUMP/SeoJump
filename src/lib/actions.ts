@@ -84,7 +84,7 @@ import {
   buildTitleH1PromptPageRules,
   homeBrandProtectionInstructions,
 } from './homeBrandPrompt'
-import { shouldDiscardAiMissionCopy } from './missionSafety'
+import { shouldDiscardAiMissionCopy, canSuggestMissionChange } from './missionSafety'
 import {
   readGeminiApiKey,
   parseTitleSuggestionFromGemini,
@@ -441,35 +441,34 @@ async function buildStarterMissions(
   const pageUrls = internalPaths.slice(0, 4);
   if (pageUrls.length === 0) pageUrls.push(homeUrl);
 
-  // 2. Scrapear metadatos de cada página en paralelo.
+  // 2. Scrapear metadatos de cada página en paralelo (HTTP + headless).
   const metas = await Promise.all(
-    pageUrls.map((u) => scrapeMetadata(u).catch(() => ({ title: '', description: '', h1: '' })))
+    pageUrls.map((u) =>
+      scrapeMetadata(u).catch(() => ({
+        title: '',
+        description: '',
+        h1: '',
+        pageType: '',
+        fetchOk: false as const,
+      }))
+    )
   );
 
   // 3. Construir una misión por página, eligiendo el arreglo más necesario.
+  // Sin título/H1 legible → misión verify_read (nunca inventar un reemplazo).
   const missions: any[] = [];
   pageUrls.forEach((fullPageUrl, i) => {
     const meta = metas[i];
     const title = (meta.title || '').trim();
     const h1 = (meta.h1 || '').trim();
     const description = (meta.description || '').trim();
-
-    // Diagnóstico simple de la página.
-    const needsTitle = !title || title.length > 60 || !h1;
-    const needsMeta = !description || description.length < 50;
-    const missionType: 'H1' | 'META' = needsTitle ? 'H1' : (needsMeta ? 'META' : 'H1');
-
-    // Puntaje de "problema" para ordenar (más problemas → más arriba).
-    let issue = 0;
-    if (!title) issue += 2;
-    if (!h1) issue += 2;
-    if (title && title.length > 60) issue += 1;
-    if (!description) issue += 1;
+    const hasReadableTitle = Boolean(title || h1);
+    const hasReadableMeta = Boolean(description);
+    const unreadable = meta.fetchOk === false || (!hasReadableTitle && !hasReadableMeta);
 
     let pagePath = '/';
     try { pagePath = normalizePagePath(fullPageUrl); } catch { /* keep */ }
 
-    // Keyword: slug legible de la URL o la semilla del usuario.
     let derivedKw = '';
     try {
       const segs = new URL(fullPageUrl).pathname.replace(/\/+$/, '').split('/').filter(Boolean);
@@ -486,6 +485,53 @@ async function buildStarterMissions(
       if (displayPath.length > 40) displayPath = displayPath.slice(0, 37) + '...';
     }
 
+    if (unreadable || !hasReadableTitle) {
+      missions.push({
+        id: `verify-read-${pagePath}`,
+        title: 'Verificar título de esta página',
+        description: `No pudimos leer el título de «${displayPath}». Reintentá la lectura o pegá el título actual que ves en el navegador — no inventamos un reemplazo a ciegas.`,
+        xp: 30,
+        page: fullPageUrl,
+        pagePath,
+        type: 'H1',
+        mode: 'verify_read',
+        icon: '🔍',
+        color: 'blue',
+        pistas: {
+          classic: [
+            'Abrí la página pública en el navegador.',
+            'Copiá el título que muestra la pestaña o Rank Math / Yoast → Título SEO.',
+            'Pegalo abajo en SEO Jump y tocá Verificar, o tocá Reintentar lectura.',
+          ],
+          visual: [
+            'Abrí la página pública y mirá el título de la pestaña del navegador.',
+            'Pegá ese texto en SEO Jump para confirmarlo.',
+          ],
+          cacheWarning: true,
+        },
+        keyword: effectiveKeyword,
+        clicks: null,
+        impressions: null,
+        ctr: null,
+        position: null,
+        opportunity: 3,
+        source: 'web',
+      });
+      return;
+    }
+
+    const needsTitle = !title || title.length > 60 || !h1;
+    const needsMeta = !hasReadableMeta || description.length < 50;
+    if (!needsTitle && !needsMeta) return;
+
+    const missionType: 'H1' | 'META' = needsTitle ? 'H1' : 'META';
+
+    let issue = 0;
+    if (!title) issue += 2;
+    if (!h1) issue += 2;
+    if (title && title.length > 60) issue += 1;
+    if (!description) issue += 1;
+
     const MISSION_TYPES = buildMissionTypes(effectiveKeyword);
     const missionDef = MISSION_TYPES.find((m) => m.type === missionType)!;
 
@@ -501,7 +547,6 @@ async function buildStarterMissions(
       color: missionDef.color,
       pistas: missionDef.pistas,
       keyword: effectiveKeyword,
-      // Sin GSC no hay métricas reales: se omiten para no mostrar "0 ventas".
       clicks: null,
       impressions: null,
       ctr: null,
@@ -1038,14 +1083,22 @@ export async function requestGoogleIndexing(urlToIndex: string) {
 export async function getPageLivePreview(pageUrl: string) {
   const gate = await requireSignedIn('live_preview', 180);
   if (gate.ok === false) {
-    return { success: false, preview: { title: "", description: "", h1: "" }, error: gate.error, code: gate.code };
+    return {
+      success: false,
+      preview: { title: "", description: "", h1: "", pageType: "", fetchOk: false },
+      error: gate.error,
+      code: gate.code,
+    };
   }
   try {
     const preview = await scrapeMetadata(pageUrl);
     return { success: true, preview };
   } catch (error) {
     console.error("getPageLivePreview:", error);
-    return { success: false, preview: { title: "", description: "", h1: "" } };
+    return {
+      success: false,
+      preview: { title: "", description: "", h1: "", pageType: "", fetchOk: false },
+    };
   }
 }
 
@@ -1096,6 +1149,17 @@ export async function getSmartMissionSuggestion(params: {
   // Solo H1 (título) y META se benefician de la IA aquí.
   if (missionType !== 'H1' && missionType !== 'META') {
     return { success: false, fallback: true as const };
+  }
+
+  // Sin estado actual legible no inventamos un reemplazo (PR2).
+  if (
+    !canSuggestMissionChange(missionType, {
+      title: pageTitle || currentValue,
+      h1: pageH1,
+      description: pageDescription || (missionType === 'META' ? currentValue : ''),
+    })
+  ) {
+    return { success: false, fallback: true as const, code: 'NO_CURRENT_VALUE' as const };
   }
 
   const apiKey = readGeminiApiKey();

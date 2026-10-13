@@ -116,3 +116,27 @@ export function shouldDiscardAiMissionCopy({ suggestedTitle, reason } = {}) {
     missionTextInstructsUnsafeUrlEdit(suggestedTitle)
   );
 }
+
+/**
+ * ¿Hay valor actual legible para proponer un cambio de título/meta?
+ * Sin eso NO se debe sugerir un reemplazo (modo verificar / reintentar).
+ */
+export function canSuggestMissionChange(missionType, preview) {
+  const t = String(missionType || '').toUpperCase();
+  if (t === 'H1') {
+    return Boolean(String(preview?.title || preview?.h1 || '').trim());
+  }
+  if (t === 'META') {
+    return Boolean(String(preview?.description || '').trim());
+  }
+  return true;
+}
+
+/** Preview falló o vino vacío para el campo que la misión quiere cambiar. */
+export function needsVerifyReadMode(missionType, preview, previewLoading = false) {
+  if (previewLoading) return false;
+  const t = String(missionType || '').toUpperCase();
+  if (t !== 'H1' && t !== 'META') return false;
+  if (preview?.fetchOk === false) return true;
+  return !canSuggestMissionChange(t, preview);
+}
