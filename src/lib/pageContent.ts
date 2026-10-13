@@ -10,30 +10,14 @@ import { decodeHtmlEntities } from './textUtils';
 export function extractFromHtml(html: string, type: string): string | string[] | null {
   try {
     if (type === 'H1') {
-      const headings: string[] = [];
-      const pushDecoded = (raw: string) => {
-        const text = decodeHtmlEntities(raw.replace(/<[^>]+>/g, '').trim());
-        if (text) headings.push(text);
-      };
-
-      // Título SEO (<title>) — lo que Google muestra en resultados de búsqueda
+      // Tipo interno H1 = Título SEO. Verificamos solo <title> (lo que Google muestra),
+      // no el Nombre/H1 visual de WooCommerce (menús, Merchant Center, slug).
       const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-      if (titleMatch) pushDecoded(titleMatch[1]);
-
-      // Extract H1s
-      const h1Regex = /<h1[^>]*>([\s\S]*?)<\/h1>/gi;
-      let match;
-      while ((match = h1Regex.exec(html)) !== null) {
-        pushDecoded(match[1]);
+      if (titleMatch) {
+        const text = decodeHtmlEntities(titleMatch[1].replace(/<[^>]+>/g, '').trim());
+        if (text) return [text];
       }
-
-      // Extract H2s (as requested for thoroughness)
-      const h2Regex = /<h2[^>]*>([\s\S]*?)<\/h2>/gi;
-      while ((match = h2Regex.exec(html)) !== null) {
-        pushDecoded(match[1]);
-      }
-
-      return headings.length > 0 ? headings : null;
+      return null;
     }
 
     if (type === 'META') {

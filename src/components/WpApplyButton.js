@@ -8,7 +8,8 @@ import {
 } from "../lib/wpActions";
 
 /**
- * Botón «Aplicar en mi web» para misiones H1 / META.
+ * Botón «Aplicar automáticamente» para misiones de Título SEO (tipo H1) / META.
+ * Escribe seo_title o meta vía el plugin — nunca toca Nombre ni slug.
  * Si no hay WordPress conectado, invita a Perfil.
  */
 export default function WpApplyButton({
@@ -108,12 +109,12 @@ export default function WpApplyButton({
             setApplying(false);
           }
         }}
-        className="btn-3d btn-blue !py-2.5 !px-5 !text-sm !normal-case !tracking-normal w-full sm:w-auto disabled:opacity-50"
+        className="btn-3d btn-green !py-3 !px-6 !text-sm !normal-case !tracking-normal w-full sm:w-auto disabled:opacity-50 shadow-lg"
       >
-        {applying ? "Aplicando…" : "🚀 Aplicar automáticamente"}
+        {applying ? "Aplicando…" : "🚀 Aplicar automáticamente (recomendado)"}
       </button>
-      <p className="text-[11px] font-bold text-slate-400 leading-snug max-w-xs">
-        Solo escribe el Título SEO / meta. No toca el slug ni la URL.
+      <p className="text-[11px] font-bold text-duo-green/90 leading-snug max-w-xs">
+        Escribe solo el Título SEO / meta en Rank Math o Yoast. No toca Nombre, slug ni URL.
       </p>
       {message && (
         <p className={`text-xs font-bold ${message.ok ? "text-duo-green" : "text-amber-300"}`}>

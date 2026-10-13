@@ -84,7 +84,12 @@ import {
   buildTitleH1PromptPageRules,
   homeBrandProtectionInstructions,
 } from './homeBrandPrompt'
-import { shouldDiscardAiMissionCopy, canSuggestMissionChange } from './missionSafety'
+import {
+  shouldDiscardAiMissionCopy,
+  canSuggestMissionChange,
+  needsSeoTitleMission,
+} from './missionSafety'
+import { keywordAlreadyPresent } from './keywordUtils'
 import {
   readGeminiApiKey,
   parseTitleSuggestionFromGemini,
@@ -97,7 +102,6 @@ import {
   deriveBrandTokens,
   isMostlySiteBrand,
 } from './gscScoring'
-import { keywordAlreadyPresent } from './keywordUtils'
 import {
   extractFromHtml,
   normalize,
@@ -250,14 +254,14 @@ export async function activateUserPlan(
  */
 const buildMissionTypes = (goldKeyword?: string) => [
   {
-    type: 'H1',
-    title: 'El Guardián del Título',
+    type: 'H1', // Tipo interno: Título SEO (Rank Math / Yoast). No es el Nombre ni el H1 visual.
+    title: 'Título SEO para Google',
     descriptionTemplate: (path: string) =>
       goldKeyword
-        ? `Esta página (${path}) tiene pocas visitas. Cambiá su título incluyendo «${goldKeyword}» para que Google entienda de qué trata.`
-        : `Esta página (${path}) tiene pocas visitas. Cambiá su título por uno más claro para que Google la entienda mejor.`,
+        ? `Esta página (${path}) tiene pocas visitas. Cambiá el Título SEO (Rank Math / Yoast) incluyendo «${goldKeyword}». No toques el Nombre ni el Slug.`
+        : `Esta página (${path}) tiene pocas visitas. Mejorá el Título SEO (Rank Math / Yoast) para que Google entienda de qué trata. No toques el Nombre ni el Slug.`,
     xp: 50,
-    icon: 'H1',
+    icon: '📝',
     color: 'green',
     pistas: {
       classic: [
@@ -557,7 +561,12 @@ async function buildStarterMissions(
       return;
     }
 
-    const needsTitle = !title || title.length > 60 || !h1;
+    const pageTypeHint = (meta.pageType || '').toLowerCase();
+    const needsTitle = needsSeoTitleMission({
+      title,
+      h1,
+      pageType: pageTypeHint,
+    });
     const needsMeta = !hasReadableMeta || description.length < 50;
     if (!needsTitle && !needsMeta) return;
 
@@ -565,8 +574,9 @@ async function buildStarterMissions(
 
     let issue = 0;
     if (!title) issue += 2;
-    if (!h1) issue += 2;
     if (title && title.length > 60) issue += 1;
+    // En ecommerce el H1 visual no dispara misión de título (Nombre es peligroso).
+    if (pageTypeHint !== 'product' && pageTypeHint !== 'category' && !h1) issue += 1;
     if (!description) issue += 1;
 
     const MISSION_TYPES = buildMissionTypes(effectiveKeyword);

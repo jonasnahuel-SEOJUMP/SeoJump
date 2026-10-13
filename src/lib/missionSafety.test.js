@@ -2,7 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   SLUG_WARNING,
   SLUG_WARNING_CATEGORY_CHILDREN,
+  NAME_FIELD_WARNING_CATEGORY,
+  NAME_FIELD_WARNING_PRODUCT,
   getSlugWarnings,
+  getNameFieldWarnings,
+  needsSeoTitleMission,
+  isNameOrVisualH1MissionEnabled,
   missionTextInstructsUnsafeUrlEdit,
   shouldDiscardAiMissionCopy,
   validateMissionTexts,
@@ -10,6 +15,7 @@ import {
 import {
   getEditWhereGuide,
   getPlainMissionLabels,
+  buildSuggestedText,
 } from './cmsGuide';
 
 const PULIDORAS_URL =
@@ -147,9 +153,78 @@ describe('cmsGuide — misiones título solo Título SEO', () => {
   it('labels H1 hablan de Título SEO (voseo)', () => {
     const cat = getPlainMissionLabels('H1', 'category');
     expect(cat.action).toMatch(/^Cambiá el Título SEO/);
+    expect(cat.action.toLowerCase()).toMatch(/no el nombre/);
     expect(cat.shortTitle.toLowerCase()).toMatch(/título seo/);
     const prod = getPlainMissionLabels('H1', 'product');
     expect(prod.action).toMatch(/^Cambiá el Título SEO/);
+  });
+});
+
+describe('PR4 — Título SEO vs Nombre/H1', () => {
+  it('misiones de Nombre/H1 visual están desactivadas', () => {
+    expect(isNameOrVisualH1MissionEnabled()).toBe(false);
+  });
+
+  it('en categoría/producto no dispara misión solo por falta de H1 visual', () => {
+    expect(
+      needsSeoTitleMission({
+        title: 'Pulidoras profesionales | Shop',
+        h1: '',
+        pageType: 'category',
+      })
+    ).toBe(false);
+    expect(
+      needsSeoTitleMission({
+        title: 'Óxido de cerio 1kg',
+        h1: '',
+        pageType: 'product',
+      })
+    ).toBe(false);
+  });
+
+  it('en categoría/producto sí dispara si falta o es muy largo el <title>', () => {
+    expect(needsSeoTitleMission({ title: '', h1: 'Pulidoras', pageType: 'category' })).toBe(true);
+    expect(
+      needsSeoTitleMission({
+        title: 'x'.repeat(70),
+        h1: 'Pulidoras',
+        pageType: 'category',
+      })
+    ).toBe(true);
+  });
+
+  it('warnings de Nombre para producto y categoría', () => {
+    expect(getNameFieldWarnings('category')).toContain(NAME_FIELD_WARNING_CATEGORY);
+    expect(getNameFieldWarnings('product')).toContain(NAME_FIELD_WARNING_PRODUCT);
+    expect(getNameFieldWarnings('page')).toEqual([]);
+  });
+
+  it('guía de categoría incluye nameWarnings y labels de Título SEO (no Nombre)', () => {
+    const guide = getEditWhereGuide(PULIDORAS_URL, 'H1', 'wp_woo', 'category');
+    expect(guide.nameWarnings?.join(' ')).toMatch(/menú|migas|filtros/i);
+    expect(guide.fieldLabel.toLowerCase()).toMatch(/título seo/);
+    const labels = getPlainMissionLabels('H1', 'category');
+    expect(labels.action.toLowerCase()).toMatch(/título seo/);
+    expect(labels.action.toLowerCase()).toMatch(/no el nombre/);
+  });
+
+  it('sugerencia de categoría es corta y limpia (sin | marca / Mayorista y Minorista)', () => {
+    const out = buildSuggestedText(
+      'H1',
+      'pulidora para autos',
+      PULIDORAS_URL,
+      'https://www.55detailshop.com.ar',
+      {
+        title: 'Pulidoras | 55 Detail Shop | Mayorista y Minorista',
+        h1: 'Pulidoras',
+        pageType: 'category',
+        fetchOk: true,
+      }
+    );
+    expect(out).toBeTruthy();
+    expect(out).not.toMatch(/\|/);
+    expect(out.toLowerCase()).not.toMatch(/mayorista y minorista/);
+    expect(out.length).toBeLessThanOrEqual(60);
   });
 });
 
@@ -161,7 +236,8 @@ describe('regresión incidente Pulidoras', () => {
     expect(guide.adminHint).toMatch(/Productos → Categorías/);
     expect(guide.pageTypeLabel.toLowerCase()).toMatch(/categor/);
     expect(guide.fieldLabel.toLowerCase()).toMatch(/título seo/);
-    expect(labels.action).toBe('Cambiá el Título SEO de esta categoría');
+    expect(labels.action).toMatch(/^Cambiá el Título SEO de esta categoría/);
+    expect(labels.action.toLowerCase()).toMatch(/no el nombre/);
 
     const blob = guideBlob(guide);
     expect(instructsNombreOrSlugAsAction(blob)).toBe(false);

@@ -12,6 +12,44 @@ export const SLUG_WARNING =
 export const SLUG_WARNING_CATEGORY_CHILDREN =
   'Esta categoría tiene subcategorías: un cambio de slug cambiaría también sus direcciones.';
 
+/** Nombre de categoría Woo: efectos colaterales fuera de Google. */
+export const NAME_FIELD_WARNING_CATEGORY =
+  'El nombre de la categoría aparece en el menú, las migas de pan y los filtros de tu tienda. No lo cambies: editá solo el Título SEO.';
+
+/** Nombre de producto Woo: Merchant Center / Shopping. */
+export const NAME_FIELD_WARNING_PRODUCT =
+  'El nombre del producto se usa como título en Google Shopping / Merchant Center. Cambiarlo puede afectar tus anuncios y fichas gratuitas. Editá solo el Título SEO.';
+
+/**
+ * Las misiones de Nombre visible / H1 de tienda están desactivadas por defecto.
+ * El tipo interno `H1` significa Título SEO (Rank Math / Yoast).
+ */
+export function isNameOrVisualH1MissionEnabled() {
+  return false;
+}
+
+/**
+ * ¿Hace falta una misión de Título SEO?
+ * En producto/categoría Woo NO usamos el H1 visual como señal (cambiar Nombre es peligroso).
+ */
+export function needsSeoTitleMission({ title, h1, pageType } = {}) {
+  const t = String(title || '').trim();
+  const page = String(pageType || '').toLowerCase();
+  const ecommerce = page === 'product' || page === 'category';
+  if (ecommerce) {
+    return !t || t.length > 60;
+  }
+  const visualH1 = String(h1 || '').trim();
+  return !t || t.length > 60 || !visualH1;
+}
+
+/** Warnings de Nombre para UI ecommerce (además del slug). */
+export function getNameFieldWarnings(pageTypeId) {
+  if (pageTypeId === 'category') return [NAME_FIELD_WARNING_CATEGORY];
+  if (pageTypeId === 'product') return [NAME_FIELD_WARNING_PRODUCT];
+  return [];
+}
+
 /**
  * Pantallas de WP/Woo donde el editor muestra Slug junto al Nombre/título.
  * home se edita como Página → también tiene slug.

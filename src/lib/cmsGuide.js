@@ -8,7 +8,8 @@
  */
 
 import { decodeHtmlEntities } from './textUtils';
-import { getSlugWarnings } from './missionSafety';
+import { getSlugWarnings, getNameFieldWarnings } from './missionSafety';
+import { fitSeoTitle } from './seoTitle';
 
 export const CMS_PLATFORMS = [
   { id: 'wp_woo', label: 'WordPress + Tienda (WooCommerce)', icon: '🛒' },
@@ -149,17 +150,17 @@ export function getPlainMissionLabels(missionType, pageTypeId = '') {
     case 'H1':
       return {
         shortTitle: isCategory
-          ? 'Título SEO de esta categoría'
+          ? 'Título SEO (lo que muestra Google)'
           : isProduct
-            ? 'Título SEO de este producto'
-            : 'Título SEO de esta página',
-        fieldName: 'Título SEO (Rank Math / Yoast)',
+            ? 'Título SEO (lo que muestra Google)'
+            : 'Título SEO (lo que muestra Google)',
+        fieldName: 'Título SEO en Rank Math / Yoast — no el Nombre',
         googleName: 'Título en Google',
         action: isCategory
-          ? 'Cambiá el Título SEO de esta categoría'
+          ? 'Cambiá el Título SEO de esta categoría (no el Nombre)'
           : isProduct
-            ? 'Cambiá el Título SEO de este producto'
-            : 'Cambiá el Título SEO de esta página',
+            ? 'Cambiá el Título SEO de este producto (no el Nombre)'
+            : 'Cambiá el Título SEO de esta página (no el título de arriba)',
         verifyLabel: 'Pegá acá el Título SEO que pusiste en Rank Math o Yoast',
       };
     case 'META':
@@ -214,6 +215,8 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
   let scrollHint = '';
   const slugWarnings =
     missionType === 'H1' || missionType === 'META' ? getSlugWarnings(page.id) : [];
+  const nameWarnings =
+    missionType === 'H1' || missionType === 'META' ? getNameFieldWarnings(page.id) : [];
 
   const seoTitleSteps = () => {
     scrollHint = 'Bajá en el editor hasta el recuadro de Rank Math o Yoast SEO (suele estar al final de la pantalla).';
@@ -259,6 +262,7 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
       pageTypeLabel: page.label,
       commonMistakes,
       slugWarnings,
+      nameWarnings,
     };
   }
 
@@ -281,6 +285,7 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
       pageTypeLabel: page.label,
       commonMistakes,
       slugWarnings,
+      nameWarnings,
     };
   }
 
@@ -301,6 +306,7 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
       pageTypeLabel: page.label,
       commonMistakes,
       slugWarnings,
+      nameWarnings,
     };
   }
 
@@ -421,6 +427,7 @@ export function getEditWhereGuide(pageUrl, missionType, platformId = 'wp_woo', p
     commonMistakes,
     scrollHint,
     slugWarnings,
+    nameWarnings,
   };
 }
 
@@ -578,14 +585,38 @@ export function buildSuggestedText(missionType, keyword, pageUrl, siteUrl, previ
   }
 
   if (missionType === 'H1') {
-    // Sin título/H1 leído en vivo no inventamos un reemplazo desde el slug.
+    // Sin título leído en vivo no inventamos un reemplazo desde el slug.
+    // En ecommerce priorizamos <title> (Título SEO), no el H1 visual/Nombre.
     const liveTitle = (preview && preview.title) || '';
     const liveH1 = (preview && preview.h1) || '';
-    if (preview && !String(liveTitle || liveH1).trim()) {
+    const ecommerce = page.id === 'category' || page.id === 'product';
+    if (preview && !(ecommerce ? liveTitle : liveTitle || liveH1).trim()) {
       return '';
     }
+
+    // Categorías: título corto y limpio — sin "|", sin marca, sin «Mayorista y Minorista».
+    if (page.id === 'category') {
+      let core =
+        (kw && cap(kw)) ||
+        deriveDescriptiveCore(liveTitle, brand) ||
+        deriveDescriptiveCore(liveH1, brand) ||
+        cap(slug) ||
+        'Categoría';
+      core = deShout(core)
+        .replace(/\s*[|].*$/, '')
+        .replace(/\bmayorista\s+y\s+minorista\b/gi, '')
+        .replace(/\bventa\s+mayorista\b/gi, '')
+        .replace(/\s{2,}/g, ' ')
+        .trim();
+      if (kw && core && !coreCoversKeyword(core, kw)) {
+        core = cap(kw);
+      }
+      return fitSeoTitle(core, { maxLen: 60, brandHints: [brand] });
+    }
+
     const core = deriveProductCore(preview, slug, kw, brand, cap);
     if (!core) return `${brand} — tu mejor opción online`;
+    // Productos: se permite marca al final si entra; sin forzar «Mayorista y Minorista».
     return composeWithBrand(core, brand, 60);
   }
 

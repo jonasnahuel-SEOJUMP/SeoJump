@@ -328,7 +328,7 @@ export default function MissionEditorGuide({
               <span className="text-xl">✅</span>
               <p className="text-sm font-bold text-duo-green leading-snug">
                 {keywordAlreadyDone && kw
-                  ? <>La keyword «{kw}» ya aparece en el título, H1 o URL. No hace falta volver a incluirla. Pegá el texto actual abajo y tocá <strong>Verificar</strong> si querés marcar la misión.</>
+                  ? <>La keyword «{kw}» ya aparece en el Título SEO o en la URL. No hace falta volver a incluirla. Pegá el texto actual abajo y tocá <strong>Verificar</strong> si querés marcar la misión.</>
                   : <>Detectamos que tu web ya tiene este cambio aplicado. Pegá el texto en el campo de abajo y tocá <strong>Verificar</strong> para guardar el progreso.</>}
               </p>
             </div>
@@ -375,6 +375,12 @@ export default function MissionEditorGuide({
                   {(missionType === "H1" || mission?.type === "H1") && (
                     <MissionWarning type="h1-change" />
                   )}
+                  {pageType.id === "category" && (missionType === "H1" || missionType === "META") && (
+                    <MissionWarning type="name-category" />
+                  )}
+                  {pageType.id === "product" && (missionType === "H1" || missionType === "META") && (
+                    <MissionWarning type="name-product" />
+                  )}
                   {(missionType === "H1" || missionType === "META") &&
                     (pageType.id === "product" ||
                       pageType.id === "category" ||
@@ -383,7 +389,7 @@ export default function MissionEditorGuide({
                       pageType.id === "home") && (
                       <MissionWarning type="slug-danger" />
                     )}
-                  <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-start">
+                  <div className="flex flex-col gap-3 items-stretch sm:items-start">
                     {!isAeo && (
                       <WpApplyButton
                         missionType={missionType}
@@ -394,9 +400,9 @@ export default function MissionEditorGuide({
                     )}
                     <CopyButton
                       text={suggested}
-                      label="📋 Copiar (alternativa manual)"
+                      label="📋 Copiar a mano (si no tenés WordPress conectado)"
                       playClick={playClick}
-                      variant="green"
+                      variant="amber"
                     />
                   </div>
                   {pageType.id === 'home' && (
@@ -431,10 +437,15 @@ export default function MissionEditorGuide({
 
         {whereOpen && (
           <div className="p-5 md:p-6 bg-slate-900 space-y-4 border-t border-slate-700/50">
-            {guide.slugWarnings?.length > 0 && (
+            {(guide.nameWarnings?.length > 0 || guide.slugWarnings?.length > 0) && (
               <div className="p-4 rounded-xl bg-red-950/40 border-2 border-red-500/50 space-y-2">
-                {guide.slugWarnings.map((w, idx) => (
-                  <p key={idx} className="text-sm font-black text-red-200 leading-snug">
+                {(guide.nameWarnings || []).map((w, idx) => (
+                  <p key={`n-${idx}`} className="text-sm font-black text-red-200 leading-snug">
+                    {w}
+                  </p>
+                ))}
+                {(guide.slugWarnings || []).map((w, idx) => (
+                  <p key={`s-${idx}`} className="text-sm font-black text-red-200 leading-snug">
                     {w}
                   </p>
                 ))}
