@@ -1,7 +1,5 @@
 "use server"
 
-import fs from "fs"
-import path from "path"
 import { signIn, signOut, auth } from "../auth"
 import { getSearchConsoleData, submitGoogleIndexing, getSearchConsoleConnectionStatus, getPageQueryMetrics } from "./google"
 import { GoogleGenerativeAI } from "@google/generative-ai"
@@ -2862,7 +2860,8 @@ export async function fetchCompletedMissions(): Promise<{
 }
 
 /**
- * Elimina todos los datos del usuario en nuestros servidores (Supabase + backup local).
+ * Elimina todos los datos del usuario en nuestros servidores (Supabase).
+ * CASCADE borra user_missions, user_game_state, etc.
  * El cliente debe borrar localStorage y cerrar sesión después de llamar a esta acción.
  */
 export async function deleteUserAccount(): Promise<{ success: boolean; error?: string }> {
@@ -2877,17 +2876,6 @@ export async function deleteUserAccount(): Promise<{ success: boolean; error?: s
     const deleted = await deleteProfileByEmail(email);
     if (!deleted) {
       return { success: false, error: 'No se pudieron borrar los datos en el servidor' };
-    }
-
-    try {
-      const dataDir = path.join(process.cwd(), 'data', 'user-states');
-      const sanitizedEmail = email.replace(/[^a-zA-Z0-9_.-]/g, '_');
-      const filePath = path.join(dataDir, `${sanitizedEmail}.json`);
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
-      }
-    } catch (fileErr) {
-      console.warn('[deleteUserAccount] No se pudo borrar archivo de estado local:', fileErr);
     }
 
     return { success: true };

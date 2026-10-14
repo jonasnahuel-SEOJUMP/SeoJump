@@ -541,6 +541,122 @@ export async function deleteProfileByEmail(email: string): Promise<boolean> {
   return true;
 }
 
+// ─── Progreso de juego (fases / XP / gold) — reemplaza data/user-states/*.json ─
+
+export type UserGameState = {
+  xp: number;
+  completed_missions: string[];
+  ciclos_prestigio: number;
+  fase_actual: number;
+  site_url: string;
+  gold_query: string;
+  gold_suggestions: unknown[];
+  missions_list: unknown[];
+  email?: string;
+  updated_at?: string;
+};
+
+function normalizeGameStateRow(row: Record<string, unknown> | null): UserGameState | null {
+  if (!row) return null;
+  return {
+    xp: Number(row.xp) || 0,
+    completed_missions: Array.isArray(row.completed_missions)
+      ? (row.completed_missions as string[])
+      : [],
+    ciclos_prestigio: Number(row.ciclos_prestigio) || 0,
+    fase_actual: Number(row.fase_actual) || 1,
+    site_url: typeof row.site_url === 'string' ? row.site_url : '',
+    gold_query: typeof row.gold_query === 'string' ? row.gold_query : '',
+    gold_suggestions: Array.isArray(row.gold_suggestions) ? row.gold_suggestions : [],
+    missions_list: Array.isArray(row.missions_list) ? row.missions_list : [],
+    email: typeof row.email === 'string' ? row.email : undefined,
+    updated_at: typeof row.updated_at === 'string' ? row.updated_at : undefined,
+  };
+}
+
+/** Lee el estado de juego por email. null = sin fila (primera vez). */
+export async function getUserGameState(email: string): Promise<UserGameState | null> {
+  if (!supabaseAdmin) {
+    console.warn('[Supabase] getUserGameState: Supabase no configurado.');
+    return null;
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const { data, error } = await supabaseAdmin
+    .from('user_game_state')
+    .select(
+      'xp, completed_missions, ciclos_prestigio, fase_actual, site_url, gold_query, gold_suggestions, missions_list, email, updated_at'
+    )
+    .eq('email', normalizedEmail)
+    .maybeSingle();
+
+  if (error) {
+    console.error('[Supabase] getUserGameState:', error.message);
+    return null;
+  }
+  return normalizeGameStateRow(data as Record<string, unknown> | null);
+}
+
+/**
+ * Upsert del progreso de juego. Crea el profile si no existe.
+ * Devuelve el estado guardado o null si falla / no hay Supabase.
+ */
+export async function upsertUserGameState(
+  email: string,
+  state: Omit<UserGameState, 'email' | 'updated_at'>
+): Promise<UserGameState | null> {
+  if (!supabaseAdmin) {
+    console.warn('[Supabase] upsertUserGameState: Supabase no configurado.');
+    return null;
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const { data: profileRow, error: rpcErr } = await supabaseAdmin.rpc('upsert_profile', {
+    p_email: normalizedEmail,
+    p_website_url: state.site_url || null,
+    p_business_name: null,
+  });
+
+  if (rpcErr) {
+    console.error('[Supabase] upsertUserGameState upsert_profile:', rpcErr.message);
+    return null;
+  }
+
+  const profile = profileRow as Profile | null;
+  if (!profile?.id) {
+    console.error('[Supabase] upsertUserGameState: profile inválido para', normalizedEmail);
+    return null;
+  }
+
+  const payload = {
+    profile_id: profile.id,
+    email: normalizedEmail,
+    xp: Math.max(0, Math.floor(Number(state.xp) || 0)),
+    completed_missions: Array.isArray(state.completed_missions) ? state.completed_missions : [],
+    ciclos_prestigio: Math.max(0, Math.floor(Number(state.ciclos_prestigio) || 0)),
+    fase_actual: Math.min(4, Math.max(1, Math.floor(Number(state.fase_actual) || 1))),
+    site_url: state.site_url || null,
+    gold_query: state.gold_query || null,
+    gold_suggestions: Array.isArray(state.gold_suggestions) ? state.gold_suggestions : [],
+    missions_list: Array.isArray(state.missions_list) ? state.missions_list : [],
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabaseAdmin
+    .from('user_game_state')
+    .upsert(payload, { onConflict: 'profile_id' })
+    .select(
+      'xp, completed_missions, ciclos_prestigio, fase_actual, site_url, gold_query, gold_suggestions, missions_list, email, updated_at'
+    )
+    .single();
+
+  if (error) {
+    console.error('[Supabase] upsertUserGameState:', error.message);
+    return null;
+  }
+  return normalizeGameStateRow(data as Record<string, unknown>);
+}
+
 // ─── Conector WordPress ──────────────────────────────────────────────────────
 
 export type WpConnectionRow = {
