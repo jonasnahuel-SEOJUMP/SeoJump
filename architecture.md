@@ -117,7 +117,19 @@ que corresponda, NO en `actions.ts`. Si `actions.ts` vuelve a crecer mezclando d
 
 ---
 
-## 8. Flujo de deploy
+## 8. Persistencia de progreso (fases / XP / gold)
+
+- **No** guardar estado de juego en el filesystem del servidor (`data/user-states/`).
+  En Vercel el disco no persiste entre instancias ni deploys.
+- Fuente durable: tabla Supabase `user_game_state` vía `/api/user-state`
+  (`getUserGameState` / `upsertUserGameState` en `supabase.ts`).
+- `localStorage` sigue siendo caché inmediata de UI; el servidor es la fuente
+  para recuperar progreso en otro dispositivo.
+- Misiones on-page completadas (H1/META/ALT/QUICK_WIN/AEO) viven en `user_missions`.
+
+---
+
+## 9. Flujo de deploy
 
 1. Commit en `main`.
 2. Push a `origin/main` → Vercel buildea y deploya automáticamente.

@@ -100,6 +100,49 @@ export function getPhaseProgress(completedMissionsSet, suggestions, rawMissions,
   };
 }
 
+/**
+ * Valida y filtra el payload de progreso antes de persistir (anti-tamper de fases).
+ * Pura: usable desde /api/user-state y tests.
+ */
+export function sanitizeGameStatePayload(body = {}) {
+  const completedList = Array.isArray(body.completed_missions) ? body.completed_missions : [];
+  const completedSet = new Set(completedList);
+  const suggestions = Array.isArray(body.gold_suggestions) ? body.gold_suggestions : [];
+  const missions = Array.isArray(body.missions_list) ? body.missions_list : [];
+  const query = body.gold_query || "";
+  const siteUrl = body.site_url || "";
+
+  const prog = getPhaseProgress(completedSet, suggestions, missions, query, siteUrl);
+
+  let filteredCompleted = [...completedList];
+  if (!prog.p2.unlocked) {
+    filteredCompleted = filteredCompleted.filter((m) => !String(m).startsWith("fase2-"));
+  }
+  if (!prog.p3.unlocked) {
+    const wpMissionIds = new Set(missions.map((m) => m && m.id).filter(Boolean));
+    filteredCompleted = filteredCompleted.filter((m) => !wpMissionIds.has(m));
+  }
+  if (!prog.p4.unlocked) {
+    filteredCompleted = filteredCompleted.filter((m) => !String(m).startsWith("fase4-"));
+  }
+
+  let fase_actual = 1;
+  if (prog.p4.unlocked) fase_actual = 4;
+  else if (prog.p3.unlocked) fase_actual = 3;
+  else if (prog.p2.unlocked) fase_actual = 2;
+
+  return {
+    xp: Math.max(0, Math.floor(Number(body.xp) || 0)),
+    completed_missions: filteredCompleted,
+    ciclos_prestigio: Math.max(0, Math.floor(Number(body.ciclos_prestigio) || 0)),
+    fase_actual,
+    site_url: siteUrl,
+    gold_query: query,
+    gold_suggestions: suggestions,
+    missions_list: missions,
+  };
+}
+
 export async function syncStateWithServer() {
   try {
     const xp = parseInt(localStorage.getItem("seojump_xp") || "0", 10);
